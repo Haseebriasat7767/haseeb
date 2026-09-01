@@ -37,6 +37,7 @@ components/
   navigation/   Header, mobile menu, footer, wordmark
   three/        Canvas, camera, lighting, terrain, loading, fallbacks
     villa/      Procedural residence: config, layout, and building parts
+      openings/ Window, sliding-door, and entrance systems
   experience/   Bridge between UI and the 3D layer, landing preview
   property/     Editorial landing-page sections
   configurator/ Phase 2 placeholder
@@ -69,9 +70,20 @@ function that resolves it into the whole building. Each part component
 stairs) only reads from that layout, so changing width, depth, floor heights,
 cantilever, or terrace depth recomposes the architecture coherently.
 
-Every volume is a transform of one of three shared unit primitives — a box, a
-plane, and a cylinder — which keeps the building at roughly 47 meshes and
-under 600 triangles.
+### Openings and facade detailing
+
+Windows are not planes laid on the walls. Each facade carries a _punched
+skin_ — a thin layer over the structural mass with the openings left out of
+it — so every opening is a real hole with real depth and its own shadow. The
+frame lines that recess as a slim dark sleeve meeting the facade plane, and
+the glass sits at the back of it. `openings/OpeningBuilder.ts` resolves a
+schedule of walls and openings into that geometry; the three components in
+`openings/` render fixed windows, sliding doors, and the entrance pivot door.
+
+Repeated detail — skin panels, frames, mullions, fins, railings — is baked
+into merged geometries, so a facade's worth of members costs one draw call.
+The building is roughly 290 volumes and 3,600 triangles in about 48 draw
+calls, and repeated detail thins out on the lower quality tiers.
 
 To render the Phase 1 diagnostic massing instead, pass `content="placeholder"`
 to `ExperienceViewport`, `ExperienceCanvas`, or `Scene`.

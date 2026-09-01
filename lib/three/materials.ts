@@ -26,6 +26,15 @@ function createMaterials() {
     /** Reveals, trim, columns — the dark metal in the palette. */
     darkMetal: standard({ color: '#1d1e21', roughness: 0.42, metalness: 0.88 }),
     /**
+     * Window frames, mullions, railings, and columns. Deliberately far less
+     * metallic than `darkMetal`: with no environment map to reflect, a high
+     * metalness reads as flat black, and slim frames disappear against the
+     * glass behind them.
+     */
+    frameMetal: standard({ color: '#3b3630', roughness: 0.4, metalness: 0.3 }),
+    /** Dark timber, used only for the entrance leaf. */
+    wood: standard({ color: '#4b3a2b', roughness: 0.6, metalness: 0.04 }),
+    /**
      * Architectural glazing. Clearcoat rather than transmission: it reads as
      * deep reflective glass without the render-target cost transmission adds
      * on mobile GPUs. Double-sided so interiors are not hollow from behind.

@@ -1,5 +1,15 @@
-import { BoxGeometry, CylinderGeometry, PlaneGeometry } from 'three';
-import type { BoxSpec, ColumnSpec, PanelSpec, VillaConfig, VillaLayout } from './VillaTypes';
+import { BoxGeometry, CylinderGeometry } from 'three';
+import type {
+  BoxSpec,
+  ColumnSpec,
+  DetailTier,
+  Range,
+  VillaConfig,
+  VillaLayout,
+} from './VillaTypes';
+import { box, column, span } from './SpecBuilders';
+import { buildOpenings } from './openings/OpeningBuilder';
+import type { FacadeWall, WallOpening } from './openings/OpeningTypes';
 
 /**
  * Default proportions of the residence, in metres. Every measurement the
@@ -29,15 +39,15 @@ export const VILLA_CONFIG: VillaConfig = {
   glazingInset: 1.1,
 
   entranceWidth: 3.2,
-  entranceRecess: 3,
+  entranceRecess: 1.6,
   entranceOffsetX: -6,
   entranceVoidDepth: 7,
 
   canopyWidth: 8,
-  canopyDepth: 4,
-  canopyThickness: 0.4,
-  columnRadius: 0.24,
-  columnCount: 3,
+  canopyDepth: 2.8,
+  canopyThickness: 0.32,
+  columnRadius: 0.17,
+  columnCount: 2,
 
   upperFrontSetback: 1,
   upperTerraceDepth: 5,
@@ -49,48 +59,70 @@ export const VILLA_CONFIG: VillaConfig = {
   stairWidth: 6,
   stairTreads: 5,
   stairGoing: 0.5,
+
+  facadeSkinDepth: 0.24,
+  facadeRevealGap: 0.09,
+  frameWidth: 0.07,
+  frameDepth: 0.1,
+  glassThickness: 0.03,
+  mullionSpacing: 1.6,
+
+  finCount: 7,
+  finWidth: 0.18,
+  finDepth: 0.38,
+
+  railingHeight: 1.05,
+  railingPostSpacing: 2.4,
+
+  soffitInset: 0.2,
+  soffitDepth: 0.07,
 };
 
-type Range = readonly [number, number];
+/** Repeated facade elements thin out on weaker GPUs. */
+const DETAIL: Record<DetailTier, { mullionScale: number; fins: number }> = {
+  low: { mullionScale: 1.75, fins: 0 },
+  medium: { mullionScale: 1.25, fins: 0.6 },
+  high: { mullionScale: 1, fins: 1 },
+};
 
-const mid = (r: Range) => (r[0] + r[1]) / 2;
-const span = (r: Range) => r[1] - r[0];
-
-/** Authors a volume by its bounds, which reads far closer to a section drawing. */
-function box(key: string, x: Range, y: Range, z: Range): BoxSpec {
-  return {
-    key,
-    position: [mid(x), mid(y), mid(z)],
-    scale: [span(x), span(y), span(z)],
-  };
-}
-
-/** A glazing plane on the XY axis (facing ±Z) or YZ axis (facing ±X). */
-function panel(key: string, axis: 'z' | 'x', at: number, across: Range, y: Range): PanelSpec {
-  return axis === 'z'
-    ? {
-        key,
-        position: [mid(across), mid(y), at],
-        rotation: [0, 0, 0],
-        scale: [span(across), span(y), 1],
-      }
-    : {
-        key,
-        position: [at, mid(y), mid(across)],
-        rotation: [0, Math.PI / 2, 0],
-        scale: [span(across), span(y), 1],
-      };
-}
-
-function column(key: string, x: number, z: number, y: Range, radius: number): ColumnSpec {
-  return { key, position: [x, mid(y), z], scale: [radius, span(y), radius] };
+/**
+ * Distributes `count` openings of `width` evenly across a wall, inset from
+ * both ends. Window positions therefore follow the villa's dimensions
+ * rather than being placed by hand.
+ */
+function distribute(
+  keyPrefix: string,
+  across: Range,
+  y: Range,
+  count: number,
+  width: number,
+  margin: number,
+  options: Partial<WallOpening> = {},
+): WallOpening[] {
+  const usable = span(across) - margin * 2;
+  const step = usable / count;
+  return Array.from({ length: count }, (_, index) => {
+    const centre = across[0] + margin + step * (index + 0.5);
+    return {
+      key: `${keyPrefix}-${index}`,
+      kind: 'window',
+      across: [centre - width / 2, centre + width / 2] as Range,
+      y,
+      solidBehind: true,
+      ...options,
+    };
+  });
 }
 
 /**
  * Resolves a configuration into the complete building. Pure and deterministic:
  * the same config always produces the same layout, so callers can memoise it.
  */
-export function createVillaLayout(config: VillaConfig = VILLA_CONFIG): VillaLayout {
+export function createVillaLayout(
+  config: VillaConfig = VILLA_CONFIG,
+  detail: DetailTier = 'high',
+): VillaLayout {
+  const tier = DETAIL[detail];
   const halfW = config.width / 2;
   const halfD = config.depth / 2;
 
@@ -223,21 +255,7 @@ export function createVillaLayout(config: VillaConfig = VILLA_CONFIG): VillaLayo
       ]),
     ],
     // Roof terrace carved out of the west volume, held by a low parapet.
-    terrace: [
-      box('up-terrace-deck', [-halfW, entX1], slabY, [upperWestFrontZ, gfFrontZ]),
-      box(
-        'up-terrace-parapet-west',
-        [-halfW, -halfW + t],
-        [upperFloorY, upperFloorY + config.upperParapetHeight],
-        [upperWestFrontZ, gfFrontZ],
-      ),
-      box(
-        'up-terrace-parapet-front',
-        [-halfW, entX1],
-        [upperFloorY, upperFloorY + config.upperParapetHeight],
-        [gfFrontZ - t, gfFrontZ],
-      ),
-    ],
+    terrace: [box('up-terrace-deck', [-halfW, entX1], slabY, [upperWestFrontZ, gfFrontZ])],
   };
 
   // ── Roof ──────────────────────────────────────────────────────────────
@@ -286,73 +304,341 @@ export function createVillaLayout(config: VillaConfig = VILLA_CONFIG): VillaLayo
     ],
   };
 
-  // ── Glazing ───────────────────────────────────────────────────────────
-  const glassInsetY: Range = [groundY + 0.12, groundFloorTopY - 0.35];
-  const upperGlassY: Range = [upperFloorY + 0.15, upperFloorTopY - 0.15];
+  // ── Facade schedule ───────────────────────────────────────────────────
+  // Each wall names its structural face and the openings punched into it;
+  // the builder turns that into skin, frames, mullions, glass, and doors.
+  const gfWallY: Range = [groundY, groundFloorTopY];
+  const upWallY: Range = [upperFloorY, upperFloorTopY];
+  const livingY: Range = [groundY + 0.12, groundFloorTopY - 0.35];
+  const upperGlassY: Range = [upperFloorY + 0.2, upperFloorTopY - 0.25];
 
-  const glazing = {
-    openings: [
-      panel('glass-living-front', 'z', livingGlassZ, [livingGlassX1, eastWingWestX], glassInsetY),
-      panel(
-        'glass-entrance-back',
-        'z',
-        entranceBackZ,
-        [entX1 + t, entX2 - t],
-        [groundY + 0.1, groundFloorTopY],
+  const walls: FacadeWall[] = [
+    // Living volume opening onto the terrace — the main sliding door.
+    {
+      key: 'living-front',
+      axis: 'z',
+      facing: 1,
+      face: livingGlassZ,
+      across: [livingGlassX1, eastWingWestX],
+      y: livingY,
+      skin: false,
+      openings: [
+        {
+          key: 'living-slider',
+          kind: 'sliding',
+          across: [livingGlassX1, eastWingWestX],
+          y: livingY,
+          solidBehind: false,
+        },
+      ],
+    },
+    // The entrance sits at the back of the three-metre recess.
+    {
+      key: 'entrance',
+      axis: 'z',
+      facing: 1,
+      face: entranceBackZ,
+      across: [entX1 + t, entX2 - t],
+      y: [groundY + 0.1, groundFloorTopY],
+      skin: false,
+      openings: [
+        {
+          key: 'entrance-door',
+          kind: 'entrance',
+          across: [entX1 + t, entX2 - t],
+          y: [groundY + 0.1, groundFloorTopY],
+          solidBehind: false,
+        },
+      ],
+    },
+    // East ground floor: privacy-oriented, smaller and higher-silled.
+    {
+      key: 'gf-east',
+      axis: 'x',
+      facing: 1,
+      face: halfW,
+      across: [rearZ + config.rearBarDepth, gfFrontZ],
+      y: gfWallY,
+      skin: true,
+      stone: true,
+      openings: distribute(
+        'gf-east-window',
+        [rearZ + config.rearBarDepth, gfFrontZ],
+        [groundY + 0.9, groundFloorTopY - 0.7],
+        3,
+        1.1,
+        0.9,
+        { mullions: 0 },
       ),
-    ],
-    surfaces: [
-      panel(
-        'glass-west-slot',
-        'x',
-        -halfW - 0.01,
-        [rearZ + config.rearBarDepth + 1, gfFrontZ - 1],
-        [groundY + 0.5, groundFloorTopY - 0.5],
+    },
+    // West ground floor: one broad opening to the afternoon side.
+    {
+      key: 'gf-west',
+      axis: 'x',
+      facing: -1,
+      face: -halfW,
+      across: [rearZ + config.rearBarDepth, gfFrontZ],
+      y: gfWallY,
+      skin: true,
+      stone: true,
+      openings: [
+        {
+          key: 'gf-west-window',
+          kind: 'window',
+          across: [rearZ + config.rearBarDepth + 1.4, gfFrontZ - 1.4],
+          y: [groundY + 0.14, groundFloorTopY - 0.6],
+          solidBehind: true,
+        },
+      ],
+    },
+    // Rear ground floor: a service elevation, evenly punched.
+    {
+      key: 'gf-rear',
+      axis: 'z',
+      facing: -1,
+      face: rearZ,
+      across: [-halfW, halfW],
+      y: gfWallY,
+      skin: true,
+      openings: distribute(
+        'gf-rear-window',
+        [-halfW, halfW],
+        [groundY + 0.9, groundFloorTopY - 0.7],
+        4,
+        1.8,
+        1.6,
       ),
-      panel(
-        'glass-east-slot',
-        'x',
-        halfW + 0.01,
-        [rearZ + config.rearBarDepth + 1, gfFrontZ - 1],
-        [groundY + 0.5, groundFloorTopY - 0.5],
+    },
+    // Upper front, between the entrance void and the cantilever.
+    {
+      key: 'up-front',
+      axis: 'z',
+      facing: 1,
+      face: upperFrontZ,
+      across: [entX2, cantileverX1],
+      y: upWallY,
+      skin: true,
+      openings: [
+        {
+          key: 'up-front-window',
+          kind: 'window',
+          across: [entX2 + 0.5, cantileverX1 - 0.5],
+          y: upperGlassY,
+          solidBehind: true,
+        },
+      ],
+    },
+    // The cantilever front is the hero elevation: full-height glazing.
+    {
+      key: 'cantilever-front',
+      axis: 'z',
+      facing: 1,
+      face: cantileverFrontZ,
+      across: [cantileverX1, halfW],
+      y: upWallY,
+      skin: true,
+      openings: [
+        {
+          key: 'cantilever-window',
+          kind: 'window',
+          across: [cantileverX1 + 0.45, halfW - 0.45],
+          y: upperGlassY,
+          solidBehind: true,
+        },
+      ],
+    },
+    {
+      key: 'cantilever-east',
+      axis: 'x',
+      facing: 1,
+      face: halfW,
+      across: [upperFrontZ, cantileverFrontZ],
+      y: upWallY,
+      skin: true,
+      openings: [
+        {
+          key: 'cantilever-east-window',
+          kind: 'window',
+          across: [upperFrontZ + 0.45, cantileverFrontZ - 0.45],
+          y: upperGlassY,
+          solidBehind: true,
+        },
+      ],
+    },
+    // Upper east band, shaded by the fins added in the facade group.
+    {
+      key: 'up-east',
+      axis: 'x',
+      facing: 1,
+      face: halfW,
+      across: [rearZ, upperFrontZ],
+      y: upWallY,
+      skin: true,
+      openings: distribute(
+        'up-east-window',
+        [rearZ, upperFrontZ],
+        [upperFloorY + 0.65, upperFloorTopY - 0.65],
+        3,
+        2.6,
+        1.2,
       ),
-      panel(
-        'glass-upper-front',
-        'z',
-        upperFrontZ + 0.01,
-        [entX2 + reveal, cantileverX1],
-        upperGlassY,
+    },
+    // Upper west opens onto the roof terrace through a second slider.
+    {
+      key: 'up-west-terrace',
+      axis: 'z',
+      facing: 1,
+      face: upperWestFrontZ,
+      across: [-halfW, entX1],
+      y: upWallY,
+      skin: true,
+      openings: [
+        {
+          key: 'up-terrace-slider',
+          kind: 'sliding',
+          across: [-halfW + 0.8, entX1 - 0.8],
+          y: [upperFloorY + 0.2, upperFloorTopY - 0.45],
+          solidBehind: true,
+        },
+      ],
+    },
+    {
+      key: 'up-rear',
+      axis: 'z',
+      facing: -1,
+      face: rearZ,
+      across: [-halfW, halfW],
+      y: upWallY,
+      skin: true,
+      openings: distribute(
+        'up-rear-window',
+        [-halfW, halfW],
+        [upperFloorY + 0.65, upperFloorTopY - 0.75],
+        4,
+        2.2,
+        1.6,
       ),
-      panel(
-        'glass-cantilever-front',
-        'z',
-        cantileverFrontZ + 0.01,
-        [cantileverX1 + reveal, halfW - reveal],
-        upperGlassY,
-      ),
-      panel(
-        'glass-cantilever-east',
-        'x',
-        halfW + 0.01,
-        [upperFrontZ, cantileverFrontZ],
-        upperGlassY,
-      ),
-      panel(
-        'glass-upper-east-band',
-        'x',
-        halfW + 0.01,
-        [rearZ + 1.5, upperFrontZ - 1.5],
-        [upperFloorY + 0.9, upperFloorTopY - 0.5],
-      ),
-      panel(
-        'glass-upper-west',
-        'z',
-        upperWestFrontZ + 0.01,
-        [-halfW + 0.6, entX1 - 0.6],
-        [upperFloorY + 0.9, upperFloorTopY - 0.5],
-      ),
-    ],
-  };
+    },
+  ];
+
+  const openings = buildOpenings(walls, {
+    skinDepth: config.facadeSkinDepth,
+    revealGap: config.facadeRevealGap,
+    frameWidth: config.frameWidth,
+    frameDepth: config.frameDepth,
+    glassThickness: config.glassThickness,
+    mullionSpacing: config.mullionSpacing * tier.mullionScale,
+  });
+
+  // ── Facade detailing ──────────────────────────────────────────────────
+  const skin = config.facadeSkinDepth;
+  const si = config.soffitInset;
+  const sd = config.soffitDepth;
+
+  // Vertical fins shade the upper east band and give that elevation rhythm.
+  const finCount = Math.round(config.finCount * tier.fins);
+  const finRun: Range = [rearZ + 1, upperFrontZ - 1];
+  const fins: BoxSpec[] = Array.from({ length: finCount }, (_, index) => {
+    const step = span(finRun) / finCount;
+    const at = finRun[0] + step * (index + 0.5);
+    return box(
+      `fin-east-${index}`,
+      [halfW + skin, halfW + skin + config.finDepth],
+      [upperFloorY, upperFloorTopY],
+      [at - config.finWidth / 2, at + config.finWidth / 2],
+    );
+  });
+
+  // Soffits separate the horizontal planes and darken every underside.
+  const soffits: BoxSpec[] = [
+    box(
+      'soffit-canopy',
+      [canopyX1 + si, canopyX2 - si],
+      [groundFloorTopY - sd, groundFloorTopY],
+      [entranceBackZ + si, canopyFrontZ - si],
+    ),
+    box(
+      'soffit-cantilever',
+      [cantileverX1 + si, halfW + reveal - si],
+      [groundFloorTopY - sd, groundFloorTopY],
+      [upperFrontZ + si, cantileverFrontZ + reveal - si],
+    ),
+    box(
+      'soffit-roof-east',
+      [halfW + skin, halfW + ov - si],
+      [upperFloorTopY - sd, upperFloorTopY],
+      [rearZ - ov + si, upperFrontZ],
+    ),
+    box(
+      'soffit-roof-cantilever',
+      [cantileverX1 + si, halfW + ov - si],
+      [upperFloorTopY - sd, upperFloorTopY],
+      [cantileverFrontZ, cantileverFrontZ + ov - si],
+    ),
+    box(
+      'soffit-roof-rear',
+      [-halfW - ov + si, halfW + ov - si],
+      [upperFloorTopY - sd, upperFloorTopY],
+      [rearZ - ov + si, rearZ - skin],
+    ),
+  ];
+
+  // Caps and shadow gaps that keep large planes from reading as slabs.
+  const reveals: BoxSpec[] = [
+    box(
+      'parapet-cap-rear',
+      [-halfW - ov + inset - 0.04, halfW + ov - inset + 0.04],
+      [roofTopY + config.roofParapetHeight, roofTopY + config.roofParapetHeight + 0.07],
+      [rearZ - ov + inset - 0.04, rearZ - ov + inset + 0.24],
+    ),
+    box(
+      'parapet-cap-east',
+      [halfW + ov - inset - 0.24, halfW + ov - inset + 0.04],
+      [roofTopY + config.roofParapetHeight, roofTopY + config.roofParapetHeight + 0.07],
+      [rearZ - ov + inset - 0.04, cantileverFrontZ + ov - inset + 0.04],
+    ),
+    box(
+      'reveal-terrace-gap',
+      [-halfW, halfW],
+      [groundY + 0.12, groundY + 0.2],
+      [gfFrontZ - 0.06, gfFrontZ],
+    ),
+  ];
+
+  // ── Railings ──────────────────────────────────────────────────────────
+  // Glass balustrades replace solid parapets on the roof terrace.
+  const railBase = upperFloorY;
+  const railTop = railBase + config.railingHeight;
+  const glassTop = railTop - 0.07;
+  const railRuns: { key: string; axis: 'x' | 'z'; at: number; run: Range }[] = [
+    { key: 'terrace-front', axis: 'z', at: gfFrontZ - 0.09, run: [-halfW, entX1] },
+    { key: 'terrace-west', axis: 'x', at: -halfW + 0.09, run: [upperWestFrontZ, gfFrontZ] },
+    { key: 'terrace-void', axis: 'x', at: entX1 - 0.09, run: [upperWestFrontZ, gfFrontZ] },
+  ];
+
+  const railings: VillaLayout['railings'] = { glass: [], rails: [], posts: [] };
+
+  railRuns.forEach(({ key, axis, at, run }) => {
+    const along = (a: Range, thickness: number): [Range, Range] =>
+      axis === 'z'
+        ? [a, [at - thickness / 2, at + thickness / 2]]
+        : [[at - thickness / 2, at + thickness / 2], a];
+
+    const [gx, gz] = along(run, 0.024);
+    railings.glass.push(box(`rail-glass-${key}`, gx, [railBase + 0.06, glassTop], gz));
+
+    const [rx, rz] = along(run, 0.07);
+    railings.rails.push(box(`rail-top-${key}`, rx, [glassTop, railTop], rz));
+    railings.rails.push(box(`rail-base-${key}`, rx, [railBase, railBase + 0.09], rz));
+
+    const posts = Math.max(2, Math.round(span(run) / config.railingPostSpacing) + 1);
+    for (let i = 0; i < posts; i += 1) {
+      const p = run[0] + (span(run) * i) / (posts - 1);
+      const edge = i === 0 ? 0.03 : i === posts - 1 ? -0.03 : 0;
+      const [px, pz] = along([p + edge - 0.03, p + edge + 0.03], 0.06);
+      railings.posts.push(box(`rail-post-${key}-${i}`, px, [railBase, railTop], pz));
+    }
+  });
 
   // ── Columns ───────────────────────────────────────────────────────────
   const columnZ = canopyFrontZ - 0.5;
@@ -382,7 +668,9 @@ export function createVillaLayout(config: VillaConfig = VILLA_CONFIG): VillaLayo
     upperFloor,
     roof,
     terrace,
-    glazing,
+    openings,
+    facade: { fins, soffits, reveals },
+    railings,
     columns,
     stairs,
     levels: { groundY, groundFloorTopY, upperFloorY, upperFloorTopY, roofTopY },
@@ -391,21 +679,19 @@ export function createVillaLayout(config: VillaConfig = VILLA_CONFIG): VillaLayo
 
 type VillaGeometries = {
   box: BoxGeometry;
-  panel: PlaneGeometry;
   column: CylinderGeometry;
 };
 
 let geometryCache: VillaGeometries | null = null;
 
 /**
- * Three unit primitives shared by every mesh in the villa — each spec is
- * applied as a transform, so the building costs three geometry allocations
+ * Two unit primitives shared by every mesh in the villa — each spec is
+ * applied as a transform, so the building costs two geometry allocations
  * rather than one per volume.
  */
 export function getVillaGeometries(): VillaGeometries {
   geometryCache ??= {
     box: new BoxGeometry(1, 1, 1),
-    panel: new PlaneGeometry(1, 1),
     column: new CylinderGeometry(1, 1, 1, 12),
   };
   return geometryCache;

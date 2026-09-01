@@ -1,4 +1,11 @@
 import type { Vector3Tuple } from 'three';
+import type { OpeningsGeometry } from './openings/OpeningTypes';
+
+/** An inclusive pair of bounds on one axis. */
+export type Range = readonly [number, number];
+
+/** Detail level for repeated facade elements, driven by the quality tier. */
+export type DetailTier = 'low' | 'medium' | 'high';
 
 /**
  * Every dimension of the residence, in metres. Phase 3's configurator will
@@ -59,20 +66,33 @@ export type VillaConfig = {
   stairWidth: number;
   stairTreads: number;
   stairGoing: number;
+
+  // ── Facade detailing ────────────────────────────────────────────────
+  /** Thickness of the punched facade layer, and so the window recess depth. */
+  facadeSkinDepth: number;
+  /** Shadow line left beneath each skin panel. */
+  facadeRevealGap: number;
+  frameWidth: number;
+  frameDepth: number;
+  glassThickness: number;
+  /** Target spacing between vertical mullions, before the detail tier. */
+  mullionSpacing: number;
+
+  finCount: number;
+  finWidth: number;
+  finDepth: number;
+
+  railingHeight: number;
+  railingPostSpacing: number;
+
+  soffitInset: number;
+  soffitDepth: number;
 };
 
 /** An axis-aligned volume, resolved to a unit-cube transform. */
 export type BoxSpec = {
   key: string;
   position: Vector3Tuple;
-  scale: Vector3Tuple;
-};
-
-/** A flat glazing surface, resolved to a unit-plane transform. */
-export type PanelSpec = {
-  key: string;
-  position: Vector3Tuple;
-  rotation: Vector3Tuple;
   scale: Vector3Tuple;
 };
 
@@ -93,12 +113,12 @@ export type VillaLayout = {
   upperFloor: { mass: BoxSpec[]; cantilever: BoxSpec[]; slab: BoxSpec[]; terrace: BoxSpec[] };
   roof: { slabs: BoxSpec[]; parapets: BoxSpec[] };
   terrace: { deck: BoxSpec[]; trim: BoxSpec[] };
-  glazing: {
-    /** Glass spanning a genuine void between volumes — reads through. */
-    openings: PanelSpec[];
-    /** Glass applied to the face of a solid volume — reads as a window. */
-    surfaces: PanelSpec[];
-  };
+  /** Frames, glazing, doors, and the punched facade skin. */
+  openings: OpeningsGeometry;
+  /** Fins, soffits, and reveals that give the elevations depth. */
+  facade: { fins: BoxSpec[]; soffits: BoxSpec[]; reveals: BoxSpec[] };
+  /** Glass balustrades to the upper terrace. */
+  railings: { glass: BoxSpec[]; rails: BoxSpec[]; posts: BoxSpec[] };
   columns: ColumnSpec[];
   stairs: BoxSpec[];
   /** Derived levels other systems (camera, future tours) may need. */

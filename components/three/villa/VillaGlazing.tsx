@@ -1,22 +1,21 @@
 'use client';
 
-import { getMaterials } from '@/lib/three/materials';
-import { Panels } from './VillaPrimitives';
+import { EntranceDoor } from './openings/EntranceDoor';
+import { SlidingDoor } from './openings/SlidingDoor';
+import { WindowSystem } from './openings/WindowSystem';
 import type { VillaLayout } from './VillaTypes';
 
 /**
- * Floor-to-ceiling glazing. Openings span a genuine void between volumes and
- * are transparent; surface panes sit on the face of a solid volume and are
- * opaque, so they read as windows rather than tinted film. Frames, mullions,
- * and sliding panels arrive in Phase 2B.
+ * Every opening in the building. The three systems below share one schedule
+ * resolved from the villa layout, so window positions, mullion spacing, and
+ * door widths all follow the villa's own dimensions.
  */
 export function VillaGlazing({ layout }: { layout: VillaLayout }) {
-  const materials = getMaterials();
-
   return (
     <group name="Glazing">
-      <Panels specs={layout.glazing.openings} material={materials.glazing} />
-      <Panels specs={layout.glazing.surfaces} material={materials.glazingSurface} />
+      <WindowSystem openings={layout.openings} />
+      <SlidingDoor openings={layout.openings} />
+      <EntranceDoor openings={layout.openings} />
     </group>
   );
 }

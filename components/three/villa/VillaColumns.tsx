@@ -14,7 +14,7 @@ export function VillaColumns({ layout }: { layout: VillaLayout }) {
 
   return (
     <group name="Columns">
-      <Supports specs={layout.columns} material={materials.darkMetal} />
+      <Supports specs={layout.columns} material={materials.frameMetal} />
     </group>
   );
 }

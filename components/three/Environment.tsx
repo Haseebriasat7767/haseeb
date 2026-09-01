@@ -45,6 +45,8 @@ export function SceneEnvironment({ shadows, shadowMapSize }: EnvironmentProps) {
         shadow-camera-top={LIGHTING.shadowExtent}
         shadow-camera-bottom={-LIGHTING.shadowExtent}
         shadow-bias={-0.0004}
+        // Removes shadow acne where the sun grazes the large horizontal planes.
+        shadow-normalBias={0.05}
       />
 
       <directionalLight

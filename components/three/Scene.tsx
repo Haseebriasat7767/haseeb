@@ -70,7 +70,12 @@ export function Scene({
 
       <Suspense fallback={null}>
         <Terrain />
-        {children ?? (content === 'placeholder' ? <PlaceholderMassing /> : <ProceduralVilla />)}
+        {children ??
+          (content === 'placeholder' ? (
+            <PlaceholderMassing />
+          ) : (
+            <ProceduralVilla detail={quality.tier} />
+          ))}
         <ReadySignal onReady={onReady} />
       </Suspense>
     </Canvas>
