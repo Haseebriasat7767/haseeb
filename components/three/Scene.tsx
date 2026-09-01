@@ -8,6 +8,8 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { DEFAULT_VIEW } from '@/lib/three/scene-config';
 import type { CameraMode, CameraView, SceneContent } from '@/types';
 import { CameraController } from './CameraController';
+import { PerformanceMonitor } from './dev/PerformanceMonitor';
+import type { PerformanceSnapshot } from './dev/performance-types';
 import { SceneEnvironment } from './Environment';
 import { PlaceholderMassing } from './PlaceholderMassing';
 import { Terrain } from './Terrain';
@@ -22,6 +24,10 @@ type SceneProps = {
   content?: SceneContent;
   /** Overrides `content` entirely when custom scene contents are needed. */
   children?: ReactNode;
+  /** Mounts the dev-only performance sampler; a no-op when omitted. */
+  diagnosticsEnabled?: boolean;
+  /** Receives a throttled metrics snapshot (~4 Hz) while diagnostics run. */
+  onMetrics?: (snapshot: PerformanceSnapshot) => void;
 };
 
 /** Signals readiness from inside Suspense — no timers, no fake delay. */
@@ -44,6 +50,8 @@ export function Scene({
   onReady,
   content = 'villa',
   children,
+  diagnosticsEnabled = false,
+  onMetrics,
 }: SceneProps) {
   const quality = useQualityTier();
   const reducedMotion = useReducedMotion();
@@ -67,6 +75,10 @@ export function Scene({
 
       <CameraController view={view} mode={mode} reducedMotion={reducedMotion} />
       <SceneEnvironment shadows={quality.shadows} shadowMapSize={quality.shadowMapSize} />
+
+      {diagnosticsEnabled && onMetrics ? (
+        <PerformanceMonitor qualityTier={quality.tier} onUpdate={onMetrics} />
+      ) : null}
 
       <Suspense fallback={null}>
         <Terrain />
