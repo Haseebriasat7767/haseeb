@@ -139,6 +139,63 @@ calls for the whole landscape. Density and canopy/shrub cluster counts
 thin out on the existing `low`/`medium`/`high` detail tiers — there is no
 second quality system.
 
+### Procedural material realism
+
+`lib/three/materials.ts` upgrades every "natural" material — stone,
+concrete, wood, bark, foliage, grass, soil, and the darker metals — with
+subtle deterministic surface variation, entirely without a texture. A
+shared `withVariation()` helper patches each material's shader via
+`onBeforeCompile`, injecting a small value-noise function (built from a
+handful of `sin`/`fract` operations, no texture fetch) that reads the
+fragment's real world position and nudges albedo and roughness by a few
+percent. Two offset noise samples are blended per material so the pattern
+never tiles obviously, and an optional per-axis anisotropy compresses the
+noise cells along one axis — stretched tall on `wood` and `bark` so it
+reads as directional grain rather than blotchy stone-like patches. Every
+material has its own fixed integer seed, so identical geometry at
+different world positions never samples identically, and the same
+material always compiles to the same shader — no `Math.random()`,
+fully deterministic.
+
+Because this costs a handful of ALU instructions per fragment and no
+texture, render target, or extra draw call, it runs identically across
+`low`/`medium`/`high` — the existing tier system keeps controlling the
+parameters that actually cost GPU time (DPR, shadow map resolution,
+antialiasing, geometry/cluster counts), rather than gaining a redundant
+second tiering scheme for material complexity.
+
+Per material:
+
+- **Stone** — lightened and warmed toward honed limestone/travertine,
+  coarse noise cells so it reads as large quarried slabs rather than
+  aggregate. Used for the foundation, stairs, pool coping, retaining
+  edges, planters, and landscape rocks.
+- **Concrete** — a refined fair-faced tone, finer-grained noise for a
+  subtle aggregate/formwork character up close that disappears into a
+  flat premium surface from the hero camera.
+- **Wood** — darkened and warmed, anisotropic noise compressed vertically
+  so the entrance leaf reads as grain running its height.
+- **Metals** — `darkMetal` lifted off pure black and pulled back from
+  maximum metalness so it still catches the hemisphere fill in shadow
+  instead of reading as a flat cutout; `frameMetal` and `bronze` tuned
+  distinctly so structural trim, window framing, and hardware accents
+  stay visually separate.
+- **Glass** — deepened tint, slightly higher reflectivity and a crisper
+  clearcoat response; still no transmission/refraction, unchanged from
+  the Phase 2B/2C performance-conscious decision. Left free of the
+  procedural-noise pass — glazing should read flawless and machined.
+- **Pool water** — shifted toward a deeper turquoise, with a very
+  low-amplitude noise pass reading as gentle depth variation across the
+  surface. Still a single static plane — no reflection target, no
+  simulation.
+- **Landscape** — bark, both foliage tones, grass, and soil each carry
+  their own seed and scale, so the many shrubs/blades merged into one
+  mesh each read as individually varied rather than mathematically
+  identical, purely from where they sit in world space.
+
+No material assignment, geometry, layout, or dependency changed in this
+pass — only material definitions in `lib/three/materials.ts`.
+
 ## External Asset Policy & Audit
 
 | Asset / Resource                 | Status       |
@@ -279,28 +336,34 @@ are centralized in `PERFORMANCE_BUDGET` for easy retuning:
 These are runtime evaluation targets — a slow machine varying below them is
 not a CI failure.
 
-### Current baseline (Phase 2D)
+### Current baseline (Phase 2E)
 
 Renderer counters, read directly from `renderer.info` on the default villa
 
 - site + landscape view:
 
-| Metric     | Phase 2B.5 | Phase 2C | Phase 2D |
-| ---------- | ---------- | -------- | -------- |
-| Draw calls | 58         | 65       | 74       |
-| Triangles  | 3,590      | 4,046    | 5,964    |
-| Geometries | 21         | 27       | 36       |
-| Textures   | 1          | 1        | 1        |
+| Metric     | Phase 2B.5 | Phase 2C | Phase 2D | Phase 2E |
+| ---------- | ---------- | -------- | -------- | -------- |
+| Draw calls | 58         | 65       | 74       | 74       |
+| Triangles  | 3,590      | 4,046    | 5,964    | 5,964    |
+| Geometries | 21         | 27       | 36       | 36       |
+| Textures   | 1          | 1        | 1        | 1        |
 
-The landscape — feature trees, shrubs, grass, hedges, rocks, and planter
-planting — added 9 draw calls (one merged mesh per foliage category,
-regardless of element count) and about 1,900 triangles. Both remain
-comfortably inside the "Excellent" band, with roughly 8x headroom left on
-the triangle budget and 25 draw calls of headroom against the absolute
-engineering ceiling. Frame-time and FPS numbers were exercised in this
-sandbox using headless Chromium with SwiftShader — a
-software GL rasterizer, not a GPU — so those figures reflect the
-instrumentation working correctly, not real-world performance:
+Phase 2E changed material definitions only — no geometry, mesh, or draw
+call was added or removed, so every counter above is identical to Phase
+2D. The procedural surface-variation shaders (see above) run inside the
+existing materials' compiled programs, at no additional draw-call or
+geometry cost.
+
+Frame-time and FPS numbers were exercised in this sandbox using headless
+Chromium with SwiftShader — a software GL rasterizer, not a GPU — so those
+figures reflect the instrumentation working correctly, not real-world
+performance. The measured Phase 2E frame time under SwiftShader was
+modestly higher than Phase 2D's (roughly 5 FPS vs. 7 FPS in this sandbox):
+the injected noise adds real per-fragment ALU work, and a CPU-based
+rasterizer pays proportionally more for that than dedicated GPU shader
+cores would. This is expected software-rasterizer overhead, not a claim
+about real-hardware cost, which has not been measured:
 
 ```
 Runtime FPS (real desktop GPU): not yet measured
