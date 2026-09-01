@@ -139,6 +139,65 @@ calls for the whole landscape. Density and canopy/shrub cluster counts
 thin out on the existing `low`/`medium`/`high` detail tiers — there is no
 second quality system.
 
+## External Asset Policy & Audit
+
+| Asset / Resource                 | Status       |
+| -------------------------------- | ------------ |
+| **External 3D assets**           | **NONE — 0** |
+| **External textures**            | **NONE — 0** |
+| **HDRIs / environment maps**     | **NONE — 0** |
+| **External asset URLs**          | **NONE — 0** |
+| **3D model loaders**             | **NONE — 0** |
+| **Texture loaders**              | **NONE — 0** |
+| **Downloaded vegetation models** | **NONE — 0** |
+| **New asset dependencies**       | **NONE — 0** |
+
+> **AURELIA's 3D scene is 100% procedurally generated in TypeScript/Three.js.
+> No externally created or downloaded 3D models, textures, HDRIs,
+> environment maps, or asset URLs are used.**
+
+Prohibited external model formats: `.glb`, `.gltf`, `.fbx`, `.obj`, `.blend`,
+`.dae`, `.3ds`, `.abc`.
+
+No Meshy, Sketchfab, Poly Haven, downloaded Blender models, downloaded
+vegetation models, stock 3D assets, external model repositories, or
+equivalent asset services are used.
+
+No JPG, JPEG, PNG, WEBP, HDR, EXR, downloaded material textures, bark
+textures, leaf textures, ground textures, normal maps, roughness maps,
+displacement maps, or external texture URLs are used.
+
+No HDRI files, downloaded environment maps, remote environment maps, or
+external skybox assets are used.
+
+Visual variation is generated procedurally through Three.js geometry, solid
+material properties, deterministic vertex deformation, seeded placement,
+primitive geometry, and scene lighting.
+
+### Phase 2D Audit
+
+```text
+External 3D assets: 0
+External textures: 0
+HDRIs: 0
+External asset URLs: 0
+3D model loaders: 0
+Texture loaders: 0
+HDRI/environment loaders: 0
+New asset dependencies: 0
+Math.random() calls in landscape generation: 0
+```
+
+Phase 2D landscaping is entirely procedural and introduces no external asset
+dependency.
+
+The `TEXTURES` counter the performance overlay reports (currently `1`) is
+`renderer.info.memory.textures` — a runtime GPU resource count Three.js
+maintains internally (render targets and internal buffers included), not a
+count of imported image files. It does not indicate an external texture
+asset was loaded; the audit above, which covers external/downloaded texture
+assets specifically, remains zero.
+
 ## Performance diagnostics
 
 A development-only HUD reports real runtime behaviour — FPS, frame time,
