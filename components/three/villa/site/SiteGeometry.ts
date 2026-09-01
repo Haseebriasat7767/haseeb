@@ -353,6 +353,23 @@ export function createSiteLayout(
     },
     retaining,
     planters,
-    bounds: { deckX, deckZ, loungeX, loungeZ },
+    bounds: {
+      deckX,
+      deckZ,
+      deckY,
+      poolX,
+      poolZ,
+      loungeX,
+      loungeZ,
+      loungeFloorX: [stepsRunX1, loungeX[1]],
+      loungeFloorY,
+      approachX,
+      approachZ: [
+        approachStartZ,
+        approachStartZ +
+          (approach.slabCount - 1) * (approach.slabLength + approach.slabGap) +
+          approach.slabLength,
+      ],
+    },
   };
 }

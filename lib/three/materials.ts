@@ -79,6 +79,16 @@ function createMaterials() {
     }),
     /** Dark plaster pool interior — basin, steps, and the infinity channel. */
     poolInterior: standard({ color: '#0d1416', roughness: 0.88, metalness: 0 }),
+    /** Tree trunks and major branches. */
+    bark: standard({ color: '#463a2e', roughness: 0.92, metalness: 0 }),
+    /** Sunlit foliage — canopy, shrubs, hedges. Muted sage, not garden green. */
+    foliageMid: standard({ color: '#5c6a4c', roughness: 0.88, metalness: 0 }),
+    /** Shadowed foliage, layered under `foliageMid` for depth without a texture. */
+    foliageDark: standard({ color: '#3a4433', roughness: 0.92, metalness: 0 }),
+    /** Ornamental grass — warmer and drier than the foliage greens. */
+    grass: standard({ color: '#7c8259', roughness: 0.85, metalness: 0 }),
+    /** Exposed soil in planting beds and planter tops. */
+    soil: standard({ color: '#2b2318', roughness: 1, metalness: 0 }),
   };
 }
 

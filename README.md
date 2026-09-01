@@ -107,6 +107,38 @@ approach path. Repeated detail (paving, planters, retaining) is merged the
 same way the facade is — a handful of draw calls regardless of how many
 slabs or steps a given run contains.
 
+### The procedural landscape
+
+`components/three/villa/landscape/` plants the site: feature trees, shrubs,
+ornamental grass, hedges, rocks, and planting on the Phase 2C planters —
+every element generated from geometry, never a texture or a downloaded
+model. `LandscapeGeometry.ts` holds `LANDSCAPE_CONFIG` and
+`createLandscapeLayout`, the same pure-function pattern as the villa and
+site; `LandscapeExterior.tsx` builds its `LandscapeContext` from
+`VillaPlan` and the site's own resolved bounds (calling the same
+`createSiteLayout` the site itself calls), so beds, poolside planting, and
+the entrance trees line up with the real paving rather than a guessed
+coordinate.
+
+Two techniques do the actual generation. A **deformed icosahedron** —
+`IcosahedronGeometry(radius, 0)` with each vertex nudged along its own
+direction from centre by a hash of its own position — is the one primitive
+behind canopy clusters, shrub blobs, and rocks; hashing by position rather
+than drawing from a random stream keeps shared corners in sync, so
+adjacent faces never crack apart. **Tapered cylinders oriented between two
+points** (`Quaternion.setFromUnitVectors`, the standard three.js technique
+for "a cylinder from A to B") build every trunk and branch. Grass blades
+are a single low-poly cone each. Landscape generation never calls
+`Math.random()` — one seeded PRNG (mulberry32, fixed seed) drives every
+placement, so the same configuration always produces the same layout.
+
+Every category — trunks, two foliage tones of canopy, two of shrub, all
+grass, hedges, rocks, planter soil — is merged into exactly one mesh
+regardless of how many trees, shrubs, or blades it contains: nine draw
+calls for the whole landscape. Density and canopy/shrub cluster counts
+thin out on the existing `low`/`medium`/`high` detail tiers — there is no
+second quality system.
+
 ## Performance diagnostics
 
 A development-only HUD reports real runtime behaviour — FPS, frame time,
@@ -188,24 +220,26 @@ are centralized in `PERFORMANCE_BUDGET` for easy retuning:
 These are runtime evaluation targets — a slow machine varying below them is
 not a CI failure.
 
-### Current baseline (Phase 2C)
+### Current baseline (Phase 2D)
 
 Renderer counters, read directly from `renderer.info` on the default villa
 
-- site view:
+- site + landscape view:
 
-| Metric     | Phase 2B.5 | Phase 2C |
-| ---------- | ---------- | -------- |
-| Draw calls | 58         | 65       |
-| Triangles  | 3,590      | 4,046    |
-| Geometries | 21         | 27       |
-| Textures   | 1          | 1        |
+| Metric     | Phase 2B.5 | Phase 2C | Phase 2D |
+| ---------- | ---------- | -------- | -------- |
+| Draw calls | 58         | 65       | 74       |
+| Triangles  | 3,590      | 4,046    | 5,964    |
+| Geometries | 21         | 27       | 36       |
+| Textures   | 1          | 1        | 1        |
 
-The pool, deck, approach path, planters, and retaining edges added 7 draw
-calls and about 450 triangles — both still well inside the "Excellent"
-band, with over 30x headroom left on the triangle budget. Frame-time and
-FPS numbers were
-exercised in this sandbox using headless Chromium with SwiftShader — a
+The landscape — feature trees, shrubs, grass, hedges, rocks, and planter
+planting — added 9 draw calls (one merged mesh per foliage category,
+regardless of element count) and about 1,900 triangles. Both remain
+comfortably inside the "Excellent" band, with roughly 8x headroom left on
+the triangle budget and 25 draw calls of headroom against the absolute
+engineering ceiling. Frame-time and FPS numbers were exercised in this
+sandbox using headless Chromium with SwiftShader — a
 software GL rasterizer, not a GPU — so those figures reflect the
 instrumentation working correctly, not real-world performance:
 

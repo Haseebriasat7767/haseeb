@@ -13,6 +13,7 @@ import { VillaRoof } from './VillaRoof';
 import { VillaStairs } from './VillaStairs';
 import { VillaTerrace } from './VillaTerrace';
 import { VillaUpperFloor } from './VillaUpperFloor';
+import { LandscapeExterior } from './landscape/LandscapeExterior';
 import { SiteExterior } from './site/SiteExterior';
 
 type ProceduralVillaProps = {
@@ -54,6 +55,7 @@ export function ProceduralVilla({ config, detail = 'high' }: ProceduralVillaProp
       <VillaColumns layout={layout} />
       <VillaStairs layout={layout} />
       <SiteExterior plan={layout.plan} detail={detail} />
+      <LandscapeExterior plan={layout.plan} detail={detail} />
     </group>
   );
 }

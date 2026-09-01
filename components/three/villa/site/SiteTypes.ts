@@ -89,6 +89,19 @@ export type SiteLayout = {
   };
   retaining: BoxSpec[];
   planters: BoxSpec[];
-  /** Deck bounds, exposed for planter/edge placement and future landscaping. */
-  bounds: { deckX: Range; deckZ: Range; loungeX: Range; loungeZ: Range };
+  /** Plan lines exposed for planter/edge placement and the landscape system. */
+  bounds: {
+    deckX: Range;
+    deckZ: Range;
+    deckY: number;
+    poolX: Range;
+    poolZ: Range;
+    loungeX: Range;
+    loungeZ: Range;
+    /** Lounge floor actually walkable — excludes the stepped run. */
+    loungeFloorX: Range;
+    loungeFloorY: number;
+    approachX: Range;
+    approachZ: Range;
+  };
 };
