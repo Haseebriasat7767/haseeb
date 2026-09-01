@@ -663,6 +663,20 @@ export function createVillaLayout(
   });
 
   return {
+    plan: {
+      halfWidth: halfW,
+      halfDepth: halfD,
+      frontZ: gfFrontZ,
+      plinthFrontZ,
+      terraceFrontZ: plinthFrontZ - 0.2,
+      plinthHalfWidth: halfW + config.foundationMargin,
+      groundY,
+      entranceOffsetX: config.entranceOffsetX,
+      entranceStairsX: [stairX1, stairX2],
+      entranceStairsOuterZ: plinthFrontZ + config.stairTreads * config.stairGoing,
+      livingAxisX: [livingGlassX1, eastWingWestX],
+      cantileverAxisX: [cantileverX1, halfW],
+    },
     foundation,
     groundFloor,
     upperFloor,

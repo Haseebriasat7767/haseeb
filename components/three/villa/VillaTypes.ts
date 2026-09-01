@@ -104,10 +104,38 @@ export type ColumnSpec = {
 };
 
 /**
+ * Key plan lines derived from the villa envelope. Exposed so systems built
+ * around the villa — the site, later a landscape — can position themselves
+ * from the villa's actual geometry instead of guessing coordinates.
+ */
+export type VillaPlan = {
+  halfWidth: number;
+  halfDepth: number;
+  /** Ground-floor / living-glass front line. */
+  frontZ: number;
+  /** Outer edge of the plinth — where the paved terrace gives way to site. */
+  plinthFrontZ: number;
+  /** Outer edge of the terrace deck itself (just inside the plinth edge). */
+  terraceFrontZ: number;
+  plinthHalfWidth: number;
+  groundY: number;
+  entranceOffsetX: number;
+  /** X extent of the existing front-door approach stairs. */
+  entranceStairsX: Range;
+  /** Z at which the existing approach stairs meet grade. */
+  entranceStairsOuterZ: number;
+  /** X extent of the living-room sliding door. */
+  livingAxisX: Range;
+  /** X extent of the upper-floor cantilever above. */
+  cantileverAxisX: Range;
+};
+
+/**
  * The fully resolved building. Groups mirror the scene-graph hierarchy so a
  * later phase can address any part of the villa by name.
  */
 export type VillaLayout = {
+  plan: VillaPlan;
   foundation: { plinth: BoxSpec[]; reveal: BoxSpec[] };
   groundFloor: { mass: BoxSpec[]; recess: BoxSpec[]; entrance: BoxSpec[] };
   upperFloor: { mass: BoxSpec[]; cantilever: BoxSpec[]; slab: BoxSpec[]; terrace: BoxSpec[] };

@@ -13,6 +13,7 @@ import { VillaRoof } from './VillaRoof';
 import { VillaStairs } from './VillaStairs';
 import { VillaTerrace } from './VillaTerrace';
 import { VillaUpperFloor } from './VillaUpperFloor';
+import { SiteExterior } from './site/SiteExterior';
 
 type ProceduralVillaProps = {
   /** Partial override of the default proportions. */
@@ -52,6 +53,7 @@ export function ProceduralVilla({ config, detail = 'high' }: ProceduralVillaProp
       <VillaRailings layout={layout} />
       <VillaColumns layout={layout} />
       <VillaStairs layout={layout} />
+      <SiteExterior plan={layout.plan} detail={detail} />
     </group>
   );
 }

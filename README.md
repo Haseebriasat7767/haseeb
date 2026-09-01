@@ -88,6 +88,25 @@ calls, and repeated detail thins out on the lower quality tiers.
 To render the Phase 1 diagnostic massing instead, pass `content="placeholder"`
 to `ExperienceViewport`, `ExperienceCanvas`, or `Scene`.
 
+### The exterior site
+
+`components/three/villa/site/` extends the villa onto its own site — pool,
+deck, approach path, planters, and the retaining edges that ground them —
+as a continuation of the terrace axis rather than a feature bolted on
+beside the house. `SiteGeometry.ts` holds `SITE_CONFIG` and
+`createSiteLayout`, a pure function exactly like the villa's own
+`createVillaLayout`; it positions everything from `VillaLayout.plan` (the
+villa's own plan lines — envelope, terrace edge, entrance stairs, living
+axis), so nothing is placed by a guessed coordinate. Steps down from the
+terrace lead onto a deck of large paving slabs framing the infinity pool;
+the pool's far wall is a shorter weir with an overflow channel behind it,
+so water reads as running to the edge instead of being held by a visible
+parapet. A sunken lounge with its own broad stepped edge sits east of the
+deck, and the existing entrance stairs continue as a stepping-stone
+approach path. Repeated detail (paving, planters, retaining) is merged the
+same way the facade is — a handful of draw calls regardless of how many
+slabs or steps a given run contains.
+
 ## Performance diagnostics
 
 A development-only HUD reports real runtime behaviour — FPS, frame time,
@@ -169,19 +188,23 @@ are centralized in `PERFORMANCE_BUDGET` for easy retuning:
 These are runtime evaluation targets — a slow machine varying below them is
 not a CI failure.
 
-### Current baseline (Phase 2B.5)
+### Current baseline (Phase 2C)
 
 Renderer counters, read directly from `renderer.info` on the default villa
-view:
 
-| Metric     | Value |
-| ---------- | ----- |
-| Draw calls | 58    |
-| Triangles  | 3,590 |
-| Geometries | 21    |
-| Textures   | 1     |
+- site view:
 
-Both are well inside the "Excellent" band. Frame-time and FPS numbers were
+| Metric     | Phase 2B.5 | Phase 2C |
+| ---------- | ---------- | -------- |
+| Draw calls | 58         | 65       |
+| Triangles  | 3,590      | 4,046    |
+| Geometries | 21         | 27       |
+| Textures   | 1          | 1        |
+
+The pool, deck, approach path, planters, and retaining edges added 7 draw
+calls and about 450 triangles — both still well inside the "Excellent"
+band, with over 30x headroom left on the triangle budget. Frame-time and
+FPS numbers were
 exercised in this sandbox using headless Chromium with SwiftShader — a
 software GL rasterizer, not a GPU — so those figures reflect the
 instrumentation working correctly, not real-world performance:

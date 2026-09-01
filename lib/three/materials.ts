@@ -63,6 +63,22 @@ function createMaterials() {
       clearcoatRoughness: 0.04,
       reflectivity: 0.6,
     }),
+    /**
+     * Pool water. Clearcoat gives a wet specular response without the cost
+     * of transmission/refraction — deliberately cheap, per the Phase 2C
+     * constraint against reflection render targets or simulated water.
+     */
+    poolWater: new MeshPhysicalMaterial({
+      color: '#0a2226',
+      roughness: 0.1,
+      metalness: 0.05,
+      clearcoat: 1,
+      clearcoatRoughness: 0.08,
+      transparent: true,
+      opacity: 0.88,
+    }),
+    /** Dark plaster pool interior — basin, steps, and the infinity channel. */
+    poolInterior: standard({ color: '#0d1416', roughness: 0.88, metalness: 0 }),
   };
 }
 
