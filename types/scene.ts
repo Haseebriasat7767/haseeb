@@ -12,6 +12,9 @@ export type CameraView = {
 /** Camera behaviour modes the scene supports. */
 export type CameraMode = 'orbit' | 'cinematic' | 'fixed';
 
+/** Which building the Canvas renders. */
+export type SceneContent = 'villa' | 'placeholder';
+
 /** Rendering tier resolved from device capability, not user agent alone. */
 export type QualityTier = 'low' | 'medium' | 'high';
 

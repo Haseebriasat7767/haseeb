@@ -75,8 +75,8 @@ export function CameraController({
           enablePan={false}
           enableDamping
           dampingFactor={0.06}
-          minDistance={16}
-          maxDistance={80}
+          minDistance={24}
+          maxDistance={130}
           minPolarAngle={0.2}
           maxPolarAngle={Math.PI / 2.15}
           autoRotate={!reducedMotion}

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import { cn } from '@/lib/utils/cn';
-import type { CameraMode, CameraView } from '@/types';
+import type { CameraMode, CameraView, SceneContent } from '@/types';
 
 const ExperienceCanvas = dynamic(
   () => import('./ExperienceCanvas').then((mod) => mod.ExperienceCanvas),
@@ -15,6 +15,8 @@ const ExperienceCanvas = dynamic(
 type ExperienceViewportProps = {
   view?: CameraView;
   mode?: CameraMode;
+  /** `placeholder` renders the Phase 1 diagnostic massing instead. */
+  content?: SceneContent;
   className?: string;
   /** Accessible description of what the canvas depicts. */
   label?: string;
@@ -28,6 +30,7 @@ type ExperienceViewportProps = {
 export function ExperienceViewport({
   view,
   mode,
+  content,
   className,
   label = 'Interactive three-dimensional view of the residence',
 }: ExperienceViewportProps) {
@@ -63,7 +66,7 @@ export function ExperienceViewport({
       {webgl === false ? (
         <WebGLFallback reason="unsupported" />
       ) : webgl && inView ? (
-        <ExperienceCanvas view={view} mode={mode} />
+        <ExperienceCanvas view={view} mode={mode} content={content} />
       ) : null}
     </div>
   );

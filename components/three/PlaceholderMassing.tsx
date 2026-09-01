@@ -8,10 +8,10 @@ import { SITE_GEOMETRY } from '@/lib/three/scene-config';
 /**
  * PHASE 1 PLACEHOLDER ONLY.
  *
- * A ground plane, a podium, and two architectural blocks — just enough to
- * prove the render pipeline, lighting, and shadows work. Phase 2 replaces
- * this with procedurally generated villa geometry; the surrounding scene
- * architecture does not need to change.
+ * A podium and two architectural blocks — just enough to prove the render
+ * pipeline, lighting, and shadows work. Superseded as the default scene
+ * content by `ProceduralVilla`, but kept as a diagnostic: pass
+ * `content="placeholder"` to `Scene` to render it instead.
  */
 export function PlaceholderMassing() {
   const materials = useMemo(() => getMaterials(), []);
@@ -27,19 +27,10 @@ export function PlaceholderMassing() {
     });
   }, []);
 
-  const { block, wing, podium, groundSize } = SITE_GEOMETRY;
+  const { block, wing, podium } = SITE_GEOMETRY;
 
   return (
-    <group>
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.01, 0]}
-        receiveShadow
-        material={materials.terrain}
-      >
-        <planeGeometry args={[groundSize, groundSize]} />
-      </mesh>
-
+    <group name="PlaceholderMassing">
       <group ref={groupRef}>
         <mesh position={[0, podium.height / 2, 0]} material={materials.stone}>
           <boxGeometry args={[podium.width, podium.height, podium.depth]} />

@@ -1,30 +1,45 @@
 import type { CameraView, QualityProfile, QualityTier } from '@/types';
 
 /**
- * Named camera framings for the residence. Phase 2 tweens between these
- * for the cinematic tour; the orbit camera uses HOME as its origin.
+ * Named framings of the residence, sized to the procedural villa. A later
+ * phase tweens between these for the cinematic tour; the orbit camera uses
+ * the first entry as its origin.
  */
 export const CAMERA_VIEWS: readonly CameraView[] = [
   {
     id: 'approach',
     label: 'Approach',
-    position: [26, 10, 30],
-    target: [0, 3, 0],
-    fov: 32,
+    position: [36, 13, 44],
+    target: [0, 4, 0],
+    fov: 30,
+  },
+  {
+    id: 'front',
+    label: 'Front',
+    position: [0, 9, 58],
+    target: [0, 4.5, 0],
+    fov: 28,
   },
   {
     id: 'elevation',
     label: 'Elevation',
-    position: [36, 5, 2],
-    target: [0, 3.5, 0],
+    position: [58, 9, 8],
+    target: [0, 4.5, 0],
     fov: 26,
+  },
+  {
+    id: 'rear',
+    label: 'Rear',
+    position: [-26, 12, -48],
+    target: [0, 4, 0],
+    fov: 30,
   },
   {
     id: 'aerial',
     label: 'Aerial',
-    position: [14, 28, 24],
-    target: [0, 0, 0],
-    fov: 38,
+    position: [30, 44, 42],
+    target: [0, 2, 0],
+    fov: 34,
   },
 ] as const;
 
@@ -32,21 +47,24 @@ export const DEFAULT_VIEW: CameraView = CAMERA_VIEWS[0]!;
 
 /** Lighting rig constants — one key sun, soft fill, warm bounce. */
 export const LIGHTING = {
-  sunPosition: [12, 18, 8] as const,
+  sunPosition: [26, 34, 18] as const,
   sunIntensity: 2.1,
   sunColor: '#fff6e8',
-  ambientIntensity: 0.35,
+  ambientIntensity: 0.5,
   ambientColor: '#8fa4bd',
-  bounceIntensity: 0.6,
+  bounceIntensity: 0.8,
   bounceColor: '#b99a63',
   fogColor: '#0a0a0b',
-  fogNear: 46,
-  fogFar: 135,
+  fogNear: 70,
+  fogFar: 220,
+  /** Half-width of the sun's orthographic shadow frustum, in metres. */
+  shadowExtent: 34,
+  shadowFar: 110,
 } as const;
 
-/** Ground and placeholder-massing dimensions (metres). */
+/** Terrain and placeholder-massing dimensions (metres). */
 export const SITE_GEOMETRY = {
-  groundSize: 120,
+  groundSize: 240,
   block: { width: 14, height: 6, depth: 9 },
   wing: { width: 7, height: 3.4, depth: 6 },
   podium: { width: 22, height: 0.5, depth: 16 },

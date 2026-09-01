@@ -6,17 +6,21 @@ import { ACESFilmicToneMapping } from 'three';
 import { useQualityTier } from '@/hooks/useQualityTier';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { DEFAULT_VIEW } from '@/lib/three/scene-config';
-import type { CameraMode, CameraView } from '@/types';
+import type { CameraMode, CameraView, SceneContent } from '@/types';
 import { CameraController } from './CameraController';
 import { SceneEnvironment } from './Environment';
 import { PlaceholderMassing } from './PlaceholderMassing';
+import { Terrain } from './Terrain';
+import { ProceduralVilla } from './villa/ProceduralVilla';
 
 type SceneProps = {
   view?: CameraView;
   mode?: CameraMode;
   /** Fires once the scene graph has mounted and suspense has resolved. */
   onReady?: () => void;
-  /** Extra scene content. Defaults to the Phase 1 placeholder massing. */
+  /** Which building to render. `placeholder` is a diagnostic fallback. */
+  content?: SceneContent;
+  /** Overrides `content` entirely when custom scene contents are needed. */
   children?: ReactNode;
 };
 
@@ -34,7 +38,13 @@ function ReadySignal({ onReady }: { onReady?: () => void }) {
  * antialiasing) is resolved per device before the renderer is created, and
  * the frameloop pauses when the canvas leaves the viewport.
  */
-export function Scene({ view = DEFAULT_VIEW, mode = 'orbit', onReady, children }: SceneProps) {
+export function Scene({
+  view = DEFAULT_VIEW,
+  mode = 'orbit',
+  onReady,
+  content = 'villa',
+  children,
+}: SceneProps) {
   const quality = useQualityTier();
   const reducedMotion = useReducedMotion();
 
@@ -59,7 +69,8 @@ export function Scene({ view = DEFAULT_VIEW, mode = 'orbit', onReady, children }
       <SceneEnvironment shadows={quality.shadows} shadowMapSize={quality.shadowMapSize} />
 
       <Suspense fallback={null}>
-        {children ?? <PlaceholderMassing />}
+        <Terrain />
+        {children ?? (content === 'placeholder' ? <PlaceholderMassing /> : <ProceduralVilla />)}
         <ReadySignal onReady={onReady} />
       </Suspense>
     </Canvas>

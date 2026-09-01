@@ -39,16 +39,16 @@ export function SceneEnvironment({ shadows, shadowMapSize }: EnvironmentProps) {
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
         shadow-camera-near={1}
-        shadow-camera-far={80}
-        shadow-camera-left={-30}
-        shadow-camera-right={30}
-        shadow-camera-top={30}
-        shadow-camera-bottom={-30}
+        shadow-camera-far={LIGHTING.shadowFar}
+        shadow-camera-left={-LIGHTING.shadowExtent}
+        shadow-camera-right={LIGHTING.shadowExtent}
+        shadow-camera-top={LIGHTING.shadowExtent}
+        shadow-camera-bottom={-LIGHTING.shadowExtent}
         shadow-bias={-0.0004}
       />
 
       <directionalLight
-        position={[-14, 4, -10]}
+        position={[-26, 7, 34]}
         intensity={LIGHTING.bounceIntensity}
         color={LIGHTING.bounceColor}
       />

@@ -35,7 +35,8 @@ app/            Routes, metadata, global styles, error boundaries
 components/
   ui/           Design-system primitives (Button, Container, headings)
   navigation/   Header, mobile menu, footer, wordmark
-  three/        Canvas, camera, lighting, loading, fallbacks
+  three/        Canvas, camera, lighting, terrain, loading, fallbacks
+    villa/      Procedural residence: config, layout, and building parts
   experience/   Bridge between UI and the 3D layer, landing preview
   property/     Editorial landing-page sections
   configurator/ Phase 2 placeholder
@@ -57,6 +58,23 @@ the region approaches the viewport, then dynamically imports the canvas chunk
 
 Camera behaviour (`orbit` / `cinematic` / `fixed`), lighting, materials, and
 quality tiers live in separate modules so pages never touch three.js directly.
+
+### The procedural villa
+
+The residence is generated entirely in code — no model, texture, or asset of
+any kind is downloaded. `components/three/villa/VillaGeometry.ts` holds
+`VILLA_CONFIG` (every dimension, in metres) and `createVillaLayout`, a pure
+function that resolves it into the whole building. Each part component
+(foundation, lower floor, upper floor, roof, terrace, glazing, columns,
+stairs) only reads from that layout, so changing width, depth, floor heights,
+cantilever, or terrace depth recomposes the architecture coherently.
+
+Every volume is a transform of one of three shared unit primitives — a box, a
+plane, and a cylinder — which keeps the building at roughly 47 meshes and
+under 600 triangles.
+
+To render the Phase 1 diagnostic massing instead, pass `content="placeholder"`
+to `ExperienceViewport`, `ExperienceCanvas`, or `Scene`.
 
 ## Design system
 
