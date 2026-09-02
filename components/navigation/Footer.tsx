@@ -10,7 +10,7 @@ export function Footer() {
         <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <div className="max-w-xs">
             <p className="font-display text-alabaster text-2xl tracking-[0.42em]">{SITE.name}</p>
-            <p className="text-eyebrow text-stone mt-4 uppercase">{SITE.tagline}</p>
+            <p className="text-eyebrow text-stone mt-4 uppercase">Private luxury residence</p>
           </div>
 
           <nav aria-label="Footer" className="flex flex-col gap-3">
@@ -43,7 +43,7 @@ export function Footer() {
           <span>
             &copy; {PROPERTY.year} {SITE.name}. All rights reserved.
           </span>
-          <span>Demonstration project — a fictional residence, generated in code</span>
+          <span>A fictional residence, generated entirely in code</span>
         </div>
       </Container>
     </footer>

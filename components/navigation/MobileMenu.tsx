@@ -42,7 +42,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
       aria-label="Site menu"
       hidden={!open}
       className={cn(
-        'bg-obsidian ease-luxe fixed inset-0 z-40 flex flex-col transition-opacity duration-500 md:hidden',
+        'bg-obsidian ease-luxe fixed inset-0 z-40 flex flex-col transition-opacity duration-500 lg:hidden',
         open ? 'opacity-100' : 'pointer-events-none opacity-0',
       )}
     >

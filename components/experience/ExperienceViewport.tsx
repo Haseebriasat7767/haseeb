@@ -24,6 +24,8 @@ type ExperienceViewportProps = {
   parallax?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
+  /** Fires once the scene is mounted and the loading state has cleared. */
+  onReady?: () => void;
   /** Chrome rendered over the canvas, inside the same positioned box. */
   children?: ReactNode;
   className?: string;
@@ -36,6 +38,19 @@ type ExperienceViewportProps = {
  * pages need: it verifies WebGL, defers the three.js chunk until the region
  * approaches the viewport, and degrades to a static plate when it must.
  */
+/**
+ * The static plate, plus the readiness signal the page is waiting on: with
+ * no renderer there is no canvas to report in, and an entrance sequence
+ * that waits for one would never run.
+ */
+function UnsupportedNotice({ onReady }: { onReady?: () => void }) {
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
+
+  return <WebGLFallback reason="unsupported" />;
+}
+
 export function ExperienceViewport({
   view,
   mode,
@@ -43,6 +58,7 @@ export function ExperienceViewport({
   timeOfDay,
   parallax,
   hotspots,
+  onReady,
   children,
   className,
   label = 'Interactive three-dimensional view of the residence',
@@ -77,7 +93,7 @@ export function ExperienceViewport({
       className={cn('bg-obsidian relative isolate overflow-hidden', className)}
     >
       {webgl === false ? (
-        <WebGLFallback reason="unsupported" />
+        <UnsupportedNotice onReady={onReady} />
       ) : webgl && inView ? (
         <ExperienceCanvas
           view={view}
@@ -86,6 +102,7 @@ export function ExperienceViewport({
           timeOfDay={timeOfDay}
           parallax={parallax}
           hotspots={hotspots}
+          onReady={onReady}
         />
       ) : null}
       {children}

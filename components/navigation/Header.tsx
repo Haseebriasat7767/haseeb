@@ -33,7 +33,7 @@ export function Header() {
         <div className="max-w-wide px-gutter mx-auto flex h-20 items-center justify-between">
           <Wordmark />
 
-          <nav aria-label="Primary" className="hidden md:block">
+          <nav aria-label="Primary" className="hidden lg:block">
             <NavLinks />
           </nav>
 
@@ -43,7 +43,7 @@ export function Header() {
             aria-label="Open menu"
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
-            className="text-alabaster hover:text-gold -mr-2 inline-flex h-11 w-11 items-center justify-center transition-colors md:hidden"
+            className="text-alabaster hover:text-gold -mr-2 inline-flex h-11 w-11 items-center justify-center transition-colors lg:hidden"
           >
             <Menu size={22} strokeWidth={1.25} aria-hidden="true" />
           </button>

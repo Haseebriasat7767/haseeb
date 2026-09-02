@@ -71,12 +71,15 @@ export function ResidenceExplorer() {
         <SpacePanel space={open} onClose={close} onFocusSpace={frame} />
       </div>
 
+      {/* `min-w-0` on both columns: a grid item defaults to `min-width:
+          auto`, so without it the widest child sets the track width and the
+          whole page scrolls sideways on a narrow screen. */}
       <div className="border-alabaster/10 grid gap-10 border-t pt-10 lg:grid-cols-12 lg:gap-16">
-        <div className="lg:col-span-7">
+        <div className="min-w-0 lg:col-span-7">
           <SpaceRail activeId={framedId} onSelect={select} />
         </div>
-        <div className="flex flex-col gap-8 lg:col-span-5">
-          <TimeOfDayControl value={timeOfDay} onChange={setTimeOfDay} />
+        <div className="flex min-w-0 flex-col gap-8 lg:col-span-5">
+          <TimeOfDayControl value={timeOfDay} onChange={setTimeOfDay} className="max-w-md" />
           <p className="text-stone max-w-[42ch] text-xs leading-relaxed">
             Select a space to move the camera to it — markers on the model open the same details.
             Moving the pointer across the frame shifts the camera slightly, the way a hand-held

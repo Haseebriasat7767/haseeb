@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
@@ -25,6 +25,22 @@ export function JourneyStage() {
   const activeId = useActiveSection(CHAPTER_IDS);
   const reducedMotion = useReducedMotion();
 
+  // The opening frame is staged: the residence settles first, then the
+  // typography arrives over it. It is a reveal, never a gate — a fallback
+  // timer and the reduced-motion preference both release it on their own,
+  // so the copy can never be held back by the renderer.
+  const [revealed, setRevealed] = useState(false);
+  const reveal = useCallback(() => setRevealed(true), []);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      setRevealed(true);
+      return;
+    }
+    const timer = window.setTimeout(reveal, 1600);
+    return () => window.clearTimeout(timer);
+  }, [reducedMotion, reveal]);
+
   const active = useMemo(() => {
     const found = JOURNEY.find((chapter) => `chapter-${chapter.id}` === activeId);
     return found ?? JOURNEY[0]!;
@@ -40,16 +56,27 @@ export function JourneyStage() {
           view={active.view}
           mode="journey"
           parallax={reducedMotion ? 0 : 1.4}
+          onReady={reveal}
           label="Cinematic three-dimensional view of the residence, following the page"
         >
-          {/* Readability scrim. Bottom-weighted only — the sky stays clean. */}
+          {/* Readability scrim. The chapter copy sits in the lower half of
+              the frame, and on narrower viewports the sunlit stone of the
+              residence sits directly behind it — so the ground under the
+              type has to be dark enough to carry alabaster at any width.
+              Bottom-weighted, so the sky and the roofline stay clean. */}
           <div
             aria-hidden="true"
-            className="from-obsidian/85 pointer-events-none absolute inset-0 bg-gradient-to-t via-transparent to-transparent"
+            className="from-obsidian via-obsidian/75 lg:via-obsidian/35 pointer-events-none absolute inset-x-0 bottom-0 h-[78%] bg-gradient-to-t to-transparent lg:h-[58%]"
           />
           <div
             aria-hidden="true"
-            className="from-obsidian/60 pointer-events-none absolute inset-0 bg-gradient-to-r via-transparent to-transparent"
+            className="from-obsidian/70 lg:from-obsidian/55 pointer-events-none absolute inset-0 bg-gradient-to-r via-transparent to-transparent"
+          />
+          {/* A narrow ground for the chapter index, which sits over the
+              sunlit side of the residence at wide viewports. */}
+          <div
+            aria-hidden="true"
+            className="from-obsidian/70 pointer-events-none absolute inset-y-0 right-0 hidden w-96 bg-gradient-to-l to-transparent lg:block"
           />
 
           {/* Chapter index. Doubles as the journey's navigation: the marks
@@ -99,7 +126,7 @@ export function JourneyStage() {
             aria-hidden="true"
             className={cn(
               'ease-luxe pointer-events-none absolute inset-x-0 bottom-6 flex justify-center transition-opacity duration-700',
-              activeId === `chapter-${JOURNEY[0]!.id}` ? 'opacity-100' : 'opacity-0',
+              activeId === `chapter-${JOURNEY[0]!.id}` && revealed ? 'opacity-100' : 'opacity-0',
             )}
           >
             <span className="text-stone text-[0.5625rem] tracking-[0.4em] uppercase">Scroll</span>
@@ -124,7 +151,11 @@ export function JourneyStage() {
                 className={cn(
                   'ease-luxe max-w-[46ch] transition-[opacity,transform] duration-[900ms]',
                   isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-45',
+                  // Only the opening chapter waits for the reveal; every
+                  // chapter below it is already scrolled to on its own terms.
+                  isFirst && !revealed && 'translate-y-8 !opacity-0',
                 )}
+                style={isFirst ? { transitionDelay: revealed ? '260ms' : '0ms' } : undefined}
               >
                 <p className="text-eyebrow text-stone flex items-center gap-4 uppercase">
                   <span className="text-gold tabular-nums">{chapter.index}</span>

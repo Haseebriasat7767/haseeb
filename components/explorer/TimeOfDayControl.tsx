@@ -17,7 +17,10 @@ type TimeOfDayControlProps = {
  */
 export function TimeOfDayControl({ value, onChange, className }: TimeOfDayControlProps) {
   return (
-    <fieldset className={cn('flex flex-col gap-3', className)}>
+    // `min-w-0` is load-bearing: a fieldset's default `min-width:
+    // min-content` overrides flex shrinking, so without it the scroll
+    // container below never engages and the control widens the page.
+    <fieldset className={cn('flex min-w-0 flex-col gap-3', className)}>
       <legend className="text-eyebrow text-stone mb-3 uppercase">Hour</legend>
       <div className="border-alabaster/10 bg-obsidian/60 flex gap-px overflow-x-auto border backdrop-blur-sm">
         {TIME_OF_DAY_ORDER.map((id) => {

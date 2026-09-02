@@ -429,6 +429,20 @@ fictional residence. Counts that can be derived — levels, rooms, bedrooms,
 bathrooms — are read from the generated room schedule and marked as such in
 the specification table, so nothing invented is presented as surveyed fact.
 
+### Production notes
+
+`/residence` replaced the Phase 2 configurator placeholder, which was in the
+primary navigation and rendering internal "Phase 2" badges to visitors. It
+now carries the architectural concept, the material palette (each entry a
+finish the model is genuinely rendered with), and an accommodation schedule
+whose room areas are computed from the generated plan. The route moved from
+`/configurator` to `/residence`; the material configurator itself remains
+future work and is not implied anywhere in the UI.
+
+The residence, its location, and the credited studio are fictional, and the
+contact details resolve to the reserved `example.com` domain. The footer
+says so on every page.
+
 ## External Asset Policy & Audit
 
 | Asset / Resource                 | Status       |

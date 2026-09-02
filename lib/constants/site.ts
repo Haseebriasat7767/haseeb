@@ -1,4 +1,11 @@
-/** Single source of truth for brand copy and metadata placeholders. */
+/**
+ * Single source of truth for brand copy and metadata.
+ *
+ * AURELIA is a demonstration project: the residence, its location, and the
+ * studio credited below are fictional, and the contact details resolve to
+ * the reserved `example.com` domain by design. Nothing here describes a
+ * real property or a real practice.
+ */
 export const SITE = {
   name: 'AURELIA',
   tagline: 'Architectural Experience',
@@ -9,14 +16,14 @@ export const SITE = {
   contact: {
     email: 'enquiries@aurelia.example.com',
     phone: '+1 (000) 000-0000',
-    address: 'Placeholder Estate, Coastal Ridge',
+    address: 'Coastal Ridge, by appointment',
   },
 } as const;
 
 export const PROPERTY = {
   name: 'Residence No. 01',
   location: 'Coastal Ridge',
-  architect: 'Studio Placeholder',
+  architect: 'Atelier Sorrel',
   year: '2026',
   /**
    * Headline figures for the property intro. These are demonstration values

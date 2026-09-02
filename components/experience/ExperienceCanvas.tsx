@@ -21,6 +21,8 @@ type ExperienceCanvasProps = {
   parallax?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
+  /** Fires once the scene graph has mounted and the loading state clears. */
+  onReady?: () => void;
 };
 
 /**
@@ -34,9 +36,13 @@ export function ExperienceCanvas({
   timeOfDay,
   parallax,
   hotspots,
+  onReady,
 }: ExperienceCanvasProps) {
   const [ready, setReady] = useState(false);
-  const onReady = useCallback(() => setReady(true), []);
+  const handleReady = useCallback(() => {
+    setReady(true);
+    onReady?.();
+  }, [onReady]);
   const quality = useQualityTier();
 
   const diagnosticsEnabled = useDevOverlayEnabled();
@@ -59,7 +65,7 @@ export function ExperienceCanvas({
             />
           ) : null
         }
-        onReady={onReady}
+        onReady={handleReady}
         diagnosticsEnabled={diagnosticsEnabled}
         onMetrics={diagnosticsEnabled ? setMetrics : undefined}
       />
