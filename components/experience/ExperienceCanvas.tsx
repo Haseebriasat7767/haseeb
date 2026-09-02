@@ -8,19 +8,20 @@ import { useDevOverlayEnabled } from '@/components/three/dev/useDevOverlayEnable
 import { PerformanceOverlay } from '@/components/three/dev/PerformanceOverlay';
 import type { PerformanceSnapshot } from '@/components/three/dev/performance-types';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
-import type { CameraMode, CameraView, SceneContent } from '@/types';
+import type { CameraMode, CameraView, SceneContent, TimeOfDay } from '@/types';
 
 type ExperienceCanvasProps = {
   view?: CameraView;
   mode?: CameraMode;
   content?: SceneContent;
+  timeOfDay?: TimeOfDay;
 };
 
 /**
  * Everything that touches three.js lives in this chunk. `ExperienceViewport`
  * loads it dynamically, so no three/drei code reaches the initial bundle.
  */
-export function ExperienceCanvas({ view, mode, content }: ExperienceCanvasProps) {
+export function ExperienceCanvas({ view, mode, content, timeOfDay }: ExperienceCanvasProps) {
   const [ready, setReady] = useState(false);
   const onReady = useCallback(() => setReady(true), []);
 
@@ -33,6 +34,7 @@ export function ExperienceCanvas({ view, mode, content }: ExperienceCanvasProps)
         view={view}
         mode={mode}
         content={content}
+        timeOfDay={timeOfDay}
         onReady={onReady}
         diagnosticsEnabled={diagnosticsEnabled}
         onMetrics={diagnosticsEnabled ? setMetrics : undefined}

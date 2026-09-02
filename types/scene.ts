@@ -9,6 +9,12 @@ export type CameraView = {
   fov: number;
 };
 
+/**
+ * The architectural lighting states the scene can be presented in. Golden
+ * hour is the hero; see `lib/three/lighting.ts` for what each one composes.
+ */
+export type TimeOfDay = 'morning' | 'day' | 'goldenHour' | 'blueHour' | 'night';
+
 /** Camera behaviour modes the scene supports. */
 export type CameraMode = 'orbit' | 'cinematic' | 'fixed';
 

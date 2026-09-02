@@ -258,8 +258,16 @@ function createMaterials() {
      */
     poolWater: withVariation(
       new MeshPhysicalMaterial({
-        color: '#0a2b2a',
-        roughness: 0.06,
+        color: '#0d3230',
+        // Not a mirror. With no environment map to reflect, a near-zero
+        // roughness returns black; a little scatter lets the hemisphere sky
+        // reach the surface, which is what makes water read as water.
+        roughness: 0.14,
+        // After dark the submerged lighting is carried by the water body
+        // itself rather than by the basin walls, so the pool reads as a
+        // soft luminous plane instead of a glowing outline.
+        emissive: '#22403f',
+        emissiveIntensity: 0,
         metalness: 0.04,
         clearcoat: 1,
         clearcoatRoughness: 0.06,
@@ -268,13 +276,27 @@ function createMaterials() {
       }),
       { scale: 0.3, colorVariation: 0.05, seed: 71 },
     ),
-    /** Dark plaster pool interior — basin, steps, and the infinity channel. */
-    poolInterior: withVariation(standard({ color: '#0d1416', roughness: 0.85, metalness: 0 }), {
-      scale: 1.6,
-      colorVariation: 0.03,
-      roughnessVariation: 0.05,
-      seed: 29,
-    }),
+    /**
+     * Dark plaster pool interior — basin, steps, and the infinity channel.
+     * Carries an emissive term that stays at zero through the day and comes
+     * up after dark, which is how the submerged perimeter lighting reads
+     * without a single dynamic light inside the water.
+     */
+    poolInterior: withVariation(
+      standard({
+        color: '#12222a',
+        roughness: 0.85,
+        metalness: 0,
+        emissive: '#16262b',
+        emissiveIntensity: 0,
+      }),
+      {
+        scale: 1.6,
+        colorVariation: 0.03,
+        roughnessVariation: 0.05,
+        seed: 29,
+      },
+    ),
     /** Tree trunks and major branches — vertical grain, like the entrance wood. */
     bark: withVariation(standard({ color: '#453a2f', roughness: 0.9, metalness: 0 }), {
       scale: 2.4,

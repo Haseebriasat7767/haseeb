@@ -3,56 +3,77 @@
 import { useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
 import { Fog } from 'three';
-import { LIGHTING } from '@/lib/three/scene-config';
+import { applyLightingToMaterials, type ResolvedLighting } from '@/lib/three/lighting';
 
 type EnvironmentProps = {
+  lighting: ResolvedLighting;
   shadows: boolean;
   shadowMapSize: number;
 };
 
 /**
- * Code-only lighting environment: one directional key light shaped like a
- * low sun, a sky/ground hemisphere fill, and a warm bounce. No HDRI is
- * fetched, so the scene has zero external asset dependencies.
+ * The cinematic lighting rig: one key sun, a sky/ground hemisphere, and a
+ * single shadowless bounce standing in for light returned off the paving
+ * and the plinth. Three lights, whatever the hour — everything that changes
+ * between morning and night is colour, angle, exposure, and which
+ * *practical* fixtures elsewhere in the scene are switched on.
+ *
+ * Code-only: no HDRI is fetched and no environment map exists, which is
+ * also why the metals are tuned the way they are in `materials.ts`.
  */
-export function SceneEnvironment({ shadows, shadowMapSize }: EnvironmentProps) {
+export function SceneEnvironment({ lighting, shadows, shadowMapSize }: EnvironmentProps) {
   const scene = useThree((state) => state.scene);
+  const gl = useThree((state) => state.gl);
+  const invalidate = useThree((state) => state.invalidate);
+
+  const { atmosphere, sun, sky, bounce } = lighting;
 
   useEffect(() => {
-    scene.fog = new Fog(LIGHTING.fogColor, LIGHTING.fogNear, LIGHTING.fogFar);
+    scene.fog = new Fog(atmosphere.fogColor, atmosphere.fogNear, atmosphere.fogFar);
     return () => {
       scene.fog = null;
     };
-  }, [scene]);
+  }, [scene, atmosphere.fogColor, atmosphere.fogNear, atmosphere.fogFar]);
+
+  // Exposure and the hour-dependent material responses are owned here, so
+  // the renderer and the material library never disagree about the time of
+  // day. `invalidate` matters because fixed-camera views render on demand.
+  useEffect(() => {
+    gl.toneMappingExposure = atmosphere.exposure;
+    applyLightingToMaterials(lighting);
+    invalidate();
+  }, [gl, invalidate, lighting, atmosphere.exposure]);
 
   return (
     <>
-      <hemisphereLight
-        args={[LIGHTING.ambientColor, LIGHTING.fogColor, LIGHTING.ambientIntensity]}
-      />
+      <hemisphereLight args={[sky.skyColor, sky.groundColor, sky.intensity]} />
 
       <directionalLight
-        position={[...LIGHTING.sunPosition]}
-        intensity={LIGHTING.sunIntensity}
-        color={LIGHTING.sunColor}
+        name="key-sun"
+        position={lighting.sunPosition}
+        intensity={sun.intensity}
+        color={sun.color}
         castShadow={shadows}
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
         shadow-camera-near={1}
-        shadow-camera-far={LIGHTING.shadowFar}
-        shadow-camera-left={-LIGHTING.shadowExtent}
-        shadow-camera-right={LIGHTING.shadowExtent}
-        shadow-camera-top={LIGHTING.shadowExtent}
-        shadow-camera-bottom={-LIGHTING.shadowExtent}
-        shadow-bias={-0.0004}
+        // Sized from the sun's own elevation: a low key throws long shadows,
+        // and a frustum tuned for midday would clip them off mid-terrace.
+        shadow-camera-far={lighting.shadowFar}
+        shadow-camera-left={-lighting.shadowExtent}
+        shadow-camera-right={lighting.shadowExtent}
+        shadow-camera-top={lighting.shadowExtent}
+        shadow-camera-bottom={-lighting.shadowExtent}
+        shadow-bias={sun.shadowBias}
         // Removes shadow acne where the sun grazes the large horizontal planes.
-        shadow-normalBias={0.05}
+        shadow-normalBias={sun.shadowNormalBias}
       />
 
       <directionalLight
-        position={[-26, 7, 34]}
-        intensity={LIGHTING.bounceIntensity}
-        color={LIGHTING.bounceColor}
+        name="architectural-bounce"
+        position={lighting.bouncePosition}
+        intensity={bounce.intensity}
+        color={bounce.color}
       />
     </>
   );

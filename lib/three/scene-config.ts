@@ -99,23 +99,6 @@ export const INTERIOR_VIEWS: readonly CameraView[] = [
 
 export const DEFAULT_VIEW: CameraView = CAMERA_VIEWS[0]!;
 
-/** Lighting rig constants — one key sun, soft fill, warm bounce. */
-export const LIGHTING = {
-  sunPosition: [26, 34, 18] as const,
-  sunIntensity: 2.1,
-  sunColor: '#fff6e8',
-  ambientIntensity: 0.5,
-  ambientColor: '#8fa4bd',
-  bounceIntensity: 0.8,
-  bounceColor: '#b99a63',
-  fogColor: '#0a0a0b',
-  fogNear: 70,
-  fogFar: 220,
-  /** Half-width of the sun's orthographic shadow frustum, in metres. */
-  shadowExtent: 34,
-  shadowFar: 110,
-} as const;
-
 /** Terrain and placeholder-massing dimensions (metres). */
 export const SITE_GEOMETRY = {
   groundSize: 240,
@@ -124,10 +107,17 @@ export const SITE_GEOMETRY = {
   podium: { width: 22, height: 0.5, depth: 16 },
 } as const;
 
+/**
+ * The high tier carries a 4096 map because the cinematic key sits low: a
+ * thirteen-degree sun needs a wide shadow frustum to hold its own long
+ * shadows, and at 2048 that spread visibly stair-stepped the parapet edges
+ * from the aerial view. Medium and low are unchanged — the artifact only
+ * exists where the premium shadows do.
+ */
 const PROFILES: Record<QualityTier, QualityProfile> = {
   low: { tier: 'low', dpr: [1, 1], shadows: false, shadowMapSize: 512, antialias: false },
   medium: { tier: 'medium', dpr: [1, 1.5], shadows: true, shadowMapSize: 1024, antialias: true },
-  high: { tier: 'high', dpr: [1, 2], shadows: true, shadowMapSize: 2048, antialias: true },
+  high: { tier: 'high', dpr: [1, 2], shadows: true, shadowMapSize: 4096, antialias: true },
 };
 
 export function getQualityProfile(tier: QualityTier): QualityProfile {

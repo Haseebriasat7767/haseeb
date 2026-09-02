@@ -4,10 +4,13 @@ import type { Parts } from './Furniture';
 import type { Room } from './InteriorPlan';
 
 /**
- * A soft interior fill light. Deliberately minimal: no shadow map, no
- * helper, no post-processing — just enough bounce for rooms behind glass to
- * read as inhabited. Cinematic lighting is a later phase; these are the
- * fixtures the architecture itself implies.
+ * A practical interior light, positioned by the architecture that implies
+ * it. Deliberately minimal: no shadow map and no helper — just enough
+ * bounce for rooms behind glass to read as inhabited.
+ *
+ * `intensity` is a relative weight, ranking this room against the others.
+ * The absolute brightness, and whether the light is mounted at all, are
+ * decided by the time-of-day state in `lib/three/lighting.ts`.
  */
 export type InteriorLight = {
   key: string;
@@ -65,6 +68,7 @@ export type InteriorLayout = {
   /** The foyer's roof-level laylight, which is what daylights the entry. */
   laylight: { frame: BoxSpec[]; glass: BoxSpec[] };
   furniture: Parts;
+  /** Every practical the plan implies, ranked; the hour decides how many run. */
   lights: InteriorLight[];
 };
 

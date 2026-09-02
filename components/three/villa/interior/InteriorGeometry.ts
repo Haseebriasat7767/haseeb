@@ -47,18 +47,14 @@ export const INTERIOR_CONFIG: InteriorConfig = {
  * What thins out on weaker GPUs. The architecture — floors, ceilings,
  * partitions, built-ins, the stair — is identical at every tier, because a
  * room with no walls is not a cheaper room, it is a broken one. Only
- * repeated and decorative elements scale, plus the number of fill lights,
- * which is the one interior feature with a real per-fragment cost. On the
- * low tier none are mounted at all and the emissive fixtures carry the
- * read on their own.
+ * repeated and decorative elements scale here; how many practical lights
+ * are actually mounted belongs to the lighting system, not to the
+ * furniture, and is decided in `lib/three/lighting.ts`.
  */
-const DETAIL: Record<
-  DetailTier,
-  { seatDensity: number; accessories: boolean; shelves: number; lights: number }
-> = {
-  low: { seatDensity: 0.5, accessories: false, shelves: 3, lights: 0 },
-  medium: { seatDensity: 0.75, accessories: true, shelves: 4, lights: 3 },
-  high: { seatDensity: 1, accessories: true, shelves: 5, lights: 7 },
+const DETAIL: Record<DetailTier, { seatDensity: number; accessories: boolean; shelves: number }> = {
+  low: { seatDensity: 0.5, accessories: false, shelves: 3 },
+  medium: { seatDensity: 0.75, accessories: true, shelves: 4 },
+  high: { seatDensity: 1, accessories: true, shelves: 5 },
 };
 
 /** A range inset equally from both ends. */
@@ -811,53 +807,58 @@ export function createInteriorLayout(
   );
 
   // ── Interior fill lighting ────────────────────────────────────────────
-  const lightPlan: InteriorLight[] = [
+  // Practical lighting, ranked by how much a room needs to read as
+  // inhabited. Intensities are relative weights only: the time-of-day state
+  // supplies the absolute candela, and the quality tier and the hour
+  // between them decide how far down this list the renderer gets. Lighting
+  // policy is not a geometry decision, so none of it is made here.
+  const lights: InteriorLight[] = [
     {
       key: 'light-living',
       position: [mid(living.x), living.ceilingY - 0.85, mid(living.z)],
-      intensity: 46,
+      intensity: 1,
       distance: 16,
       color: '#ffe6c4',
     },
     {
       key: 'light-kitchen',
       position: [mid(islandX), kitchen.ceilingY - 0.85, mid(islandZ)],
-      intensity: 38,
+      intensity: 0.85,
       distance: 15,
       color: '#ffeed6',
     },
     {
       key: 'light-foyer',
       position: [mid(foyer.x), levels.groundFloorTopY - 0.4, mid(foyer.z)],
-      intensity: 40,
+      intensity: 0.9,
       distance: 16,
       color: '#ffe8cb',
     },
     {
       key: 'light-library',
       position: [mid(library.x), library.ceilingY - 0.85, mid(library.z) - 1.5],
-      intensity: 42,
+      intensity: 0.9,
       distance: 16,
       color: '#ffe6c4',
     },
     {
       key: 'light-lounge',
       position: [mid(lounge.x) + 1.5, lounge.ceilingY - 0.85, mid(lounge.z)],
-      intensity: 40,
+      intensity: 0.85,
       distance: 16,
       color: '#ffe6c4',
     },
     {
       key: 'light-master',
       position: [mid(master.x), master.ceilingY - 0.85, mid(master.z)],
-      intensity: 34,
+      intensity: 0.75,
       distance: 13,
       color: '#ffe0bb',
     },
     {
       key: 'light-stair',
       position: [mid(hall.x), levels.groundFloorTopY + 0.6, mid(stairwellZ)],
-      intensity: 26,
+      intensity: 0.55,
       distance: 13,
       color: '#ffe8cb',
     },
@@ -873,6 +874,6 @@ export function createInteriorLayout(
     stairs,
     laylight,
     furniture: parts,
-    lights: lightPlan.slice(0, tier.lights),
+    lights,
   };
 }

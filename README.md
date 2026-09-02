@@ -280,6 +280,100 @@ orbit rig, whose minimum distance deliberately keeps the exterior model in
 frame, and they are kept out of `CAMERA_VIEWS` so the public explore page
 still lists approaches to the house rather than rooms within it.
 
+### Cinematic lighting and atmosphere
+
+Every lighting decision in the project lives in `lib/three/lighting.ts`.
+Nothing is scattered across components: the module owns the sun, the sky,
+the bounce, the fog, the exposure, which practical fixtures are switched on,
+and how the shared materials respond — and `resolveLighting(hour, tier)` is
+the one pure function that turns an hour and a rendering tier into the rig
+the renderer mounts.
+
+The sun is authored as **elevation and azimuth**, not as a position vector.
+"A thirteen-degree key raking across the front elevation" is an
+architectural decision; `[26, 34, 18]` is not. It also lets the shadow
+frustum be sized from the elevation, which matters — a nine-metre building
+under a thirteen-degree sun throws a forty-metre shadow, and a frustum tuned
+for midday clips it off mid-terrace.
+
+Five states compose the day. They are not samples along a continuous sun
+curve: each is a photograph, which is why colour temperature, contrast,
+exposure, and which fixtures are lit all move together.
+
+| State           | What it is for                                                                        |
+| --------------- | ------------------------------------------------------------------------------------- |
+| **Morning**     | Soft warm key at 22°, cool sky, restrained contrast — the house waking up.            |
+| **Day**         | The neutral reference. Clean 47° sun, readable façade, honest material colour.        |
+| **Golden hour** | **The hero.** 13° key, long shadows, warm stone, interiors just coming up.            |
+| **Blue hour**   | Cool exterior against warm windows — the strongest warm/cool contrast of the day.     |
+| **Night**       | Dark but not crushed. Warm rooms, lit entrance, a pool that glows rather than shines. |
+
+`DEFAULT_TIME_OF_DAY` is golden hour, and `Scene`, `ExperienceCanvas`, and
+`ExperienceViewport` all take an optional `timeOfDay` prop, so the hour is
+presentation state rather than something the scene decides for itself. There
+is no animated transition and no lighting choreography — that is Phase 4's
+job, and a tween nothing can currently trigger would be dead code.
+
+**Three lights, whatever the hour.** The rig is one key sun, one sky/ground
+hemisphere, and one shadowless directional standing in for light returned
+off the paving and the plinth, aimed relative to the sun so it always fills
+the shaded side. Everything else that changes between morning and night is
+colour, angle, exposure, and which _practical_ fixtures elsewhere in the
+scene are switched on.
+
+**Exterior architectural lighting** gets the same treatment as every other
+system: `components/three/villa/lighting/LightingGeometry.ts` is a pure
+function of the villa's plan lines and the site's resolved bounds. Every
+fixture exists because a piece of architecture needs it — a slot recessed
+into the entrance canopy soffit, a wash under the cantilever where it hangs
+over the terrace, in-ground grazers raking the two stone wings, niches under
+the pool coping on the three sides water does not run over, a cove in the
+sunken lounge, markers flanking the approach slabs, and a few discreet
+uplights in the poolside planting. They are _geometry_ — two merged meshes,
+a dark housing and an emissive face — and they carry most of the read on
+their own.
+
+Only three real dynamic exterior lights exist, and they are ranked: an
+entrance spot, a submerged pool light, and a lounge fill. How far down that
+list the renderer gets is the product of the hour and the tier — none in
+daylight, where they would be invisible anyway.
+
+**Interior practicals** were already positioned by the Phase 2F room plan.
+Phase 3 took the _policy_ out of the geometry: `createInteriorLayout` now
+emits all seven ranked by how much a room needs to read as inhabited, with
+relative weights only, and the lighting state supplies the absolute candela
+and decides how many are mounted. Two in daylight so the glazing never reads
+as black rectangles, five at golden hour, all seven after dark.
+
+**Glazing, pool, and fixture faces** are the three material families that
+belong to the hour rather than to themselves, and `applyLightingToMaterials`
+is the single place that says so. Glazing opacity drops after dark so lit
+rooms read through the glass; the fixture emissive comes up; and the pool is
+lit through the **water body** rather than the basin walls — an early
+version glowed at the basin, which outlined the pool in cyan and looked like
+a nightclub. It now reads as a soft luminous plane.
+
+**Reflections and post-processing: neither was added.** There is still no
+environment map, no render target, no cube camera, and no composer, and no
+dependency was added. The pool was fixed the way §17 asks — by material
+response, not by a reflection system: near-zero roughness returns black
+without an environment to reflect, so the water was given enough scatter to
+pick up the hemisphere sky. Exposure and tone are handled inside the ACES
+pipeline the Canvas already had, per state, owned by `SceneEnvironment` so
+the renderer and the hour cannot disagree. A bloom or vignette pass would
+have cost a full-screen render target for an effect the emissive fixtures
+already deliver.
+
+**Tiers** reuse the existing `QualityTier` — the villa, site, landscape, and
+interior all carry a tier map of their own, and the lighting system now has
+one too. Only the genuinely expensive things scale: the number of dynamic
+lights, and the shadow frustum. Colour, exposure, fog, and every emissive
+fixture are free and identical everywhere, so a phone still gets the same
+photograph with fewer lights carrying it. The high tier's shadow map moved
+from 2048 to 4096 — not on principle, but because the wide frustum a low sun
+needs visibly stair-stepped the parapet edges from the aerial view at 2048,
+and an A/B at high tier showed the increase actually fixing it.
+
 ## External Asset Policy & Audit
 
 | Asset / Resource                 | Status       |
@@ -360,6 +454,30 @@ No furniture model, fabric texture, timber texture, marble texture, or
 interior HDRI is loaded, and `package.json` is unchanged. The only
 `Math.random` occurrences anywhere in the repository are the two prose
 mentions in these documentation comments stating that it is not used.
+
+### Phase 3 Audit
+
+```text
+External 3D assets: 0
+External textures: 0
+HDRIs: 0
+External environment maps: 0
+Image-based lighting assets: 0
+3D model loaders: 0
+Texture loaders: 0
+External asset URLs: 0
+Reflection render targets / cube cameras: 0
+Post-processing passes: 0
+New dependencies: 0
+Math.random() calls in lighting: 0
+```
+
+Phase 3 is lighting, colour, and atmosphere only. Every light is a Three.js
+light constructed in code, every fixture is procedural geometry, and every
+material response is a property set on the existing shared materials. No
+HDRI or environment map is fetched — which is also why the metals stay
+pulled back from maximum metalness, since with nothing to reflect they would
+render as flat black. `package.json` is unchanged.
 
 ## Performance diagnostics
 
@@ -442,42 +560,48 @@ are centralized in `PERFORMANCE_BUDGET` for easy retuning:
 These are runtime evaluation targets — a slow machine varying below them is
 not a CI failure.
 
-### Current baseline (Phase 2F)
+### Current baseline (Phase 3)
 
 Renderer counters, read directly from `renderer.info` on the default villa
 
-- site + landscape view:
+- site + landscape view, at the `high` tier and the default golden hour:
 
-| Metric     | Phase 2B.5 | Phase 2C | Phase 2D | Phase 2E | Phase 2F |
-| ---------- | ---------- | -------- | -------- | -------- | -------- |
-| Draw calls | 58         | 65       | 74       | 74       | 93       |
-| Triangles  | 3,590      | 4,046    | 5,964    | 5,964    | 15,320   |
-| Geometries | 21         | 27       | 36       | 36       | 57       |
-| Textures   | 1          | 1        | 1        | 1        | 1        |
+| Metric     | Phase 2C | Phase 2D | Phase 2E | Phase 2F | Phase 3 |
+| ---------- | -------- | -------- | -------- | -------- | ------- |
+| Draw calls | 65       | 74       | 74       | 93       | 95      |
+| Triangles  | 4,046    | 5,964    | 5,964    | 15,320   | 17,144  |
+| Geometries | 36       | 36       | 36       | 57       | 59      |
+| Textures   | 1        | 1        | 1        | 1        | 1       |
 
-Phase 2F added a complete two-storey interior — twenty-one rooms, their
-partitions and finishes, a connecting stair, and every piece of furniture —
-for **19 additional draw calls**. That is the merge strategy paying off:
-furniture is batched per material rather than per object, and the punched
-enclosure walls (which are many small volumes in the layout) are merged per
-floor. Both counters stay inside the "Excellent" band of the budget table
-above.
+Phase 3 added the entire exterior lighting scheme for **two draw calls** —
+one merged mesh of dark housings, one of emissive faces — and about 1,800
+triangles. Both counters stay well inside the "Excellent" band. The counters
+do not move with the time of day, because the fixtures are the same geometry
+at every hour; what changes is how many dynamic lights are mounted, which
+costs shader time rather than draw calls:
 
-An intermediate build that drew each enclosure wall segment and each turned
-element as its own mesh measured 227 draw calls; merging them brought it to
-93 with identical geometry on screen. Worth recording, because it is the
-difference between a furnished house being nearly free and being the most
-expensive thing in the scene.
+| Hour        | Environment | Interior practicals | Exterior | Total (high) |
+| ----------- | ----------- | ------------------- | -------- | ------------ |
+| Day         | 3           | 2                   | 0        | 5            |
+| Morning     | 3           | 3                   | 0        | 6            |
+| Golden hour | 3           | 5                   | 1        | 9            |
+| Blue hour   | 3           | 7                   | 3        | 13           |
+| Night       | 3           | 7                   | 3        | 13           |
+
+The `medium` tier caps that at three interior and one exterior, and `low`
+mounts no practicals at all — the emissive fixtures carry the read. The
+default presentation state is therefore also one of the cheaper ones.
+
+The high tier's shadow map moved from 2048 to 4096, which costs GPU memory
+rather than frame time and applies to no other tier.
 
 Frame-time and FPS numbers were exercised in this sandbox using headless
 Chromium with SwiftShader — a software GL rasterizer, not a GPU — so those
 figures reflect the instrumentation working correctly, not real-world
-performance. Under SwiftShader the interiors are markedly slower than Phase
-2E (roughly 2 FPS vs. 5 FPS in this sandbox), which is what a CPU
-rasterizer does when it is given more geometry and, on the `high` tier,
-seven extra point lights to evaluate per fragment. That is software-
-rasterizer overhead, not a claim about real-hardware cost, which has not
-been measured:
+performance. Under SwiftShader the scene renders at roughly 2 FPS, the same
+order as Phase 2F; a CPU rasterizer pays disproportionately for extra lights
+and a larger shadow map, and its numbers say nothing about what a real GPU
+does with either:
 
 ```
 Runtime FPS (real desktop GPU): not yet measured

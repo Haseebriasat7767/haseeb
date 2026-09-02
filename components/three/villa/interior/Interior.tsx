@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import type { ResolvedLighting } from '@/lib/three/lighting';
 import type { DetailTier, VillaLevels, VillaPlan } from '../VillaTypes';
 import { createInteriorLayout, INTERIOR_CONFIG } from './InteriorGeometry';
 import { InteriorArchitecture } from './InteriorArchitecture';
@@ -12,6 +13,8 @@ type InteriorProps = {
   levels: VillaLevels;
   config?: Partial<InteriorConfig>;
   detail?: DetailTier;
+  /** Decides how many practicals run, and how brightly. */
+  lighting: ResolvedLighting;
 };
 
 /**
@@ -22,7 +25,7 @@ type InteriorProps = {
  * function and mounts the result; nothing here holds state, and no geometry
  * or material is created outside the shared caches.
  */
-export function Interior({ plan, levels, config, detail = 'high' }: InteriorProps) {
+export function Interior({ plan, levels, config, detail = 'high', lighting }: InteriorProps) {
   const layout = useMemo(
     () =>
       createInteriorLayout(
@@ -40,17 +43,17 @@ export function Interior({ plan, levels, config, detail = 'high' }: InteriorProp
       <InteriorFurnishings layout={layout} />
 
       {/*
-        A handful of soft, shadowless fill lights so rooms behind glass read
-        as inhabited. The quality tier decides how many are mounted at all —
-        on the low tier the emissive fixtures carry the read on their own.
-        Cinematic lighting and any post-processing belong to a later phase.
+        Practicals, in the plan's own ranked order. How many run and how
+        brightly is the time of day's decision, capped by the quality tier —
+        so a daylit house shows two, a house at night shows all seven, and a
+        low-tier device shows none and lets the emissive fixtures carry it.
       */}
-      {layout.lights.map((light) => (
+      {layout.lights.slice(0, lighting.interiorLightCount).map((light) => (
         <pointLight
           key={light.key}
           name={light.key}
           position={light.position}
-          intensity={light.intensity}
+          intensity={light.intensity * lighting.interior.intensity}
           distance={light.distance}
           decay={2}
           color={light.color}

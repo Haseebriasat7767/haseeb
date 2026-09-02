@@ -1,12 +1,13 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { ACESFilmicToneMapping } from 'three';
 import { useQualityTier } from '@/hooks/useQualityTier';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { DEFAULT_TIME_OF_DAY, resolveLighting } from '@/lib/three/lighting';
 import { DEFAULT_VIEW } from '@/lib/three/scene-config';
-import type { CameraMode, CameraView, SceneContent } from '@/types';
+import type { CameraMode, CameraView, SceneContent, TimeOfDay } from '@/types';
 import { CameraController } from './CameraController';
 import { PerformanceMonitor } from './dev/PerformanceMonitor';
 import type { PerformanceSnapshot } from './dev/performance-types';
@@ -22,6 +23,8 @@ type SceneProps = {
   onReady?: () => void;
   /** Which building to render. `placeholder` is a diagnostic fallback. */
   content?: SceneContent;
+  /** Architectural lighting state. Golden hour is the presentation default. */
+  timeOfDay?: TimeOfDay;
   /** Overrides `content` entirely when custom scene contents are needed. */
   children?: ReactNode;
   /** Mounts the dev-only performance sampler; a no-op when omitted. */
@@ -49,6 +52,7 @@ export function Scene({
   mode = 'orbit',
   onReady,
   content = 'villa',
+  timeOfDay = DEFAULT_TIME_OF_DAY,
   children,
   diagnosticsEnabled = false,
   onMetrics,
@@ -56,25 +60,38 @@ export function Scene({
   const quality = useQualityTier();
   const reducedMotion = useReducedMotion();
 
+  // One resolved rig for the whole scene: the environment reads it, and so
+  // do the interior practicals and the exterior fixtures, so nothing can
+  // drift out of step with the hour.
+  const lighting = useMemo(
+    () => resolveLighting(timeOfDay, quality.tier),
+    [timeOfDay, quality.tier],
+  );
+
   return (
     <Canvas
       shadows={quality.shadows}
       dpr={quality.dpr}
+      // Exposure is deliberately absent here: `SceneEnvironment` owns it, so
+      // the renderer and the time-of-day state cannot disagree.
       gl={{
         antialias: quality.antialias,
         powerPreference: 'high-performance',
         toneMapping: ACESFilmicToneMapping,
-        toneMappingExposure: 1.05,
       }}
       camera={{ position: view.position, fov: view.fov }}
       // Renders only when something changes — idle scenes cost no GPU time.
       frameloop={mode === 'fixed' ? 'demand' : 'always'}
       className="h-full w-full"
     >
-      <color attach="background" args={['#0a0a0b']} />
+      <color attach="background" args={[lighting.atmosphere.background]} />
 
       <CameraController view={view} mode={mode} reducedMotion={reducedMotion} />
-      <SceneEnvironment shadows={quality.shadows} shadowMapSize={quality.shadowMapSize} />
+      <SceneEnvironment
+        lighting={lighting}
+        shadows={quality.shadows}
+        shadowMapSize={quality.shadowMapSize}
+      />
 
       {diagnosticsEnabled && onMetrics ? (
         <PerformanceMonitor qualityTier={quality.tier} onUpdate={onMetrics} />
@@ -86,7 +103,7 @@ export function Scene({
           (content === 'placeholder' ? (
             <PlaceholderMassing />
           ) : (
-            <ProceduralVilla detail={quality.tier} />
+            <ProceduralVilla detail={quality.tier} lighting={lighting} />
           ))}
         <ReadySignal onReady={onReady} />
       </Suspense>
