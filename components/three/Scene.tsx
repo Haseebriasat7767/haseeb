@@ -6,6 +6,7 @@ import { ACESFilmicToneMapping } from 'three';
 import { useQualityTier } from '@/hooks/useQualityTier';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { getPostProfile, resolveGrade } from '@/lib/three/grading';
+import { setSurfaceMapsEnabled } from '@/lib/three/materials';
 import { DEFAULT_TIME_OF_DAY, resolveLighting } from '@/lib/three/lighting';
 import { DEFAULT_VIEW } from '@/lib/three/scene-config';
 import type { CameraMode, CameraView, SceneContent, TimeOfDay } from '@/types';
@@ -78,6 +79,11 @@ export function Scene({
 
   // The finishing chain reads the same hour the rig does, so a grade can
   // never describe a different time of day than the light it is grading.
+  // Settled during render rather than in an effect: the material cache is
+  // built lazily by the children below, so the answer has to be in place
+  // before they first ask for it.
+  useMemo(() => setSurfaceMapsEnabled(quality.tier !== 'low'), [quality.tier]);
+
   const post = useMemo(() => getPostProfile(quality.tier), [quality.tier]);
   const grade = useMemo(() => resolveGrade(timeOfDay ?? DEFAULT_TIME_OF_DAY), [timeOfDay]);
 

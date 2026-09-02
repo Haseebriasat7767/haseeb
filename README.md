@@ -471,6 +471,28 @@ No JPG, JPEG, PNG, WEBP, HDR, EXR, downloaded material textures, bark
 textures, leaf textures, ground textures, normal maps, roughness maps,
 displacement maps, or external texture URLs are used.
 
+### Phase 7G: CC0 textures were approved but could not be fetched
+
+Phase 7G selected Route B — procedural geometry plus CC0 PBR texture maps
+from ambientCG or Poly Haven. **No external texture was obtained**, because
+the build environment's egress proxy denies CONNECT to both hosts:
+
+```
+ambientcg.com:443      403  connect_rejected (policy denial)
+api.polyhaven.com:443  403  connect_rejected (policy denial)
+```
+
+The proxy's allowlist covers package registries only. The PBR _pipeline_ was
+therefore built in full — albedo, roughness and normal maps, metre-scale
+tiling, per-family repeat and restrained normal strengths — and fed from
+maps generated in a canvas at runtime
+(`components/three/textures/SurfaceMaps.ts`). Substituting real scans later
+means changing where the three textures come from and nothing else.
+
+So the audit below still holds exactly: **every texture in this project is
+drawn by the program, and nothing is downloaded.** There is no licence to
+record because no asset was obtained from anyone.
+
 Phase 7E introduced the project's first texture, and it is worth being
 exact about what it is. `components/three/villa/landscape/FoliageAtlas.ts`
 **draws** a 512x512 four-cell foliage atlas into an HTML canvas at runtime —

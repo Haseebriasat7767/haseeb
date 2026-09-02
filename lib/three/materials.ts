@@ -5,6 +5,7 @@ import {
   type Material,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
+import { getSurfaceMaps, type SurfaceFamily } from '@/components/three/textures/SurfaceMaps';
 
 /**
  * Procedural material factory. Materials are created once and shared
@@ -245,6 +246,58 @@ function withVariation<T extends Material>(material: T, options: VariationOption
   return material;
 }
 
+/**
+ * Attaches a family's albedo, roughness and normal maps to a material.
+ *
+ * Deliberately additive. The material keeps its own colour, its own base
+ * roughness and the Phase 7B procedural variation; the maps supply the
+ * per-texel detail underneath all of it. `normalScale` is taken from the
+ * family rather than left at 1, because the single most common way to make
+ * architectural CG look wrong is a normal map at full strength — the brief
+ * asks for material depth, not for the viewer to notice a map.
+ *
+ * Not every material gets this. Glass, water, metal, emissive faces and the
+ * landscape are all better served by the environment and by roughness
+ * alone, and texturing them would add cost for no gain.
+ */
+function withMaps<T extends MeshStandardMaterial>(
+  material: T,
+  family: SurfaceFamily,
+  strength = 1,
+): T {
+  if (!surfaceMapsEnabled) return material;
+
+  const maps = getSurfaceMaps(family);
+  material.map = maps.map;
+  material.roughnessMap = maps.roughnessMap;
+  material.normalMap = maps.normalMap;
+  material.normalScale.set(maps.normalScale * strength, maps.normalScale * strength);
+  material.needsUpdate = true;
+  return material;
+}
+
+/**
+ * Whether materials carry sampled maps at all.
+ *
+ * Off on the low tier, for a reason that is about correctness before cost:
+ * the maps tile against the metre-scale UVs `ChamferedBox` emits, and the
+ * low tier renders plain unit cubes whose UVs run 0–1 across a face of any
+ * size. A twelve-metre wall would get exactly one tile stretched across it.
+ * The twenty-odd megabytes of texture saved on the hardware least able to
+ * afford them is the secondary benefit.
+ */
+let surfaceMapsEnabled = true;
+
+/**
+ * Turns sampled maps on or off. Rebuilds the material cache when the answer
+ * changes, since the maps are baked into the materials themselves.
+ */
+export function setSurfaceMapsEnabled(enabled: boolean): void {
+  if (enabled === surfaceMapsEnabled) return;
+  surfaceMapsEnabled = enabled;
+  disposeMaterials();
+}
+
 let cache: ReturnType<typeof createMaterials> | null = null;
 
 function createMaterials() {
@@ -255,34 +308,42 @@ function createMaterials() {
      * at close range and disappears into a flat premium surface from the
      * hero camera distance.
      */
-    concrete: withVariation(
-      standard({ color: '#a1968a', roughness: 0.64, metalness: 0.02, envMapIntensity: 0.62 }),
-      {
-        scale: 1.1,
-        colorVariation: 0.035,
-        roughnessVariation: 0.09,
-        seed: 11,
-        // Fine aggregate and formwork pores in fair-faced concrete.
-        normalStrength: 0.035,
-        normalScale: 2.4,
-      },
+    concrete: withMaps(
+      withVariation(
+        standard({ color: '#a1968a', roughness: 0.64, metalness: 0.02, envMapIntensity: 0.62 }),
+        {
+          scale: 1.1,
+          colorVariation: 0.035,
+          roughnessVariation: 0.09,
+          seed: 11,
+          // Fine aggregate and formwork pores in fair-faced concrete.
+          normalStrength: 0.0123,
+          normalScale: 2.4,
+        },
+      ),
+      'plaster',
+      0.8,
     ),
     /**
      * Honed limestone / travertine — warm off-white, restrained natural
      * irregularity. Coarser noise cells than concrete so it reads as large
      * quarried slabs, not aggregate.
      */
-    stone: withVariation(
-      standard({ color: '#b0a48d', roughness: 0.68, metalness: 0, envMapIntensity: 0.68 }),
-      {
-        scale: 0.55,
-        colorVariation: 0.055,
-        roughnessVariation: 0.12,
-        seed: 23,
-        // The open grain and shallow pitting of honed limestone.
-        normalStrength: 0.032,
-        normalScale: 2.1,
-      },
+    stone: withMaps(
+      withVariation(
+        standard({ color: '#b0a48d', roughness: 0.68, metalness: 0, envMapIntensity: 0.68 }),
+        {
+          scale: 0.55,
+          colorVariation: 0.055,
+          roughnessVariation: 0.12,
+          seed: 23,
+          // The open grain and shallow pitting of honed limestone.
+          normalStrength: 0.0112,
+          normalScale: 2.1,
+        },
+      ),
+      'stone',
+      1.0,
     ),
     /**
      * The surrounding ground. Previously a near-black plane, which is what
@@ -310,16 +371,20 @@ function createMaterials() {
      * facade reads as a plinth extending outward rather than as ground the
      * building sits on.
      */
-    paving: withVariation(
-      standard({ color: '#8f887c', roughness: 0.82, metalness: 0, envMapIntensity: 0.5 }),
-      {
-        scale: 0.42,
-        colorVariation: 0.07,
-        roughnessVariation: 0.12,
-        seed: 137,
-        normalStrength: 0.03,
-        normalScale: 2.6,
-      },
+    paving: withMaps(
+      withVariation(
+        standard({ color: '#8f887c', roughness: 0.82, metalness: 0, envMapIntensity: 0.5 }),
+        {
+          scale: 0.42,
+          colorVariation: 0.07,
+          roughnessVariation: 0.12,
+          seed: 137,
+          normalStrength: 0.0105,
+          normalScale: 2.6,
+        },
+      ),
+      'paving',
+      1.0,
     ),
     /**
      * Outdoor teak — the warm, silvered timber of terrace furniture, and
@@ -327,17 +392,21 @@ function createMaterials() {
      * stained joinery oak. Grain runs along the length via the same
      * anisotropy the interior timbers use.
      */
-    teak: withVariation(
-      standard({ color: '#8a6a45', roughness: 0.68, metalness: 0.02, envMapIntensity: 0.45 }),
-      {
-        scale: 1.6,
-        colorVariation: 0.07,
-        roughnessVariation: 0.07,
-        seed: 139,
-        anisotropy: [1, 0.16, 1],
-        normalStrength: 0.04,
-        normalScale: 5.0,
-      },
+    teak: withMaps(
+      withVariation(
+        standard({ color: '#8a6a45', roughness: 0.68, metalness: 0.02, envMapIntensity: 0.45 }),
+        {
+          scale: 1.6,
+          colorVariation: 0.07,
+          roughnessVariation: 0.07,
+          seed: 139,
+          anisotropy: [1, 0.16, 1],
+          normalStrength: 0.04,
+          normalScale: 5.0,
+        },
+      ),
+      'oak',
+      0.85,
     ),
     /** Legacy Phase 1 diagnostic massing only — kept simple deliberately. */
     glass: standard({
@@ -395,16 +464,20 @@ function createMaterials() {
      * noise compressed along the vertical axis so it reads as grain running
      * the height of the door rather than a blotchy stain.
      */
-    wood: withVariation(standard({ color: '#3f3025', roughness: 0.52, metalness: 0.05 }), {
-      scale: 5,
-      colorVariation: 0.05,
-      roughnessVariation: 0.06,
-      seed: 7,
-      // Open-pore timber: the grain the anisotropy already stretches.
-      normalStrength: 0.035,
-      normalScale: 4.5,
-      anisotropy: [1, 0.1, 1],
-    }),
+    wood: withMaps(
+      withVariation(standard({ color: '#3f3025', roughness: 0.52, metalness: 0.05 }), {
+        scale: 5,
+        colorVariation: 0.05,
+        roughnessVariation: 0.06,
+        seed: 7,
+        // Open-pore timber: the grain the anisotropy already stretches.
+        normalStrength: 0.0123,
+        normalScale: 4.5,
+        anisotropy: [1, 0.1, 1],
+      }),
+      'oak',
+      1.0,
+    ),
     /**
      * Architectural glazing. Clearcoat rather than transmission: it reads as
      * deep reflective glass without the render-target cost transmission adds
@@ -569,89 +642,117 @@ function createMaterials() {
      * low-amplitude, large-cell noise so a big flat wall reads as a hand-
      * finished surface rather than a solid fill, without ever looking dirty.
      */
-    plaster: withVariation(standard({ color: '#cec7ba', roughness: 0.9, metalness: 0 }), {
-      scale: 0.35,
-      colorVariation: 0.022,
-      roughnessVariation: 0.04,
-      seed: 83,
-      // Polished plaster: a trowelled wall is flat, not perfect.
-      normalStrength: 0.009,
-      normalScale: 2.6,
-    }),
+    plaster: withMaps(
+      withVariation(standard({ color: '#cec7ba', roughness: 0.9, metalness: 0 }), {
+        scale: 0.35,
+        colorVariation: 0.022,
+        roughnessVariation: 0.04,
+        seed: 83,
+        // Polished plaster: a trowelled wall is flat, not perfect.
+        normalStrength: 0.0031,
+        normalScale: 2.6,
+      }),
+      'plaster',
+      1.0,
+    ),
     /**
      * Honed pale limestone flooring for the principal rooms. Larger, softer
      * cells than the exterior `stone` so it reads as big-format interior
      * slabs, and lower roughness for the sheen of a honed finish.
      */
-    interiorStone: withVariation(standard({ color: '#b8b0a0', roughness: 0.52, metalness: 0.02 }), {
-      scale: 0.4,
-      colorVariation: 0.04,
-      roughnessVariation: 0.07,
-      seed: 89,
-      // Honed stone floor — the same grain as the exterior, finer.
-      normalStrength: 0.022,
-      normalScale: 2.8,
-    }),
+    interiorStone: withMaps(
+      withVariation(standard({ color: '#b8b0a0', roughness: 0.52, metalness: 0.02 }), {
+        scale: 0.4,
+        colorVariation: 0.04,
+        roughnessVariation: 0.07,
+        seed: 89,
+        // Honed stone floor — the same grain as the exterior, finer.
+        normalStrength: 0.0077,
+        normalScale: 2.8,
+      }),
+      'stone',
+      0.8,
+    ),
     /**
      * Interior joinery timber — cabinetry, built-ins, bedroom flooring.
      * Warmer and lighter than the entrance `wood`, with the same vertically
      * compressed anisotropy that reads as directional grain.
      */
-    joinery: withVariation(standard({ color: '#6b503a', roughness: 0.46, metalness: 0.04 }), {
-      scale: 4.5,
-      colorVariation: 0.055,
-      roughnessVariation: 0.06,
-      seed: 97,
-      // Sawn timber joinery.
-      normalStrength: 0.03,
-      normalScale: 4.0,
-      anisotropy: [1, 0.12, 1],
-    }),
+    joinery: withMaps(
+      withVariation(standard({ color: '#6b503a', roughness: 0.46, metalness: 0.04 }), {
+        scale: 4.5,
+        colorVariation: 0.055,
+        roughnessVariation: 0.06,
+        seed: 97,
+        // Sawn timber joinery.
+        normalStrength: 0.0105,
+        normalScale: 4.0,
+        anisotropy: [1, 0.12, 1],
+      }),
+      'oak',
+      0.9,
+    ),
     /**
      * Book-matched marble for island tops, vanities, and the fireplace
      * surround. Strongly anisotropic noise stretched along X is what draws
      * veining across a slab without a texture map.
      */
-    marble: withVariation(standard({ color: '#e2ded5', roughness: 0.22, metalness: 0.03 }), {
-      scale: 1.6,
-      colorVariation: 0.09,
-      roughnessVariation: 0.05,
-      seed: 101,
-      // Polished marble is almost perfectly flat; only the veining lifts.
-      normalStrength: 0.01,
-      normalScale: 2.0,
-      anisotropy: [0.25, 1.6, 1],
-    }),
+    marble: withMaps(
+      withVariation(standard({ color: '#e2ded5', roughness: 0.22, metalness: 0.03 }), {
+        scale: 1.6,
+        colorVariation: 0.09,
+        roughnessVariation: 0.05,
+        seed: 101,
+        // Polished marble is almost perfectly flat; only the veining lifts.
+        normalStrength: 0.0035,
+        normalScale: 2.0,
+        anisotropy: [0.25, 1.6, 1],
+      }),
+      'marble',
+      1.0,
+    ),
     /** Principal upholstery — sofas, beds, headboards. Warm greige linen. */
-    upholstery: withVariation(standard({ color: '#9a917f', roughness: 0.95, metalness: 0 }), {
-      scale: 6,
-      colorVariation: 0.05,
-      roughnessVariation: 0.04,
-      seed: 103,
-      // Woven upholstery microstructure.
-      normalStrength: 0.045,
-      normalScale: 8.5,
-    }),
+    upholstery: withMaps(
+      withVariation(standard({ color: '#9a917f', roughness: 0.95, metalness: 0 }), {
+        scale: 6,
+        colorVariation: 0.05,
+        roughnessVariation: 0.04,
+        seed: 103,
+        // Woven upholstery microstructure.
+        normalStrength: 0.0158,
+        normalScale: 8.5,
+      }),
+      'linen',
+      0.9,
+    ),
     /** Accent upholstery — occasional chairs, stools, bed throws. */
-    upholsteryDark: withVariation(standard({ color: '#4a463f', roughness: 0.96, metalness: 0 }), {
-      scale: 6,
-      colorVariation: 0.06,
-      roughnessVariation: 0.04,
-      seed: 107,
-      // As the pale upholstery.
-      normalStrength: 0.045,
-      normalScale: 8.5,
-    }),
+    upholsteryDark: withMaps(
+      withVariation(standard({ color: '#4a463f', roughness: 0.96, metalness: 0 }), {
+        scale: 6,
+        colorVariation: 0.06,
+        roughnessVariation: 0.04,
+        seed: 107,
+        // As the pale upholstery.
+        normalStrength: 0.0158,
+        normalScale: 8.5,
+      }),
+      'leather',
+      1.0,
+    ),
     /** Deep-pile wool rugs. Coarse noise reads as pile at close range. */
-    rug: withVariation(standard({ color: '#5f574a', roughness: 1, metalness: 0 }), {
-      scale: 9,
-      colorVariation: 0.08,
-      roughnessVariation: 0.03,
-      seed: 109,
-      // Wool pile — the deepest of the interior fabrics.
-      normalStrength: 0.06,
-      normalScale: 9.0,
-    }),
+    rug: withMaps(
+      withVariation(standard({ color: '#5f574a', roughness: 1, metalness: 0 }), {
+        scale: 9,
+        colorVariation: 0.08,
+        roughnessVariation: 0.03,
+        seed: 109,
+        // Wool pile — the deepest of the interior fabrics.
+        normalStrength: 0.021,
+        normalScale: 9.0,
+      }),
+      'wool',
+      1.0,
+    ),
     /** Sanitaryware and tableware — glazed white ceramic. */
     ceramic: standard({ color: '#eef0ee', roughness: 0.12, metalness: 0.02 }),
     /**
@@ -665,17 +766,21 @@ function createMaterials() {
      * has to hold its own value against it, where a seat cushion is read
      * against a floor.
      */
-    drapery: withVariation(
-      standard({ color: '#a89b87', roughness: 0.97, metalness: 0, envMapIntensity: 0.35 }),
-      {
-        scale: 1.1,
-        colorVariation: 0.05,
-        roughnessVariation: 0.04,
-        seed: 149,
-        anisotropy: [1, 0.2, 1],
-        normalStrength: 0.05,
-        normalScale: 6.0,
-      },
+    drapery: withMaps(
+      withVariation(
+        standard({ color: '#a89b87', roughness: 0.97, metalness: 0, envMapIntensity: 0.35 }),
+        {
+          scale: 1.1,
+          colorVariation: 0.05,
+          roughnessVariation: 0.04,
+          seed: 149,
+          anisotropy: [1, 0.2, 1],
+          normalStrength: 0.05,
+          normalScale: 6.0,
+        },
+      ),
+      'linen',
+      1.0,
     ),
     /**
      * The sheer layer. Transparent rather than alpha-cut, because a voile is

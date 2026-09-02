@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { resolveLighting, type ResolvedLighting } from '@/lib/three/lighting';
 import type { DetailTier, VillaConfig } from './VillaTypes';
 import { VILLA_CONFIG, createVillaLayout } from './VillaGeometry';
+import { disposeSurfaceMaps } from '../textures/SurfaceMaps';
 import { disposeFoliageAtlas } from './landscape/FoliageAtlas';
 import { disposeVillaGeometries } from './VillaPrimitiveCache';
 import { ARCHITECTURAL_CHAMFER, ChamferProvider } from './VillaPrimitives';
@@ -106,6 +107,7 @@ export function ProceduralVilla({ config, detail = 'high', lighting }: Procedura
     () => () => {
       disposeVillaGeometries();
       disposeFoliageAtlas();
+      disposeSurfaceMaps();
     },
     [],
   );
