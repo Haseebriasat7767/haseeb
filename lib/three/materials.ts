@@ -537,8 +537,8 @@ function createMaterials() {
       roughnessVariation: 0.04,
       seed: 83,
       // Polished plaster: a trowelled wall is flat, not perfect.
-      normalStrength: 0.018,
-      normalScale: 3.4,
+      normalStrength: 0.009,
+      normalScale: 2.6,
     }),
     /**
      * Honed pale limestone flooring for the principal rooms. Larger, softer
@@ -551,8 +551,8 @@ function createMaterials() {
       roughnessVariation: 0.07,
       seed: 89,
       // Honed stone floor — the same grain as the exterior, finer.
-      normalStrength: 0.03,
-      normalScale: 3.2,
+      normalStrength: 0.022,
+      normalScale: 2.8,
     }),
     /**
      * Interior joinery timber — cabinetry, built-ins, bedroom flooring.
@@ -580,8 +580,8 @@ function createMaterials() {
       roughnessVariation: 0.05,
       seed: 101,
       // Polished marble is almost perfectly flat; only the veining lifts.
-      normalStrength: 0.012,
-      normalScale: 2.2,
+      normalStrength: 0.01,
+      normalScale: 2.0,
       anisotropy: [0.25, 1.6, 1],
     }),
     /** Principal upholstery — sofas, beds, headboards. Warm greige linen. */
@@ -591,8 +591,8 @@ function createMaterials() {
       roughnessVariation: 0.04,
       seed: 103,
       // Woven upholstery microstructure.
-      normalStrength: 0.06,
-      normalScale: 7.0,
+      normalStrength: 0.045,
+      normalScale: 8.5,
     }),
     /** Accent upholstery — occasional chairs, stools, bed throws. */
     upholsteryDark: withVariation(standard({ color: '#4a463f', roughness: 0.96, metalness: 0 }), {
@@ -601,8 +601,8 @@ function createMaterials() {
       roughnessVariation: 0.04,
       seed: 107,
       // As the pale upholstery.
-      normalStrength: 0.06,
-      normalScale: 7.0,
+      normalStrength: 0.045,
+      normalScale: 8.5,
     }),
     /** Deep-pile wool rugs. Coarse noise reads as pile at close range. */
     rug: withVariation(standard({ color: '#5f574a', roughness: 1, metalness: 0 }), {
@@ -611,8 +611,8 @@ function createMaterials() {
       roughnessVariation: 0.03,
       seed: 109,
       // Wool pile — the deepest of the interior fabrics.
-      normalStrength: 0.09,
-      normalScale: 6.5,
+      normalStrength: 0.06,
+      normalScale: 9.0,
     }),
     /** Sanitaryware and tableware — glazed white ceramic. */
     ceramic: standard({ color: '#eef0ee', roughness: 0.12, metalness: 0.02 }),

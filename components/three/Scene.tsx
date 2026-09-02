@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { ACESFilmicToneMapping } from 'three';
 import { useQualityTier } from '@/hooks/useQualityTier';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { getPostProfile, resolveGrade } from '@/lib/three/grading';
 import { DEFAULT_TIME_OF_DAY, resolveLighting } from '@/lib/three/lighting';
 import { DEFAULT_VIEW } from '@/lib/three/scene-config';
 import type { CameraMode, CameraView, SceneContent, TimeOfDay } from '@/types';
@@ -13,6 +14,7 @@ import { PerformanceMonitor } from './dev/PerformanceMonitor';
 import type { PerformanceSnapshot } from './dev/performance-types';
 import { SceneEnvironment } from './Environment';
 import { PlaceholderMassing } from './PlaceholderMassing';
+import { PostProcessing } from './post/PostProcessing';
 import { Terrain } from './Terrain';
 import { ProceduralVilla } from './villa/ProceduralVilla';
 
@@ -74,6 +76,11 @@ export function Scene({
     [timeOfDay, quality.tier],
   );
 
+  // The finishing chain reads the same hour the rig does, so a grade can
+  // never describe a different time of day than the light it is grading.
+  const post = useMemo(() => getPostProfile(quality.tier), [quality.tier]);
+  const grade = useMemo(() => resolveGrade(timeOfDay ?? DEFAULT_TIME_OF_DAY), [timeOfDay]);
+
   return (
     <Canvas
       shadows={quality.shadows}
@@ -98,6 +105,8 @@ export function Scene({
         shadows={quality.shadows}
         shadowMapSize={quality.shadowMapSize}
       />
+
+      {post.enabled ? <PostProcessing profile={post} grade={grade} /> : null}
 
       {diagnosticsEnabled && onMetrics ? (
         <PerformanceMonitor qualityTier={quality.tier} onUpdate={onMetrics} />
