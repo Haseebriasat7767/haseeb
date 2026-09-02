@@ -13,6 +13,7 @@ import { VillaRoof } from './VillaRoof';
 import { VillaStairs } from './VillaStairs';
 import { VillaTerrace } from './VillaTerrace';
 import { VillaUpperFloor } from './VillaUpperFloor';
+import { Interior } from './interior/Interior';
 import { LandscapeExterior } from './landscape/LandscapeExterior';
 import { SiteExterior } from './site/SiteExterior';
 
@@ -30,7 +31,8 @@ type ProceduralVillaProps = {
  * The whole building is a pure function of `VILLA_CONFIG`: the layout is
  * resolved once per configuration and every part reads from it, so a later
  * configurator can change width, depth, floor heights, cantilever, or
- * terrace depth and the architecture recomposes coherently.
+ * terrace depth and the architecture — inside and out — recomposes
+ * coherently.
  */
 export function ProceduralVilla({ config, detail = 'high' }: ProceduralVillaProps) {
   const layout = useMemo(
@@ -54,6 +56,7 @@ export function ProceduralVilla({ config, detail = 'high' }: ProceduralVillaProp
       <VillaRailings layout={layout} />
       <VillaColumns layout={layout} />
       <VillaStairs layout={layout} />
+      <Interior plan={layout.plan} levels={layout.levels} detail={detail} />
       <SiteExterior plan={layout.plan} detail={detail} />
       <LandscapeExterior plan={layout.plan} detail={detail} />
     </group>

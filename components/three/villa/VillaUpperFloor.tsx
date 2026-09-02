@@ -1,7 +1,7 @@
 'use client';
 
 import { getMaterials } from '@/lib/three/materials';
-import { Massing } from './VillaPrimitives';
+import { Massing, MergedBoxes } from './VillaPrimitives';
 import type { VillaLayout } from './VillaTypes';
 
 /**
@@ -19,11 +19,20 @@ export function VillaUpperFloor({ layout }: { layout: VillaLayout }) {
       <Massing specs={layout.upperFloor.slab} material={materials.darkMetal} />
 
       <group name="MainMass">
-        <Massing specs={layout.upperFloor.mass} material={materials.concrete} />
+        {/* Punched enclosure walls merge to one mesh, as on the floor below. */}
+        <MergedBoxes
+          name="up-enclosure"
+          specs={layout.upperFloor.mass}
+          material={materials.concrete}
+        />
       </group>
 
       <group name="Cantilever">
-        <Massing specs={layout.upperFloor.cantilever} material={materials.concrete} />
+        <MergedBoxes
+          name="up-cantilever-enclosure"
+          specs={layout.upperFloor.cantilever}
+          material={materials.concrete}
+        />
       </group>
 
       <group name="Terrace">

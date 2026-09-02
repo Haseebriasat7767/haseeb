@@ -311,6 +311,93 @@ function createMaterials() {
       roughnessVariation: 0.03,
       seed: 79,
     }),
+
+    // ── Interior palette (Phase 2F) ──────────────────────────────────────
+    // Deliberately additions to this same cache rather than a second one:
+    // every interior surface still resolves through `getMaterials()` and is
+    // released by the same `disposeMaterials()`.
+
+    /**
+     * Polished interior plaster — partitions, ceilings, and reveals. Very
+     * low-amplitude, large-cell noise so a big flat wall reads as a hand-
+     * finished surface rather than a solid fill, without ever looking dirty.
+     */
+    plaster: withVariation(standard({ color: '#ddd7cc', roughness: 0.9, metalness: 0 }), {
+      scale: 0.35,
+      colorVariation: 0.022,
+      roughnessVariation: 0.04,
+      seed: 83,
+    }),
+    /**
+     * Honed pale limestone flooring for the principal rooms. Larger, softer
+     * cells than the exterior `stone` so it reads as big-format interior
+     * slabs, and lower roughness for the sheen of a honed finish.
+     */
+    interiorStone: withVariation(standard({ color: '#cfc7b7', roughness: 0.5, metalness: 0.02 }), {
+      scale: 0.4,
+      colorVariation: 0.04,
+      roughnessVariation: 0.07,
+      seed: 89,
+    }),
+    /**
+     * Interior joinery timber — cabinetry, built-ins, bedroom flooring.
+     * Warmer and lighter than the entrance `wood`, with the same vertically
+     * compressed anisotropy that reads as directional grain.
+     */
+    joinery: withVariation(standard({ color: '#6b503a', roughness: 0.46, metalness: 0.04 }), {
+      scale: 4.5,
+      colorVariation: 0.055,
+      roughnessVariation: 0.06,
+      seed: 97,
+      anisotropy: [1, 0.12, 1],
+    }),
+    /**
+     * Book-matched marble for island tops, vanities, and the fireplace
+     * surround. Strongly anisotropic noise stretched along X is what draws
+     * veining across a slab without a texture map.
+     */
+    marble: withVariation(standard({ color: '#e2ded5', roughness: 0.22, metalness: 0.03 }), {
+      scale: 1.6,
+      colorVariation: 0.09,
+      roughnessVariation: 0.05,
+      seed: 101,
+      anisotropy: [0.25, 1.6, 1],
+    }),
+    /** Principal upholstery — sofas, beds, headboards. Warm greige linen. */
+    upholstery: withVariation(standard({ color: '#9a917f', roughness: 0.95, metalness: 0 }), {
+      scale: 6,
+      colorVariation: 0.05,
+      roughnessVariation: 0.04,
+      seed: 103,
+    }),
+    /** Accent upholstery — occasional chairs, stools, bed throws. */
+    upholsteryDark: withVariation(standard({ color: '#4a463f', roughness: 0.96, metalness: 0 }), {
+      scale: 6,
+      colorVariation: 0.06,
+      roughnessVariation: 0.04,
+      seed: 107,
+    }),
+    /** Deep-pile wool rugs. Coarse noise reads as pile at close range. */
+    rug: withVariation(standard({ color: '#5f574a', roughness: 1, metalness: 0 }), {
+      scale: 9,
+      colorVariation: 0.08,
+      roughnessVariation: 0.03,
+      seed: 109,
+    }),
+    /** Sanitaryware and tableware — glazed white ceramic. */
+    ceramic: standard({ color: '#eef0ee', roughness: 0.12, metalness: 0.02 }),
+    /**
+     * Lit fixture surfaces — pendants, cove strips, integrated joinery
+     * lighting. Emissive only: it costs nothing beyond a normal material and
+     * carries no bloom or post-processing, which stays out of Phase 2F.
+     */
+    lightGlow: standard({
+      color: '#241d14',
+      roughness: 0.6,
+      metalness: 0,
+      emissive: '#ffd9a8',
+      emissiveIntensity: 1.5,
+    }),
   };
 }
 

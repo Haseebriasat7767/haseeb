@@ -43,6 +43,60 @@ export const CAMERA_VIEWS: readonly CameraView[] = [
   },
 ] as const;
 
+/**
+ * Framings from inside the residence. These are the same `CameraView`
+ * objects the exterior list uses and feed the same `CameraController` — the
+ * only difference is that they sit inside the building, so they are meant
+ * for the `fixed` camera mode rather than the orbit rig, whose minimum
+ * distance deliberately keeps the exterior model in frame. They are kept
+ * out of `CAMERA_VIEWS` so the public explore page still lists approaches
+ * to the house rather than rooms within it.
+ */
+export const INTERIOR_VIEWS: readonly CameraView[] = [
+  {
+    id: 'foyer',
+    label: 'Foyer',
+    position: [-6, 2.6, 2.7],
+    target: [-6.2, 2.1, -3.4],
+    fov: 58,
+  },
+  {
+    id: 'living',
+    label: 'Living room',
+    position: [10.2, 2.3, 3.2],
+    target: [4.4, 1.7, -3.2],
+    fov: 56,
+  },
+  {
+    id: 'kitchen',
+    label: 'Kitchen',
+    position: [-3.4, 2.3, 1.6],
+    target: [1.4, 1.6, -7.4],
+    fov: 58,
+  },
+  {
+    id: 'stair',
+    label: 'Stair hall',
+    position: [-6.0, 2.3, -1.4],
+    target: [-6.4, 3.4, -8.4],
+    fov: 58,
+  },
+  {
+    id: 'master',
+    label: 'Master suite',
+    position: [-8.4, 6.8, -0.8],
+    target: [-12.6, 6.1, -5.2],
+    fov: 56,
+  },
+  {
+    id: 'library',
+    label: 'Library',
+    position: [13.8, 6.6, 7.2],
+    target: [5.2, 5.9, -3.2],
+    fov: 56,
+  },
+] as const;
+
 export const DEFAULT_VIEW: CameraView = CAMERA_VIEWS[0]!;
 
 /** Lighting rig constants — one key sun, soft fill, warm bounce. */

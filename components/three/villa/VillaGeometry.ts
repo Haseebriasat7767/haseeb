@@ -6,8 +6,12 @@ import type {
   Range,
   VillaConfig,
   VillaLayout,
+  VillaLevels,
+  VillaPlan,
+  WallGap,
 } from './VillaTypes';
-import { box, column, span } from './SpecBuilders';
+import { box, column, shell, span } from './SpecBuilders';
+import { createInteriorPlan } from './interior/InteriorPlan';
 import { buildOpenings } from './openings/OpeningBuilder';
 import type { FacadeWall, WallOpening } from './openings/OpeningTypes';
 
@@ -167,6 +171,153 @@ export function createVillaLayout(
   // Keeps stacked elements off each other's faces, avoiding depth flicker.
   const inset = 0.15;
 
+  const levels: VillaLevels = {
+    groundY,
+    groundFloorTopY,
+    upperFloorY,
+    upperFloorTopY,
+    roofTopY,
+  };
+
+  const plan: VillaPlan = {
+    halfWidth: halfW,
+    halfDepth: halfD,
+    frontZ: gfFrontZ,
+    plinthFrontZ,
+    terraceFrontZ: plinthFrontZ - 0.2,
+    plinthHalfWidth: halfW + config.foundationMargin,
+    groundY,
+    entranceOffsetX: config.entranceOffsetX,
+    entranceStairsX: [
+      config.entranceOffsetX - config.stairWidth / 2,
+      config.entranceOffsetX + config.stairWidth / 2,
+    ],
+    entranceStairsOuterZ: plinthFrontZ + config.stairTreads * config.stairGoing,
+    livingAxisX: [livingGlassX1, eastWingWestX],
+    cantileverAxisX: [cantileverX1, halfW],
+    wallThickness: t,
+    rearBarFrontZ: rearZ + config.rearBarDepth,
+    westWingEastX,
+    eastWingWestX,
+    entranceX: [entX1, entX2],
+    entranceBackZ,
+    entranceVoidBackZ,
+    livingGlassZ,
+    upperFrontZ,
+    upperWestFrontZ,
+    cantileverZ: [upperFrontZ, cantileverFrontZ],
+  };
+
+  // The interior schedule decides which faces of each structural volume are
+  // omitted and where doors pierce them, so the enclosure below is built to
+  // serve real rooms rather than being a hollow box that rooms are squeezed
+  // into afterwards.
+  const interior = createInteriorPlan(plan, levels);
+
+  // ── Opening schedule ──────────────────────────────────────────────────
+  // Hoisted above the structure because the same voids are punched twice:
+  // once through the cladding, by the facade builder, and once through the
+  // structural enclosure, so a window is a hole in the building and not
+  // only in its skin.
+  const gfWallY: Range = [groundY, groundFloorTopY];
+  const upWallY: Range = [upperFloorY, upperFloorTopY];
+  const livingY: Range = [groundY + 0.12, groundFloorTopY - 0.35];
+  const upperGlassY: Range = [upperFloorY + 0.2, upperFloorTopY - 0.25];
+  const gfWingZ: Range = [rearZ + config.rearBarDepth, gfFrontZ];
+
+  const gfEastWindows = distribute(
+    'gf-east-window',
+    gfWingZ,
+    [groundY + 0.9, groundFloorTopY - 0.7],
+    3,
+    1.1,
+    0.9,
+    { mullions: 0, solidBehind: false },
+  );
+  const gfWestWindows: WallOpening[] = [
+    {
+      key: 'gf-west-window',
+      kind: 'window',
+      across: [gfWingZ[0] + 1.4, gfWingZ[1] - 1.4],
+      y: [groundY + 0.14, groundFloorTopY - 0.6],
+      solidBehind: false,
+    },
+  ];
+  const gfRearWindows = distribute(
+    'gf-rear-window',
+    [-halfW, halfW],
+    [groundY + 0.9, groundFloorTopY - 0.7],
+    4,
+    1.8,
+    1.6,
+    { solidBehind: false },
+  );
+  const upFrontWindows: WallOpening[] = [
+    {
+      key: 'up-front-window',
+      kind: 'window',
+      across: [entX2 + 0.5, cantileverX1 - 0.5],
+      y: upperGlassY,
+      solidBehind: false,
+    },
+  ];
+  const cantileverWindows: WallOpening[] = [
+    {
+      key: 'cantilever-window',
+      kind: 'window',
+      across: [cantileverX1 + 0.45, halfW - 0.45],
+      y: upperGlassY,
+      solidBehind: false,
+    },
+  ];
+  const cantileverEastWindows: WallOpening[] = [
+    {
+      key: 'cantilever-east-window',
+      kind: 'window',
+      across: [upperFrontZ + 0.45, cantileverFrontZ - 0.45],
+      y: upperGlassY,
+      solidBehind: false,
+    },
+  ];
+  const upEastWindows = distribute(
+    'up-east-window',
+    [rearZ, upperFrontZ],
+    [upperFloorY + 0.65, upperFloorTopY - 0.65],
+    3,
+    2.6,
+    1.2,
+    { solidBehind: false },
+  );
+  const upTerraceOpenings: WallOpening[] = [
+    {
+      key: 'up-terrace-slider',
+      kind: 'sliding',
+      across: [-halfW + 0.8, entX1 - 0.8],
+      y: [upperFloorY + 0.2, upperFloorTopY - 0.45],
+      solidBehind: false,
+    },
+  ];
+  const upRearWindows = distribute(
+    'up-rear-window',
+    [-halfW, halfW],
+    [upperFloorY + 0.65, upperFloorTopY - 0.75],
+    4,
+    2.2,
+    1.6,
+    { solidBehind: false },
+  );
+
+  /** An opening schedule reduced to the voids the structure must carry. */
+  const voids = (openings: readonly WallOpening[]): WallGap[] =>
+    openings.map((opening) => ({ across: opening.across, y: opening.y }));
+
+  /** Merges structural voids with the interior's own door schedule. */
+  const withDoors = (
+    windows: readonly WallOpening[],
+    doors: readonly WallGap[] | false | undefined,
+  ): readonly WallGap[] | false =>
+    doors === false ? false : [...voids(windows), ...(doors ?? [])];
+
   // ── Foundation ────────────────────────────────────────────────────────
   const foundation = {
     plinth: [box('plinth', plinthX, [0.25, groundY], plinthZ)],
@@ -182,13 +333,41 @@ export function createVillaLayout(
   };
 
   // ── Ground floor ──────────────────────────────────────────────────────
+  // Each volume is built as its own enclosure rather than a solid block:
+  // the outer faces land exactly where the massing always put them, so the
+  // elevations are unchanged, while the space inside is real and habitable.
   const gfY: Range = [groundY, groundFloorTopY];
+  const gfShell = interior.shellGaps;
 
   const groundFloor = {
     mass: [
-      box('gf-rear-bar', [-halfW, halfW], gfY, [rearZ, rearZ + config.rearBarDepth]),
-      box('gf-west-wing', [-halfW, westWingEastX], gfY, [rearZ + config.rearBarDepth, gfFrontZ]),
-      box('gf-east-wing', [eastWingWestX, halfW], gfY, [rearZ + config.rearBarDepth, gfFrontZ]),
+      ...shell('gf-rear-bar', [-halfW, halfW], gfY, [rearZ, rearZ + config.rearBarDepth], t, {
+        north: voids(gfRearWindows),
+        south: gfShell.rearBar.south,
+      }),
+      ...shell(
+        'gf-west-wing',
+        [-halfW, westWingEastX],
+        gfY,
+        [rearZ + config.rearBarDepth, gfFrontZ],
+        t,
+        {
+          west: voids(gfWestWindows),
+          north: gfShell.westWing.north,
+          east: gfShell.westWing.east,
+        },
+      ),
+      ...shell(
+        'gf-east-wing',
+        [eastWingWestX, halfW],
+        gfY,
+        [rearZ + config.rearBarDepth, gfFrontZ],
+        t,
+        {
+          east: voids(gfEastWindows),
+          west: gfShell.eastWing.west,
+        },
+      ),
     ],
     // Solid spandrel behind the recessed living glazing, plus its head beam.
     recess: [
@@ -240,14 +419,32 @@ export function createVillaLayout(
 
   const upperFloor = {
     mass: [
-      box('up-west', [-halfW, entX1], upY, [rearZ, upperWestFrontZ]),
-      box('up-link', [entX1, entX2], upY, [rearZ, entranceVoidBackZ]),
-      box('up-east', [entX2, halfW], upY, [rearZ, upperFrontZ]),
+      ...shell('up-west', [-halfW, entX1], upY, [rearZ, upperWestFrontZ], t, {
+        north: voids(upRearWindows),
+        south: voids(upTerraceOpenings),
+        east: gfShell.upWest.east,
+      }),
+      ...shell('up-link', [entX1, entX2], upY, [rearZ, entranceVoidBackZ], t, gfShell.upLink),
+      ...shell('up-east', [entX2, halfW], upY, [rearZ, upperFrontZ], t, {
+        north: voids(upRearWindows),
+        east: voids(upEastWindows),
+        west: gfShell.upEast.west,
+        south: withDoors(upFrontWindows, gfShell.upEast.south),
+      }),
     ],
-    cantilever: [box('up-cantilever', [cantileverX1, halfW], upY, [upperFrontZ, cantileverFrontZ])],
+    cantilever: [
+      ...shell('up-cantilever', [cantileverX1, halfW], upY, [upperFrontZ, cantileverFrontZ], t, {
+        north: gfShell.upCantilever.north,
+        south: voids(cantileverWindows),
+        east: voids(cantileverEastWindows),
+      }),
+    ],
     slab: [
       box('slab-west', [-halfW - reveal, entX1], slabY, [rearZ - reveal, upperWestFrontZ + reveal]),
-      box('slab-link', [entX1, entX2], slabY, [rearZ - reveal, entranceVoidBackZ]),
+      // Split around the stairwell, which is what lets the stair arrive on
+      // the upper level instead of running into the underside of its slab.
+      box('slab-link-rear', [entX1, entX2], slabY, [rearZ - reveal, interior.stairwellZ[0]]),
+      box('slab-link-front', [entX1, entX2], slabY, [interior.stairwellZ[1], entranceVoidBackZ]),
       box('slab-east', [entX2, halfW + reveal], slabY, [rearZ - reveal, upperFrontZ + reveal]),
       box('slab-cantilever', [cantileverX1, halfW + reveal], slabY, [
         upperFrontZ,
@@ -307,11 +504,6 @@ export function createVillaLayout(
   // ── Facade schedule ───────────────────────────────────────────────────
   // Each wall names its structural face and the openings punched into it;
   // the builder turns that into skin, frames, mullions, glass, and doors.
-  const gfWallY: Range = [groundY, groundFloorTopY];
-  const upWallY: Range = [upperFloorY, upperFloorTopY];
-  const livingY: Range = [groundY + 0.12, groundFloorTopY - 0.35];
-  const upperGlassY: Range = [upperFloorY + 0.2, upperFloorTopY - 0.25];
-
   const walls: FacadeWall[] = [
     // Living volume opening onto the terrace — the main sliding door.
     {
@@ -357,19 +549,11 @@ export function createVillaLayout(
       axis: 'x',
       facing: 1,
       face: halfW,
-      across: [rearZ + config.rearBarDepth, gfFrontZ],
+      across: gfWingZ,
       y: gfWallY,
       skin: true,
       stone: true,
-      openings: distribute(
-        'gf-east-window',
-        [rearZ + config.rearBarDepth, gfFrontZ],
-        [groundY + 0.9, groundFloorTopY - 0.7],
-        3,
-        1.1,
-        0.9,
-        { mullions: 0 },
-      ),
+      openings: gfEastWindows,
     },
     // West ground floor: one broad opening to the afternoon side.
     {
@@ -377,19 +561,11 @@ export function createVillaLayout(
       axis: 'x',
       facing: -1,
       face: -halfW,
-      across: [rearZ + config.rearBarDepth, gfFrontZ],
+      across: gfWingZ,
       y: gfWallY,
       skin: true,
       stone: true,
-      openings: [
-        {
-          key: 'gf-west-window',
-          kind: 'window',
-          across: [rearZ + config.rearBarDepth + 1.4, gfFrontZ - 1.4],
-          y: [groundY + 0.14, groundFloorTopY - 0.6],
-          solidBehind: true,
-        },
-      ],
+      openings: gfWestWindows,
     },
     // Rear ground floor: a service elevation, evenly punched.
     {
@@ -400,14 +576,7 @@ export function createVillaLayout(
       across: [-halfW, halfW],
       y: gfWallY,
       skin: true,
-      openings: distribute(
-        'gf-rear-window',
-        [-halfW, halfW],
-        [groundY + 0.9, groundFloorTopY - 0.7],
-        4,
-        1.8,
-        1.6,
-      ),
+      openings: gfRearWindows,
     },
     // Upper front, between the entrance void and the cantilever.
     {
@@ -418,15 +587,7 @@ export function createVillaLayout(
       across: [entX2, cantileverX1],
       y: upWallY,
       skin: true,
-      openings: [
-        {
-          key: 'up-front-window',
-          kind: 'window',
-          across: [entX2 + 0.5, cantileverX1 - 0.5],
-          y: upperGlassY,
-          solidBehind: true,
-        },
-      ],
+      openings: upFrontWindows,
     },
     // The cantilever front is the hero elevation: full-height glazing.
     {
@@ -437,15 +598,7 @@ export function createVillaLayout(
       across: [cantileverX1, halfW],
       y: upWallY,
       skin: true,
-      openings: [
-        {
-          key: 'cantilever-window',
-          kind: 'window',
-          across: [cantileverX1 + 0.45, halfW - 0.45],
-          y: upperGlassY,
-          solidBehind: true,
-        },
-      ],
+      openings: cantileverWindows,
     },
     {
       key: 'cantilever-east',
@@ -455,15 +608,7 @@ export function createVillaLayout(
       across: [upperFrontZ, cantileverFrontZ],
       y: upWallY,
       skin: true,
-      openings: [
-        {
-          key: 'cantilever-east-window',
-          kind: 'window',
-          across: [upperFrontZ + 0.45, cantileverFrontZ - 0.45],
-          y: upperGlassY,
-          solidBehind: true,
-        },
-      ],
+      openings: cantileverEastWindows,
     },
     // Upper east band, shaded by the fins added in the facade group.
     {
@@ -474,14 +619,7 @@ export function createVillaLayout(
       across: [rearZ, upperFrontZ],
       y: upWallY,
       skin: true,
-      openings: distribute(
-        'up-east-window',
-        [rearZ, upperFrontZ],
-        [upperFloorY + 0.65, upperFloorTopY - 0.65],
-        3,
-        2.6,
-        1.2,
-      ),
+      openings: upEastWindows,
     },
     // Upper west opens onto the roof terrace through a second slider.
     {
@@ -492,15 +630,7 @@ export function createVillaLayout(
       across: [-halfW, entX1],
       y: upWallY,
       skin: true,
-      openings: [
-        {
-          key: 'up-terrace-slider',
-          kind: 'sliding',
-          across: [-halfW + 0.8, entX1 - 0.8],
-          y: [upperFloorY + 0.2, upperFloorTopY - 0.45],
-          solidBehind: true,
-        },
-      ],
+      openings: upTerraceOpenings,
     },
     {
       key: 'up-rear',
@@ -510,14 +640,7 @@ export function createVillaLayout(
       across: [-halfW, halfW],
       y: upWallY,
       skin: true,
-      openings: distribute(
-        'up-rear-window',
-        [-halfW, halfW],
-        [upperFloorY + 0.65, upperFloorTopY - 0.75],
-        4,
-        2.2,
-        1.6,
-      ),
+      openings: upRearWindows,
     },
   ];
 
@@ -663,20 +786,7 @@ export function createVillaLayout(
   });
 
   return {
-    plan: {
-      halfWidth: halfW,
-      halfDepth: halfD,
-      frontZ: gfFrontZ,
-      plinthFrontZ,
-      terraceFrontZ: plinthFrontZ - 0.2,
-      plinthHalfWidth: halfW + config.foundationMargin,
-      groundY,
-      entranceOffsetX: config.entranceOffsetX,
-      entranceStairsX: [stairX1, stairX2],
-      entranceStairsOuterZ: plinthFrontZ + config.stairTreads * config.stairGoing,
-      livingAxisX: [livingGlassX1, eastWingWestX],
-      cantileverAxisX: [cantileverX1, halfW],
-    },
+    plan,
     foundation,
     groundFloor,
     upperFloor,
@@ -687,7 +797,7 @@ export function createVillaLayout(
     railings,
     columns,
     stairs,
-    levels: { groundY, groundFloorTopY, upperFloorY, upperFloorTopY, roofTopY },
+    levels,
   };
 }
 

@@ -68,7 +68,8 @@ any kind is downloaded. `components/three/villa/VillaGeometry.ts` holds
 function that resolves it into the whole building. Each part component
 (foundation, lower floor, upper floor, roof, terrace, glazing, columns,
 stairs) only reads from that layout, so changing width, depth, floor heights,
-cantilever, or terrace depth recomposes the architecture coherently.
+cantilever, or terrace depth recomposes the architecture coherently — inside
+and out, since the interiors below are generated from the same layout.
 
 ### Openings and facade detailing
 
@@ -196,6 +197,89 @@ Per material:
 No material assignment, geometry, layout, or dependency changed in this
 pass — only material definitions in `lib/three/materials.ts`.
 
+### Procedural interiors
+
+The residence is a complete house, not a facade: the ground and upper
+volumes are built as _enclosures_ rather than solid blocks, and every room
+inside them is generated from the villa's own plan lines.
+
+`SpecBuilders.punchedWall()` builds a wall as the solid remainder around its
+voids — a pier between each pair of openings, a sill below and a head above
+every one. `shell()` wraps that into a four-sided enclosure whose outer
+faces land exactly where the Phase 2A massing put them, so the elevations
+are unchanged while the space inside becomes real. The same opening
+schedule is now punched twice: once through the cladding by the facade
+builder, and once through the structure, so a window is a hole in the
+building and not only in its skin.
+
+`components/three/villa/interior/` holds the interior in the same
+config → pure layout → merged geometry shape as the villa, the site, and
+the landscape:
+
+- **`InteriorPlan.ts`** — `createInteriorPlan()`, the room schedule. It
+  returns twenty-one rooms across both storeys (foyer, living, dining,
+  kitchen, pantry, utility, stair hall, guest suite and bathroom, study,
+  media room; master bedroom, bathroom and dressing room, upper landing,
+  two further bedrooms and a bathroom, upper hall, upper lounge, library),
+  the partitions dividing them, which shell faces are omitted or pierced by
+  doors, and where the upper slab is voided for the stair. It is pure and
+  is called **twice** — once by `createVillaLayout` to hollow its masses,
+  once by `createInteriorLayout` to furnish the result — so the structure
+  and the rooms can never disagree.
+- **`Furniture.ts`** — reusable procedural builders: `createSofa`,
+  `createArmchair`, `createDiningSet`, `createBed`, `createNightstand`,
+  `createBuiltIn`, `createShelving`, `createCounterRun`, `createIsland`,
+  `createVanity`, `createBathtub`, `createShower`, `createWC`,
+  `createDesk`, `createConsole`, `createMediaUnit`, `createFireplace`,
+  `createNiche`, `createRug`, `createPendant`, `createFloorLamp`,
+  `createCove`, and `createBalustrade`. Each is written once in the piece's
+  own frame — across its width, up from its floor, back from its front —
+  and mapped onto world axes by a `facing`, so a sofa is authored the same
+  way whether it ends up against the north wall or the east one.
+- **`InteriorGeometry.ts`** — `INTERIOR_CONFIG` and `createInteriorLayout()`,
+  the pure counterpart of `createVillaLayout()`, `createSiteLayout()`, and
+  `createLandscapeLayout()`. It resolves floor and ceiling finishes, the
+  dog-leg stair connecting the two storeys, the balustrades guarding every
+  edge that stair opens up, the foyer laylight, and the furniture in each
+  room. There is no randomness of any kind — the same villa always
+  furnishes identically.
+
+Two pieces of architecture fall out of connecting the interior to the
+structure rather than drawing it to fit. The stair is sized from the storey
+height, not the room: two equal flights either side of a half-landing, with
+the slab above voided over exactly the length that needs headroom — which is
+why `slab-link` is now built in two pieces. And the two-storey entrance slot
+had no floor plate above it, so the foyer is roofed at parapet level in a
+glazed laylight and becomes the daylit heart of the plan.
+
+Furniture is sorted by **material** rather than by room, and each bucket
+becomes exactly one merged mesh, so a fully furnished two-storey house costs
+about a dozen draw calls. The enclosure walls merge the same way. Materials
+are additions to the single existing cache in `lib/three/materials.ts` —
+`plaster`, `interiorStone`, `joinery`, `marble`, `upholstery`,
+`upholsteryDark`, `rug`, `ceramic`, and an emissive `lightGlow` — resolved
+through the same `getMaterials()` and released by the same
+`disposeMaterials()`. There is no second material cache and no second
+quality-tier system.
+
+The quality tier scales only what is safe to scale. Floors, ceilings,
+partitions, built-ins, and the stair are identical at every tier, because a
+room with no walls is not a cheaper room. What thins out is decorative
+accessories, seating density, shelf counts, and the number of soft interior
+fill lights — seven on `high`, three on `medium`, and none on `low`, where
+the emissive fixtures carry the read on their own. Those fills are plain
+shadowless point lights placed by the layout; cinematic lighting, exposure,
+and any post-processing remain out of scope here.
+
+`lib/three/scene-config.ts` gains `INTERIOR_VIEWS` — foyer, living room,
+kitchen, stair hall, master suite, and library. They are ordinary
+`CameraView` objects feeding the existing `CameraController`; no second
+camera or navigation system was added. Because they sit inside the
+building they are intended for the `fixed` camera mode rather than the
+orbit rig, whose minimum distance deliberately keeps the exterior model in
+frame, and they are kept out of `CAMERA_VIEWS` so the public explore page
+still lists approaches to the house rather than rooms within it.
+
 ## External Asset Policy & Audit
 
 | Asset / Resource                 | Status       |
@@ -254,6 +338,28 @@ maintains internally (render targets and internal buffers included), not a
 count of imported image files. It does not indicate an external texture
 asset was loaded; the audit above, which covers external/downloaded texture
 assets specifically, remains zero.
+
+### Phase 2F Audit
+
+```text
+External 3D assets: 0
+External textures: 0
+HDRIs: 0
+External asset URLs: 0
+3D model loaders: 0
+Texture loaders: 0
+HDRI/environment loaders: 0
+New asset dependencies: 0
+Image planes used as furniture: 0
+Math.random() calls in interior generation: 0
+```
+
+Every room, every fitting, and every piece of furniture in Phase 2F is
+built from Three.js box and cylinder primitives resolved by pure functions.
+No furniture model, fabric texture, timber texture, marble texture, or
+interior HDRI is loaded, and `package.json` is unchanged. The only
+`Math.random` occurrences anywhere in the repository are the two prose
+mentions in these documentation comments stating that it is not used.
 
 ## Performance diagnostics
 
@@ -336,34 +442,42 @@ are centralized in `PERFORMANCE_BUDGET` for easy retuning:
 These are runtime evaluation targets — a slow machine varying below them is
 not a CI failure.
 
-### Current baseline (Phase 2E)
+### Current baseline (Phase 2F)
 
 Renderer counters, read directly from `renderer.info` on the default villa
 
 - site + landscape view:
 
-| Metric     | Phase 2B.5 | Phase 2C | Phase 2D | Phase 2E |
-| ---------- | ---------- | -------- | -------- | -------- |
-| Draw calls | 58         | 65       | 74       | 74       |
-| Triangles  | 3,590      | 4,046    | 5,964    | 5,964    |
-| Geometries | 21         | 27       | 36       | 36       |
-| Textures   | 1          | 1        | 1        | 1        |
+| Metric     | Phase 2B.5 | Phase 2C | Phase 2D | Phase 2E | Phase 2F |
+| ---------- | ---------- | -------- | -------- | -------- | -------- |
+| Draw calls | 58         | 65       | 74       | 74       | 93       |
+| Triangles  | 3,590      | 4,046    | 5,964    | 5,964    | 15,320   |
+| Geometries | 21         | 27       | 36       | 36       | 57       |
+| Textures   | 1          | 1        | 1        | 1        | 1        |
 
-Phase 2E changed material definitions only — no geometry, mesh, or draw
-call was added or removed, so every counter above is identical to Phase
-2D. The procedural surface-variation shaders (see above) run inside the
-existing materials' compiled programs, at no additional draw-call or
-geometry cost.
+Phase 2F added a complete two-storey interior — twenty-one rooms, their
+partitions and finishes, a connecting stair, and every piece of furniture —
+for **19 additional draw calls**. That is the merge strategy paying off:
+furniture is batched per material rather than per object, and the punched
+enclosure walls (which are many small volumes in the layout) are merged per
+floor. Both counters stay inside the "Excellent" band of the budget table
+above.
+
+An intermediate build that drew each enclosure wall segment and each turned
+element as its own mesh measured 227 draw calls; merging them brought it to
+93 with identical geometry on screen. Worth recording, because it is the
+difference between a furnished house being nearly free and being the most
+expensive thing in the scene.
 
 Frame-time and FPS numbers were exercised in this sandbox using headless
 Chromium with SwiftShader — a software GL rasterizer, not a GPU — so those
 figures reflect the instrumentation working correctly, not real-world
-performance. The measured Phase 2E frame time under SwiftShader was
-modestly higher than Phase 2D's (roughly 5 FPS vs. 7 FPS in this sandbox):
-the injected noise adds real per-fragment ALU work, and a CPU-based
-rasterizer pays proportionally more for that than dedicated GPU shader
-cores would. This is expected software-rasterizer overhead, not a claim
-about real-hardware cost, which has not been measured:
+performance. Under SwiftShader the interiors are markedly slower than Phase
+2E (roughly 2 FPS vs. 5 FPS in this sandbox), which is what a CPU
+rasterizer does when it is given more geometry and, on the `high` tier,
+seven extra point lights to evaluate per fragment. That is software-
+rasterizer overhead, not a claim about real-hardware cost, which has not
+been measured:
 
 ```
 Runtime FPS (real desktop GPU): not yet measured

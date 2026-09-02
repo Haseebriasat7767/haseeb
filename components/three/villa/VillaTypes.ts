@@ -89,6 +89,32 @@ export type VillaConfig = {
   soffitDepth: number;
 };
 
+/**
+ * A void punched through a wall — a window, a door, or a room-to-room
+ * opening. `across` runs along the wall's own length, exactly as
+ * `WallOpening.across` does on the facade schedule.
+ */
+export type WallGap = {
+  across: Range;
+  y: Range;
+};
+
+/**
+ * Which of an enclosure's four faces to build. `false` omits a side
+ * entirely — used where one volume opens straight into the next; an array
+ * gives the voids to punch through it; omitting a key builds it solid.
+ */
+export type ShellSides = {
+  /** −X face. */
+  west?: readonly WallGap[] | false;
+  /** +X face. */
+  east?: readonly WallGap[] | false;
+  /** −Z face. */
+  north?: readonly WallGap[] | false;
+  /** +Z face. */
+  south?: readonly WallGap[] | false;
+};
+
 /** An axis-aligned volume, resolved to a unit-cube transform. */
 export type BoxSpec = {
   key: string;
@@ -128,6 +154,42 @@ export type VillaPlan = {
   livingAxisX: Range;
   /** X extent of the upper-floor cantilever above. */
   cantileverAxisX: Range;
+
+  // ── Interior plan lines ─────────────────────────────────────────────
+  // Exposed so the interior layout derives every room boundary from the
+  // building that actually exists, rather than restating its dimensions.
+
+  /** Structural wall thickness, and so the depth of every enclosure face. */
+  wallThickness: number;
+  /** Front face of the rear service bar — the back of the living volume. */
+  rearBarFrontZ: number;
+  /** East face of the west wing. */
+  westWingEastX: number;
+  /** West face of the east wing. */
+  eastWingWestX: number;
+  /** X extent of the entrance slot, between the two full-height blades. */
+  entranceX: Range;
+  /** Z of the entrance door itself, at the back of the arrival recess. */
+  entranceBackZ: number;
+  /** Z at which the two-storey entrance slot stops. */
+  entranceVoidBackZ: number;
+  /** Z of the living-room sliding glazing. */
+  livingGlassZ: number;
+  /** Front face of the upper east volume. */
+  upperFrontZ: number;
+  /** Front face of the upper west volume, at the roof terrace. */
+  upperWestFrontZ: number;
+  /** Z extent of the cantilevered upper volume. */
+  cantileverZ: Range;
+};
+
+/** Derived floor levels other systems — camera, interiors — build against. */
+export type VillaLevels = {
+  groundY: number;
+  groundFloorTopY: number;
+  upperFloorY: number;
+  upperFloorTopY: number;
+  roofTopY: number;
 };
 
 /**
@@ -150,11 +212,5 @@ export type VillaLayout = {
   columns: ColumnSpec[];
   stairs: BoxSpec[];
   /** Derived levels other systems (camera, future tours) may need. */
-  levels: {
-    groundY: number;
-    groundFloorTopY: number;
-    upperFloorY: number;
-    upperFloorTopY: number;
-    roofTopY: number;
-  };
+  levels: VillaLevels;
 };

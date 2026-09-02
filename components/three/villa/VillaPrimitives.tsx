@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { BoxGeometry, type BufferGeometry, type Material } from 'three';
+import { BoxGeometry, CylinderGeometry, type BufferGeometry, type Material } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { BoxSpec, ColumnSpec } from './VillaTypes';
 import { getVillaGeometries } from './VillaGeometry';
@@ -115,4 +115,38 @@ export function Supports({
       ))}
     </>
   );
+}
+
+type MergedSupportsProps = {
+  specs: readonly ColumnSpec[];
+  material: Material;
+  name: string;
+};
+
+/**
+ * Bakes many turned elements — pendant stems, lamp columns, taps — into a
+ * single geometry, the cylinder counterpart of `MergedBoxes`. A furnished
+ * house has dozens of them and none needs to be addressed on its own.
+ */
+export function MergedSupports({ specs, material, name }: MergedSupportsProps) {
+  const geometry = useMemo<BufferGeometry | null>(() => {
+    if (specs.length === 0) return null;
+
+    const parts = specs.map((spec) => {
+      const part = new CylinderGeometry(1, 1, 1, 8);
+      part.scale(...spec.scale);
+      part.translate(...spec.position);
+      return part;
+    });
+
+    const merged = mergeGeometries(parts, false);
+    parts.forEach((part) => part.dispose());
+    return merged;
+  }, [specs]);
+
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+
+  if (!geometry) return null;
+
+  return <mesh name={name} geometry={geometry} material={material} castShadow receiveShadow />;
 }
