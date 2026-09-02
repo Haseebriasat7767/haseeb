@@ -148,24 +148,39 @@ function createMaterials() {
      * at close range and disappears into a flat premium surface from the
      * hero camera distance.
      */
-    concrete: withVariation(standard({ color: '#c6c0b3', roughness: 0.72, metalness: 0.02 }), {
-      scale: 1.1,
-      colorVariation: 0.028,
-      roughnessVariation: 0.05,
-      seed: 11,
-    }),
+    concrete: withVariation(
+      standard({ color: '#a1968a', roughness: 0.64, metalness: 0.02, envMapIntensity: 0.62 }),
+      {
+        scale: 1.1,
+        colorVariation: 0.035,
+        roughnessVariation: 0.09,
+        seed: 11,
+      },
+    ),
     /**
      * Honed limestone / travertine — warm off-white, restrained natural
      * irregularity. Coarser noise cells than concrete so it reads as large
      * quarried slabs, not aggregate.
      */
-    stone: withVariation(standard({ color: '#d3c9b8', roughness: 0.78, metalness: 0 }), {
-      scale: 0.55,
-      colorVariation: 0.045,
-      roughnessVariation: 0.08,
-      seed: 23,
-    }),
-    terrain: standard({ color: '#15151a', roughness: 1, metalness: 0 }),
+    stone: withVariation(
+      standard({ color: '#b0a48d', roughness: 0.68, metalness: 0, envMapIntensity: 0.68 }),
+      {
+        scale: 0.55,
+        colorVariation: 0.055,
+        roughnessVariation: 0.12,
+        seed: 23,
+      },
+    ),
+    /**
+     * The surrounding ground. Previously a near-black plane, which is what
+     * made the residence look like it was floating in a void; it is now
+     * mown lawn, with enough tonal variation across it to read as a
+     * landscaped property rather than a fill colour.
+     */
+    terrain: withVariation(
+      standard({ color: '#57633a', roughness: 0.96, metalness: 0, envMapIntensity: 0.6 }),
+      { scale: 0.055, colorVariation: 0.3, roughnessVariation: 0.12, seed: 131 },
+    ),
     /** Legacy Phase 1 diagnostic massing only — kept simple deliberately. */
     glass: standard({
       color: '#0d1418',
@@ -174,8 +189,12 @@ function createMaterials() {
       transparent: true,
       opacity: 0.72,
     }),
-    /** Architectural bronze hardware accents. */
-    bronze: withVariation(standard({ color: '#a9885a', roughness: 0.32, metalness: 0.82 }), {
+    /**
+     * Architectural bronze hardware accents. Now that the scene carries a
+     * generated environment map, this behaves as real metal — it reflects
+     * the sky rather than resolving to a flat fill.
+     */
+    bronze: withVariation(standard({ color: '#b08e5c', roughness: 0.26, metalness: 0.95 }), {
       scale: 3,
       colorVariation: 0.02,
       roughnessVariation: 0.04,
@@ -183,24 +202,22 @@ function createMaterials() {
     }),
     /**
      * Reveals, trim, soffits, slab shadow lines — satin dark anodized
-     * aluminum. Lifted off pure black and pulled back from maximum
-     * metalness so it still picks up the hemisphere fill in shadow instead
-     * of reading as a flat cutout; the subtle roughness noise is what a
-     * brushed anodized finish looks like without a texture.
+     * aluminium. The environment map is what keeps this from reading as a
+     * flat cutout in shadow now; the roughness noise is what a brushed
+     * anodized finish looks like without a texture.
      */
-    darkMetal: withVariation(standard({ color: '#24242a', roughness: 0.38, metalness: 0.78 }), {
+    darkMetal: withVariation(standard({ color: '#2a2a30', roughness: 0.33, metalness: 0.9 }), {
       scale: 1.4,
       colorVariation: 0.02,
       roughnessVariation: 0.06,
       seed: 61,
     }),
     /**
-     * Window frames, mullions, railings, and columns. Deliberately far less
-     * metallic than `darkMetal`: with no environment map to reflect, a high
-     * metalness reads as flat black, and slim frames disappear against the
-     * glass behind them.
+     * Window frames, mullions, railings, and columns. Kept a little rougher
+     * and less mirror-like than the bronze so slim members read as solid
+     * profiles against the glazing rather than dissolving into it.
      */
-    frameMetal: withVariation(standard({ color: '#403a32', roughness: 0.36, metalness: 0.32 }), {
+    frameMetal: withVariation(standard({ color: '#463f36', roughness: 0.34, metalness: 0.82 }), {
       scale: 2,
       colorVariation: 0.018,
       roughnessVariation: 0.04,
@@ -226,12 +243,16 @@ function createMaterials() {
      * and machined, not organic.
      */
     glazing: new MeshPhysicalMaterial({
-      color: '#141f28',
-      roughness: 0.08,
-      metalness: 0.15,
+      color: '#1b2b36',
+      roughness: 0.035,
+      metalness: 0.08,
       clearcoat: 1,
-      clearcoatRoughness: 0.03,
-      reflectivity: 0.68,
+      clearcoatRoughness: 0.02,
+      reflectivity: 0.9,
+      // The environment map is doing the work here: the sky reflected off
+      // the glazing at a grazing angle is what makes a facade read as glass
+      // instead of as a dark panel.
+      envMapIntensity: 1.5,
       transparent: true,
       opacity: 0.58,
       side: DoubleSide,
@@ -242,12 +263,13 @@ function createMaterials() {
      * over the wall rather than as a window.
      */
     glazingSurface: new MeshPhysicalMaterial({
-      color: '#17242e',
-      roughness: 0.1,
-      metalness: 0.1,
+      color: '#1b2b36',
+      roughness: 0.05,
+      metalness: 0.08,
       clearcoat: 1,
-      clearcoatRoughness: 0.03,
-      reflectivity: 0.68,
+      clearcoatRoughness: 0.02,
+      reflectivity: 0.9,
+      envMapIntensity: 1.5,
     }),
     /**
      * Pool water. Clearcoat gives a wet specular response without the cost
@@ -258,11 +280,12 @@ function createMaterials() {
      */
     poolWater: withVariation(
       new MeshPhysicalMaterial({
-        color: '#0d3230',
-        // Not a mirror. With no environment map to reflect, a near-zero
-        // roughness returns black; a little scatter lets the hemisphere sky
-        // reach the surface, which is what makes water read as water.
-        roughness: 0.14,
+        color: '#0e3a41',
+        // Water is very nearly a mirror, and with a sky to reflect it can
+        // finally behave like one — the reflected dome is what gives the
+        // pool its colour, not the albedo underneath.
+        roughness: 0.045,
+        envMapIntensity: 1.35,
         // After dark the submerged lighting is carried by the water body
         // itself rather than by the basin walls, so the pool reads as a
         // soft luminous plane instead of a glowing outline.
@@ -320,11 +343,25 @@ function createMaterials() {
       seed: 59,
     }),
     /** Ornamental grass — warmer and drier than the foliage greens. */
-    grass: withVariation(standard({ color: '#7c8259', roughness: 0.82, metalness: 0 }), {
+    grass: withVariation(standard({ color: '#6b7347', roughness: 0.86, metalness: 0 }), {
       scale: 1.3,
       colorVariation: 0.05,
       roughnessVariation: 0.04,
       seed: 67,
+    }),
+    /**
+     * The mown lawn's blades. Deliberately *not* the ornamental `grass`
+     * above: that one is a warm dry olive chosen to contrast with planting,
+     * and instancing it across the whole property read as scattered yellow
+     * needles over the ground rather than as turf. This sits a shade lighter
+     * than `terrain` and nothing else, so the blades resolve as a nap on the
+     * ground at distance instead of as separate objects on top of it.
+     */
+    lawnBlade: standard({
+      color: '#63713e',
+      roughness: 0.94,
+      metalness: 0,
+      envMapIntensity: 0.4,
     }),
     /** Exposed soil in planting beds and planter tops. */
     soil: withVariation(standard({ color: '#2b2318', roughness: 0.98, metalness: 0 }), {
@@ -344,7 +381,7 @@ function createMaterials() {
      * low-amplitude, large-cell noise so a big flat wall reads as a hand-
      * finished surface rather than a solid fill, without ever looking dirty.
      */
-    plaster: withVariation(standard({ color: '#ddd7cc', roughness: 0.9, metalness: 0 }), {
+    plaster: withVariation(standard({ color: '#cec7ba', roughness: 0.9, metalness: 0 }), {
       scale: 0.35,
       colorVariation: 0.022,
       roughnessVariation: 0.04,
@@ -355,7 +392,7 @@ function createMaterials() {
      * cells than the exterior `stone` so it reads as big-format interior
      * slabs, and lower roughness for the sheen of a honed finish.
      */
-    interiorStone: withVariation(standard({ color: '#cfc7b7', roughness: 0.5, metalness: 0.02 }), {
+    interiorStone: withVariation(standard({ color: '#b8b0a0', roughness: 0.52, metalness: 0.02 }), {
       scale: 0.4,
       colorVariation: 0.04,
       roughnessVariation: 0.07,

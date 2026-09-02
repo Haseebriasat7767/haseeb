@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Fog } from 'three';
 import type { ResolvedLighting } from '@/lib/three/lighting';
 import { applyLightingToMaterials } from '@/lib/three/lighting-materials';
+import { ProceduralSky } from './ProceduralSky';
 
 type EnvironmentProps = {
   lighting: ResolvedLighting;
@@ -47,6 +48,12 @@ export function SceneEnvironment({ lighting, shadows, shadowMapSize }: Environme
 
   return (
     <>
+      <ProceduralSky lighting={lighting} />
+
+      {/* The hemisphere is now a small corrective on top of image-based
+          light from the sky dome, not the ambient term itself — it keeps a
+          little colour separation between what faces up and what faces
+          down, which a single environment map alone does not give. */}
       <hemisphereLight args={[sky.skyColor, sky.groundColor, sky.intensity]} />
 
       <directionalLight

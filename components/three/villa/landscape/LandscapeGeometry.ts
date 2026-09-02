@@ -19,13 +19,13 @@ import type {
 export const LANDSCAPE_CONFIG: LandscapeConfig = {
   style: 'mediterranean',
   featureTree: {
-    count: 2,
-    trunkHeight: 4.2,
-    trunkRadius: 0.22,
-    branchCount: 3,
-    canopyClusters: 4,
-    canopyRadius: 1.6,
-    canopySpread: 1.3,
+    count: 7,
+    trunkHeight: 4.6,
+    trunkRadius: 0.24,
+    branchCount: 5,
+    canopyClusters: 18,
+    canopyRadius: 1.15,
+    canopySpread: 2.6,
   },
   shrub: {
     poolsideCount: 6,
@@ -54,11 +54,50 @@ export const LANDSCAPE_CONFIG: LandscapeConfig = {
 /** Repeated landscape detail thins out on weaker GPUs, mirroring the villa's own tiers. */
 const LANDSCAPE_DETAIL: Record<
   DetailTier,
-  { canopy: number; shrubs: number; grass: number; bladeScale: number; rocks: number }
+  {
+    canopy: number;
+    /**
+     * Icosahedron subdivision level for canopy masses. At 0 a canopy is 20
+     * flat triangles, which is precisely why the trees read as stylised
+     * low-poly props rather than planting; one subdivision quadruples the
+     * face count and is what lets the deformation resolve as foliage.
+     */
+    canopyDetail: BlobSpec['detail'];
+    /** The same, for shrub masses, which sit closest to the camera. */
+    shrubDetail: BlobSpec['detail'];
+    shrubs: number;
+    grass: number;
+    bladeScale: number;
+    rocks: number;
+  }
 > = {
-  low: { canopy: 0.5, shrubs: 0.4, grass: 0.25, bladeScale: 0.7, rocks: 0.5 },
-  medium: { canopy: 0.75, shrubs: 0.7, grass: 0.6, bladeScale: 0.85, rocks: 0.75 },
-  high: { canopy: 1, shrubs: 1, grass: 1, bladeScale: 1, rocks: 1 },
+  low: {
+    canopy: 0.5,
+    canopyDetail: 1,
+    shrubDetail: 0,
+    shrubs: 0.4,
+    grass: 0.25,
+    bladeScale: 0.7,
+    rocks: 0.5,
+  },
+  medium: {
+    canopy: 0.8,
+    canopyDetail: 1,
+    shrubDetail: 1,
+    shrubs: 0.7,
+    grass: 0.6,
+    bladeScale: 0.85,
+    rocks: 0.75,
+  },
+  high: {
+    canopy: 1,
+    canopyDetail: 2,
+    shrubDetail: 1,
+    shrubs: 1,
+    grass: 1,
+    bladeScale: 1,
+    rocks: 1,
+  },
 };
 
 /**
@@ -67,7 +106,7 @@ const LANDSCAPE_DETAIL: Record<
  * layout, since a fresh generator with this fixed seed is created on every
  * call to `createLandscapeLayout`.
  */
-function mulberry32(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -89,6 +128,7 @@ function makeShrub(
   position: Vector3Tuple,
   radius: number,
   blobCount: number,
+  detail: BlobSpec['detail'],
   rng: Rng,
   nextSeed: () => number,
 ): { mid: BlobSpec[]; dark: BlobSpec[] } {
@@ -107,8 +147,8 @@ function makeShrub(
       radius: r,
       scale: [between(rng, 0.9, 1.15), between(rng, 0.75, 1.05), between(rng, 0.9, 1.15)],
       seed: nextSeed(),
-      deform: between(rng, 0.18, 0.32),
-      detail: 0,
+      deform: between(rng, 0.22, 0.38),
+      detail,
     };
     (i % 3 === 0 ? dark : mid).push(spec);
   }
@@ -171,6 +211,7 @@ function makeTree(
   base: Vector3Tuple,
   cfg: FeatureTreeConfig,
   canopyClusters: number,
+  canopyDetail: BlobSpec['detail'],
   rng: Rng,
   nextSeed: () => number,
 ): { trunks: BranchSpec[]; canopyMid: BlobSpec[]; canopyDark: BlobSpec[] } {
@@ -218,19 +259,21 @@ function makeTree(
   const clusterTotal = Math.max(1, canopyClusters);
   for (let c = 0; c < clusterTotal; c += 1) {
     const center = clusterCenters[c % clusterCenters.length]!;
-    const r = cfg.canopyRadius * between(rng, 0.75, 1.05);
+    const r = cfg.canopyRadius * between(rng, 0.6, 1.0);
     const spec: BlobSpec = {
       key: `${keyPrefix}-canopy-${c}`,
       position: [
-        center[0] + between(rng, -cfg.canopySpread * 0.3, cfg.canopySpread * 0.3),
-        center[1] + between(rng, -0.2, 0.3),
-        center[2] + between(rng, -cfg.canopySpread * 0.3, cfg.canopySpread * 0.3),
+        center[0] + between(rng, -cfg.canopySpread * 0.42, cfg.canopySpread * 0.42),
+        center[1] + between(rng, -0.35, 0.45),
+        center[2] + between(rng, -cfg.canopySpread * 0.42, cfg.canopySpread * 0.42),
       ],
       radius: r,
-      scale: [between(rng, 0.9, 1.2), between(rng, 0.8, 1.05), between(rng, 0.9, 1.2)],
+      scale: [between(rng, 0.85, 1.3), between(rng, 0.72, 1.0), between(rng, 0.85, 1.3)],
       seed: nextSeed(),
-      deform: between(rng, 0.2, 0.34),
-      detail: 0,
+      // Heavier deformation than a shrub: a canopy edge is ragged, and a
+      // near-spherical mass is what makes a tree read as a lollipop.
+      deform: between(rng, 0.34, 0.52),
+      detail: canopyDetail,
     };
     (c % 3 === 2 ? canopyDark : canopyMid).push(spec);
   }
@@ -264,7 +307,7 @@ export function createLandscapeLayout(
   const planterSoil: BoxSpec[] = [];
 
   const addShrub = (key: string, position: Vector3Tuple, radius: number, blobs: number) => {
-    const { mid, dark } = makeShrub(key, position, radius, blobs, rng, nextSeed);
+    const { mid, dark } = makeShrub(key, position, radius, blobs, shrubDetail, rng, nextSeed);
     shrubsMid.push(...mid);
     shrubsDark.push(...dark);
   };
@@ -285,15 +328,36 @@ export function createLandscapeLayout(
   };
 
   // ── Feature trees near the approach ─────────────────────────────────────
+  const shrubDetail = tier.shrubDetail;
   const canopyClusters = scaleCount(config.featureTree.canopyClusters, tier.canopy);
-  const treeCount = Math.min(config.featureTree.count, 2);
+  const treeCount = config.featureTree.count;
   const approachMidZ = ctx.approachZ[0] + span(ctx.approachZ) * 0.32;
+  // Two specimens frame the approach; the rest stand off the property
+  // boundary, where they give the elevations a treeline to sit against
+  // instead of a bare horizon. Placed on a ring at deterministic angles
+  // biased away from the front, so nothing grows into the hero view.
   const treePositions: Vector3Tuple[] = [
     [ctx.approachX[0] - 1.6, 0, approachMidZ],
     [ctx.approachX[1] + 1.9, 0, ctx.approachZ[0] + span(ctx.approachZ) * 0.78],
   ];
+  const ringCount = Math.max(0, treeCount - treePositions.length);
+  for (let i = 0; i < ringCount; i += 1) {
+    // Sweep the rear and flanks, never the front elevation.
+    const angle = Math.PI * 0.32 + (i / Math.max(1, ringCount - 1)) * Math.PI * 1.36;
+    const radius = 30 + between(rng, 0, 16);
+    treePositions.push([
+      Math.sin(angle) * radius + between(rng, -3, 3),
+      0,
+      -Math.cos(angle) * radius + between(rng, -3, 3),
+    ]);
+  }
+
   for (let i = 0; i < treeCount; i += 1) {
-    const scale = i === 0 ? 1 : 0.72;
+    const position = treePositions[i];
+    if (!position) break;
+    // Every specimen a different size, so a row of them never reads as one
+    // tree copied along a line.
+    const scale = i === 0 ? 1 : 0.6 + between(rng, 0, 0.62);
     const cfg: FeatureTreeConfig = {
       ...config.featureTree,
       trunkHeight: config.featureTree.trunkHeight * scale,
@@ -302,9 +366,10 @@ export function createLandscapeLayout(
     };
     const tree = makeTree(
       `tree-${i}`,
-      treePositions[i]!,
+      position,
       cfg,
       Math.max(1, Math.round(canopyClusters * scale)),
+      tier.canopyDetail,
       rng,
       nextSeed,
     );

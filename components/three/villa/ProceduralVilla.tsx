@@ -17,6 +17,7 @@ import { VillaTerrace } from './VillaTerrace';
 import { VillaUpperFloor } from './VillaUpperFloor';
 import { Interior } from './interior/Interior';
 import { LandscapeExterior } from './landscape/LandscapeExterior';
+import { Lawn } from './landscape/Lawn';
 import { ArchitecturalLighting } from './lighting/ArchitecturalLighting';
 import {
   ARCHITECTURAL_LIGHTING_CONFIG,
@@ -86,6 +87,14 @@ export function ProceduralVilla({ config, detail = 'high', lighting }: Procedura
       <Interior plan={layout.plan} levels={layout.levels} detail={detail} lighting={rig} />
       <SiteExterior plan={layout.plan} detail={detail} />
       <LandscapeExterior plan={layout.plan} detail={detail} />
+      <Lawn
+        paving={{
+          x: layout.plan.plinthHalfWidth + 2,
+          zNear: -layout.plan.halfDepth - 5,
+          zFar: layout.plan.plinthFrontZ + 24,
+        }}
+        detail={detail}
+      />
       <ArchitecturalLighting layout={fixtures} lighting={rig} />
     </group>
   );

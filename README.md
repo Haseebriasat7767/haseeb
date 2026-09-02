@@ -474,6 +474,18 @@ displacement maps, or external texture URLs are used.
 No HDRI files, downloaded environment maps, remote environment maps, or
 external skybox assets are used.
 
+Since Phase 6 the scene does carry an environment map, and it is worth being
+precise about where it comes from: it is **generated at runtime, not
+fetched**. `components/three/ProceduralSky.tsx` drives the analytic Preetham
+daylight model that ships inside three.js itself
+(`three/examples/jsm/objects/Sky.js` — MIT, already a dependency, nothing
+downloaded) from the time-of-day parameters in `lib/three/lighting.ts`, then
+bakes that dome through `PMREMGenerator` into a pre-filtered cube map
+assigned to `scene.environment`. Nothing leaves the origin, no `.hdr` or
+`.exr` exists in the repository or is requested over the network, and the
+result follows the hour rather than being fixed to whenever a photograph was
+taken.
+
 Visual variation is generated procedurally through Three.js geometry, solid
 material properties, deterministic vertex deformation, seeded placement,
 primitive geometry, and scene lighting.

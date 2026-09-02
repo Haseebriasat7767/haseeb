@@ -42,13 +42,42 @@ export type BounceSetting = {
 };
 
 export type AtmosphereSetting = {
-  /** Canvas clear colour. Kept in step with the fog so silhouettes read. */
+  /** Clear colour behind the sky dome, and the fallback if it fails. */
   background: string;
   fogColor: string;
   fogNear: number;
   fogFar: number;
   /** Tone-mapping exposure, applied to the existing ACES pipeline. */
   exposure: number;
+};
+
+/**
+ * Parameters of the analytic daylight model that generates the sky — and,
+ * baked through a PMREM pass, the scene's environment map.
+ *
+ * This is what an HDRI would otherwise provide: real reflections in the
+ * glazing and the metals, sky colour behind the building, and image-based
+ * ambient light. Generating it means it costs no download, and it follows
+ * the hour instead of being fixed to whenever the photograph was taken.
+ */
+export type SkyModel = {
+  /** Haze. Low is a clear alpine morning; high is a hot coastal afternoon. */
+  turbidity: number;
+  /** Rayleigh scattering — how blue the sky reads away from the sun. */
+  rayleigh: number;
+  /** Mie scattering strength: the size of the haze disc around the sun. */
+  mieCoefficient: number;
+  /** Mie directionality: how tightly that disc hugs the sun. */
+  mieDirectionalG: number;
+  /**
+   * Elevation of the sun *in the sky*, which is not always the key light's.
+   * At night the key is a high moon while the sky's sun sits below the
+   * horizon, and only this separation makes a dark sky with cast shadows
+   * possible at all.
+   */
+  elevation: number;
+  /** Strength of the baked environment map as ambient illumination. */
+  environmentIntensity: number;
 };
 
 /** How a family of practical fixtures behaves at this hour. */
@@ -82,6 +111,7 @@ export type LightingState = {
   label: string;
   sun: SunSetting;
   sky: SkySetting;
+  skyModel: SkyModel;
   bounce: BounceSetting;
   atmosphere: AtmosphereSetting;
   interior: PracticalSetting;
@@ -109,22 +139,30 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     sun: {
       elevation: 22,
       azimuth: 118,
-      intensity: 2.2,
+      intensity: 2.6,
       color: '#ffe9cf',
       shadowExtent: 52,
       shadowBias: -0.0005,
       shadowNormalBias: 0.05,
     },
-    sky: { skyColor: '#a8bcd6', groundColor: '#171a1e', intensity: 0.58 },
-    bounce: { azimuthOffset: 168, elevation: 16, intensity: 0.5, color: '#8296b2' },
-    atmosphere: {
-      background: '#10131a',
-      fogColor: '#141922',
-      fogNear: 80,
-      fogFar: 250,
-      exposure: 1.02,
+    skyModel: {
+      turbidity: 4.5,
+      rayleigh: 2.4,
+      mieCoefficient: 0.006,
+      mieDirectionalG: 0.82,
+      elevation: 14,
+      environmentIntensity: 0.5,
     },
-    interior: { intensity: 12, activeLights: 3 },
+    sky: { skyColor: '#bcccdd', groundColor: '#3c4030', intensity: 0.12 },
+    bounce: { azimuthOffset: 168, elevation: 16, intensity: 0.12, color: '#8296b2' },
+    atmosphere: {
+      background: '#8ea4bc',
+      fogColor: '#a5b8cc',
+      fogNear: 110,
+      fogFar: 330,
+      exposure: 0.44,
+    },
+    interior: { intensity: 7, activeLights: 3 },
     exterior: { intensity: 0, activeLights: 0 },
     surfaces: { glazingOpacity: 0.6, poolGlow: 0.02, fixtureEmissive: 0.5 },
   },
@@ -135,22 +173,30 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     sun: {
       elevation: 47,
       azimuth: 55,
-      intensity: 2.7,
+      intensity: 3.1,
       color: '#fff6e8',
       shadowExtent: 42,
       shadowBias: -0.0004,
       shadowNormalBias: 0.05,
     },
-    sky: { skyColor: '#8fa4bd', groundColor: '#101216', intensity: 0.52 },
-    bounce: { azimuthOffset: 170, elevation: 14, intensity: 0.55, color: '#b99a63' },
-    atmosphere: {
-      background: '#0d0f12',
-      fogColor: '#11141a',
-      fogNear: 90,
-      fogFar: 260,
-      exposure: 1.0,
+    skyModel: {
+      turbidity: 3.2,
+      rayleigh: 1.8,
+      mieCoefficient: 0.005,
+      mieDirectionalG: 0.8,
+      elevation: 42,
+      environmentIntensity: 0.55,
     },
-    interior: { intensity: 8, activeLights: 2 },
+    sky: { skyColor: '#c2d3e4', groundColor: '#3f4433', intensity: 0.1 },
+    bounce: { azimuthOffset: 170, elevation: 14, intensity: 0.14, color: '#b99a63' },
+    atmosphere: {
+      background: '#9db4cd',
+      fogColor: '#b3c6d9',
+      fogNear: 130,
+      fogFar: 360,
+      exposure: 0.4,
+    },
+    interior: { intensity: 4, activeLights: 2 },
     exterior: { intensity: 0, activeLights: 0 },
     surfaces: { glazingOpacity: 0.62, poolGlow: 0, fixtureEmissive: 0.25 },
   },
@@ -168,24 +214,37 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     sun: {
       elevation: 13,
       azimuth: 74,
-      intensity: 3.4,
+      intensity: 3.6,
       color: '#ffcf9a',
       shadowExtent: 54,
       shadowBias: -0.0005,
       shadowNormalBias: 0.075,
     },
-    sky: { skyColor: '#86a0c0', groundColor: '#2a1f17', intensity: 0.58 },
-    bounce: { azimuthOffset: 172, elevation: 20, intensity: 0.72, color: '#7d8aa8' },
-    atmosphere: {
-      background: '#14100e',
-      fogColor: '#1c1512',
-      fogNear: 78,
-      fogFar: 235,
-      exposure: 1.08,
+    skyModel: {
+      // Haze-forward rather than scattering-forward. A physically neutral
+      // golden hour is only golden in the sun's own quarter of the sky, and
+      // the approach view does not look that way; pushing turbidity and
+      // pulling rayleigh back carries the warmth across the whole dome, so
+      // the hour reads from every camera rather than from one.
+      turbidity: 7,
+      rayleigh: 2.1,
+      mieCoefficient: 0.019,
+      mieDirectionalG: 0.83,
+      elevation: 6.5,
+      environmentIntensity: 0.55,
     },
-    interior: { intensity: 26, activeLights: 5 },
+    sky: { skyColor: '#d3b795', groundColor: '#5c4a2e', intensity: 0.2 },
+    bounce: { azimuthOffset: 172, elevation: 20, intensity: 0.16, color: '#9d8fa5' },
+    atmosphere: {
+      background: '#c2a37f',
+      fogColor: '#c4a684',
+      fogNear: 105,
+      fogFar: 315,
+      exposure: 0.56,
+    },
+    interior: { intensity: 13, activeLights: 4 },
     exterior: { intensity: 22, activeLights: 1 },
-    surfaces: { glazingOpacity: 0.55, poolGlow: 0.07, fixtureEmissive: 1.1 },
+    surfaces: { glazingOpacity: 0.55, poolGlow: 0.07, fixtureEmissive: 0.5 },
   },
 
   blueHour: {
@@ -200,14 +259,22 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       shadowBias: -0.0006,
       shadowNormalBias: 0.08,
     },
-    sky: { skyColor: '#4d6285', groundColor: '#0b0d14', intensity: 0.52 },
-    bounce: { azimuthOffset: 170, elevation: 26, intensity: 0.34, color: '#41577a' },
+    skyModel: {
+      turbidity: 8,
+      rayleigh: 3.2,
+      mieCoefficient: 0.02,
+      mieDirectionalG: 0.88,
+      elevation: -1.6,
+      environmentIntensity: 0.85,
+    },
+    sky: { skyColor: '#5f7594', groundColor: '#12161f', intensity: 0.18 },
+    bounce: { azimuthOffset: 170, elevation: 26, intensity: 0.2, color: '#41577a' },
     atmosphere: {
-      background: '#090c14',
-      fogColor: '#0d1220',
-      fogNear: 60,
-      fogFar: 190,
-      exposure: 1.12,
+      background: '#31425f',
+      fogColor: '#3b4d6d',
+      fogNear: 80,
+      fogFar: 250,
+      exposure: 0.8,
     },
     interior: { intensity: 46, activeLights: 7 },
     exterior: { intensity: 42, activeLights: 3 },
@@ -223,20 +290,28 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     sun: {
       elevation: 40,
       azimuth: 252,
-      intensity: 0.24,
+      intensity: 0.22,
       color: '#9db3d2',
       shadowExtent: 50,
       shadowBias: -0.0005,
       shadowNormalBias: 0.05,
     },
-    sky: { skyColor: '#26334a', groundColor: '#05070b', intensity: 0.3 },
-    bounce: { azimuthOffset: 170, elevation: 24, intensity: 0.16, color: '#1d2739' },
+    skyModel: {
+      turbidity: 10,
+      rayleigh: 0.6,
+      mieCoefficient: 0.03,
+      mieDirectionalG: 0.9,
+      elevation: -9,
+      environmentIntensity: 0.5,
+    },
+    sky: { skyColor: '#2a3750', groundColor: '#05070b', intensity: 0.16 },
+    bounce: { azimuthOffset: 170, elevation: 24, intensity: 0.12, color: '#1d2739' },
     atmosphere: {
-      background: '#04060a',
-      fogColor: '#060910',
-      fogNear: 50,
-      fogFar: 165,
-      exposure: 1.18,
+      background: '#070b14',
+      fogColor: '#0a1020',
+      fogNear: 65,
+      fogFar: 205,
+      exposure: 1.1,
     },
     interior: { intensity: 52, activeLights: 7 },
     exterior: { intensity: 50, activeLights: 3 },

@@ -15,8 +15,12 @@ export type BlobSpec = {
   seed: number;
   /** Relative vertex displacement, 0–1. */
   deform: number;
-  /** Icosahedron subdivision — 0 stays cheap, 1 is only for hero elements. */
-  detail: 0 | 1;
+  /**
+   * Icosahedron subdivision. 0 stays cheap but reads as faceted low-poly;
+   * 1 and 2 are reserved for canopies, where the silhouette is the whole
+   * point and a 20-face blob is unmistakably a prop.
+   */
+  detail: 0 | 1 | 2;
 };
 
 /**
