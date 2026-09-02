@@ -5,6 +5,7 @@ import { resolveLighting, type ResolvedLighting } from '@/lib/three/lighting';
 import type { DetailTier, VillaConfig } from './VillaTypes';
 import { VILLA_CONFIG, createVillaLayout } from './VillaGeometry';
 import { disposeVillaGeometries } from './VillaPrimitiveCache';
+import { ARCHITECTURAL_CHAMFER, ChamferProvider } from './VillaPrimitives';
 import { VillaColumns } from './VillaColumns';
 import { VillaFacade } from './VillaFacade';
 import { VillaFoundation } from './VillaFoundation';
@@ -73,30 +74,32 @@ export function ProceduralVilla({ config, detail = 'high', lighting }: Procedura
   useEffect(() => disposeVillaGeometries, []);
 
   return (
-    <group name="ProceduralVilla">
-      <VillaFoundation layout={layout} />
-      <VillaLowerFloor layout={layout} />
-      <VillaUpperFloor layout={layout} />
-      <VillaRoof layout={layout} />
-      <VillaTerrace layout={layout} />
-      <VillaGlazing layout={layout} />
-      <VillaFacade layout={layout} />
-      <VillaRailings layout={layout} />
-      <VillaColumns layout={layout} />
-      <VillaStairs layout={layout} />
-      <Interior plan={layout.plan} levels={layout.levels} detail={detail} lighting={rig} />
-      <SiteExterior plan={layout.plan} detail={detail} />
-      <LandscapeExterior plan={layout.plan} detail={detail} />
-      <Lawn
-        paving={{
-          x: layout.plan.plinthHalfWidth + 2,
-          zNear: -layout.plan.halfDepth - 5,
-          zFar: layout.plan.plinthFrontZ + 24,
-        }}
-        detail={detail}
-      />
-      <ArchitecturalLighting layout={fixtures} lighting={rig} />
-    </group>
+    <ChamferProvider value={ARCHITECTURAL_CHAMFER[detail]}>
+      <group name="ProceduralVilla">
+        <VillaFoundation layout={layout} />
+        <VillaLowerFloor layout={layout} />
+        <VillaUpperFloor layout={layout} />
+        <VillaRoof layout={layout} />
+        <VillaTerrace layout={layout} />
+        <VillaGlazing layout={layout} />
+        <VillaFacade layout={layout} />
+        <VillaRailings layout={layout} />
+        <VillaColumns layout={layout} />
+        <VillaStairs layout={layout} />
+        <Interior plan={layout.plan} levels={layout.levels} detail={detail} lighting={rig} />
+        <SiteExterior plan={layout.plan} detail={detail} />
+        <LandscapeExterior plan={layout.plan} detail={detail} />
+        <Lawn
+          paving={{
+            x: layout.plan.plinthHalfWidth + 2,
+            zNear: -layout.plan.halfDepth - 5,
+            zFar: layout.plan.plinthFrontZ + 24,
+          }}
+          detail={detail}
+        />
+        <ArchitecturalLighting layout={fixtures} lighting={rig} />
+      </group>
+    </ChamferProvider>
   );
 }
 

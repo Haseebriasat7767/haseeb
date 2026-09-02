@@ -37,6 +37,8 @@ uniform float uVarColor;
 uniform float uVarRough;
 uniform float uVarSeed;
 uniform vec3 uVarAnisotropy;
+uniform float uVarNormalScale;
+uniform float uVarNormal;
 
 float aureliaHash(vec3 p) {
   p = fract(p * 0.3183099 + vec3(uVarSeed * 0.017));
@@ -64,6 +66,74 @@ float aureliaNoise(vec3 p) {
   float nxy1 = mix(nx01, nx11, f.y);
   return mix(nxy0, nxy1, f.z);
 }
+
+// Micro-relief as a sum of four travelling waves in skewed directions.
+//
+// The obvious way to tilt a normal from procedural noise is to take a
+// finite difference of the value-noise field above — four samples, each
+// eight hash evaluations. That was the first implementation here and it
+// was sixty-four extra hash operations on every fragment of every surface
+// in the scene, which is a real cost even on hardware and made the
+// software rasterizer used for verification unusable.
+//
+// A sum of sines needs no differencing at all: the gradient of
+// a*sin(dot(p, d)*k) is a*k*d*cos(dot(p, d)*k), so the
+// slope falls out of the same four cosines that would evaluate the height.
+// Four incommensurate directions, none axis-aligned, keep it from reading
+// as the corduroy that a naive axis-aligned wave field produces.
+vec3 aureliaSurfaceGradient(vec3 p) {
+  const vec3 d1 = vec3(0.87, 0.31, 0.38);
+  const vec3 d2 = vec3(-0.29, 0.81, 0.51);
+  const vec3 d3 = vec3(0.41, -0.45, 0.79);
+  const vec3 d4 = vec3(0.63, 0.55, -0.55);
+
+  // Four waves in fixed directions are periodic, and at the frequencies a
+  // material finish actually lives at that period is plainly visible as a
+  // woven cross-hatch across a large slab. One low-frequency noise sample
+  // rolls the phase of the whole field and destroys the repeat, for an
+  // eighth of what differencing the noise field itself would cost.
+  //
+  // Because the phase now varies with position the gradient is strictly
+  // approximate; the warp runs some twenty times slower than the carrier,
+  // so the error stays far below the amplitude of the relief it describes.
+  float s = uVarSeed + aureliaNoise(p * 0.16) * 6.2831853;
+  return d1 * (1.00 * cos(dot(p, d1) * 1.0 + s))
+       + d2 * (1.38 * cos(dot(p, d2) * 2.3 + s * 1.7))
+       + d3 * (1.44 * cos(dot(p, d3) * 4.1 + s * 2.9))
+       + d4 * (1.58 * cos(dot(p, d4) * 7.9 + s * 3.7));
+}
+
+// Tilts a surface normal along that gradient.
+//
+// This is what a normal map does, computed rather than sampled: the
+// component along the existing normal is removed so the surface is tilted
+// rather than inflated, and the result is renormalised.
+vec3 aureliaPerturb(vec3 worldPos, vec3 nView, float strength) {
+  if (strength <= 0.0) return nView;
+
+  // Fade the relief out with distance.
+  //
+  // Procedural micro-relief has no mip chain, so once a surface feature
+  // falls below a pixel it does not average away the way a sampled normal
+  // map would — it aliases, and across the villa's large flat planes that
+  // showed as a moire cross-hatch over the roof and the terrace. Real
+  // texture maps in a later phase will filter properly; until then the
+  // honest fix is to stop asserting detail the frame cannot resolve. Close
+  // up, where the relief is the whole point, nothing is lost.
+  float viewDistance = length(cameraPosition - worldPos);
+  strength *= 1.0 - smoothstep(9.0, 34.0, viewDistance);
+  if (strength <= 0.0) return nView;
+
+  vec3 grad = aureliaSurfaceGradient(worldPos * uVarAnisotropy * uVarNormalScale);
+
+  // The gradient is a world-space direction and the normal being perturbed
+  // is in view space, so it has to be carried across. For a standard camera
+  // the view matrix's upper 3x3 is a rotation, which transforms directions
+  // directly.
+  vec3 gradView = mat3(viewMatrix) * (grad * uVarAnisotropy);
+  gradView -= nView * dot(gradView, nView);
+  return normalize(nView - gradView * strength);
+}
 `;
 
 type VariationOptions = {
@@ -81,6 +151,24 @@ type VariationOptions = {
    * on wood and bark rather than blotchy stone-like patches.
    */
   anisotropy?: [number, number, number];
+  /**
+   * How far the surface normal is tilted by the detail field. This is the
+   * micro-relief that was missing entirely: without it a surface is
+   * mathematically flat however much its colour varies, so concrete has no
+   * aggregate, stone has no grain and plaster has no trowel. Values are
+   * small — 0.02 is a barely-perceptible plaster, 0.2 is coarse render.
+   * Zero leaves the normal untouched and compiles out nothing, so it is
+   * the default for anything genuinely smooth.
+   */
+  normalStrength?: number;
+  /**
+   * World-space frequency of that relief, independent of `scale`. Surface
+   * grain and tonal variation live at different sizes on almost every real
+   * material — limestone mottles over half a metre but is pitted over
+   * millimetres — and tying them together is what makes procedural
+   * surfaces read as one repeating pattern.
+   */
+  normalScale?: number;
 };
 
 /**
@@ -92,7 +180,15 @@ type VariationOptions = {
  * program, so the existing `material.dispose()` calls already release it.
  */
 function withVariation<T extends Material>(material: T, options: VariationOptions): T {
-  const { scale, colorVariation, roughnessVariation = 0, seed, anisotropy = [1, 1, 1] } = options;
+  const {
+    scale,
+    colorVariation,
+    roughnessVariation = 0,
+    seed,
+    anisotropy = [1, 1, 1],
+    normalStrength = 0,
+    normalScale = scale * 8,
+  } = options;
 
   material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
     shader.uniforms.uVarScale = { value: scale };
@@ -100,6 +196,8 @@ function withVariation<T extends Material>(material: T, options: VariationOption
     shader.uniforms.uVarRough = { value: roughnessVariation };
     shader.uniforms.uVarSeed = { value: seed };
     shader.uniforms.uVarAnisotropy = { value: anisotropy };
+    shader.uniforms.uVarNormalScale = { value: normalScale };
+    shader.uniforms.uVarNormal = { value: normalStrength };
 
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\nvarying vec3 vAureliaWorldPos;`)
@@ -121,6 +219,14 @@ function withVariation<T extends Material>(material: T, options: VariationOption
     diffuseColor.rgb *= 1.0 + tone * uVarColor;
   }`,
       )
+      // After `normal_fragment_begin`, `normal` holds the interpolated
+      // (and, for a double-sided face, flipped) shading normal — the same
+      // point three's own normal maps hook into.
+      .replace(
+        '#include <normal_fragment_begin>',
+        `#include <normal_fragment_begin>
+  normal = aureliaPerturb(vAureliaWorldPos, normal, uVarNormal);`,
+      )
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
@@ -133,7 +239,8 @@ function withVariation<T extends Material>(material: T, options: VariationOption
   };
 
   // Every instance of this exact material shares one compiled program.
-  material.customProgramCacheKey = () => `aurelia-var-${seed}-${scale}-${colorVariation}`;
+  material.customProgramCacheKey = () =>
+    `aurelia-var-${seed}-${scale}-${colorVariation}-${normalStrength}-${normalScale}`;
 
   return material;
 }
@@ -155,6 +262,9 @@ function createMaterials() {
         colorVariation: 0.035,
         roughnessVariation: 0.09,
         seed: 11,
+        // Fine aggregate and formwork pores in fair-faced concrete.
+        normalStrength: 0.035,
+        normalScale: 2.4,
       },
     ),
     /**
@@ -169,6 +279,9 @@ function createMaterials() {
         colorVariation: 0.055,
         roughnessVariation: 0.12,
         seed: 23,
+        // The open grain and shallow pitting of honed limestone.
+        normalStrength: 0.032,
+        normalScale: 2.1,
       },
     ),
     /**
@@ -179,7 +292,14 @@ function createMaterials() {
      */
     terrain: withVariation(
       standard({ color: '#57633a', roughness: 0.96, metalness: 0, envMapIntensity: 0.6 }),
-      { scale: 0.055, colorVariation: 0.3, roughnessVariation: 0.12, seed: 131 },
+      {
+        scale: 0.055,
+        colorVariation: 0.3,
+        roughnessVariation: 0.12,
+        seed: 131,
+        normalStrength: 0.1,
+        normalScale: 0.35,
+      },
     ),
     /** Legacy Phase 1 diagnostic massing only — kept simple deliberately. */
     glass: standard({
@@ -199,6 +319,9 @@ function createMaterials() {
       colorVariation: 0.02,
       roughnessVariation: 0.04,
       seed: 3,
+      // Brushed bronze: barely there, but enough to break the highlight.
+      normalStrength: 0.015,
+      normalScale: 2.0,
     }),
     /**
      * Reveals, trim, soffits, slab shadow lines — satin dark anodized
@@ -211,6 +334,9 @@ function createMaterials() {
       colorVariation: 0.02,
       roughnessVariation: 0.06,
       seed: 61,
+      // Fine mill finish on dark metal.
+      normalStrength: 0.018,
+      normalScale: 2.0,
     }),
     /**
      * Window frames, mullions, railings, and columns. Kept a little rougher
@@ -222,6 +348,9 @@ function createMaterials() {
       colorVariation: 0.018,
       roughnessVariation: 0.04,
       seed: 17,
+      // Anodised extrusion — a faint directional drag.
+      normalStrength: 0.02,
+      normalScale: 2.0,
     }),
     /**
      * Dark luxury timber, used only for the entrance leaf. Anisotropic
@@ -233,6 +362,9 @@ function createMaterials() {
       colorVariation: 0.05,
       roughnessVariation: 0.06,
       seed: 7,
+      // Open-pore timber: the grain the anisotropy already stretches.
+      normalStrength: 0.035,
+      normalScale: 4.5,
       anisotropy: [1, 0.1, 1],
     }),
     /**
@@ -297,7 +429,7 @@ function createMaterials() {
         transparent: true,
         opacity: 0.9,
       }),
-      { scale: 0.3, colorVariation: 0.05, seed: 71 },
+      { scale: 0.3, colorVariation: 0.05, seed: 71, normalStrength: 0.045, normalScale: 0.8 },
     ),
     /**
      * Dark plaster pool interior — basin, steps, and the infinity channel.
@@ -318,6 +450,9 @@ function createMaterials() {
         colorVariation: 0.03,
         roughnessVariation: 0.05,
         seed: 29,
+        // Trowelled pool plaster.
+        normalStrength: 0.025,
+        normalScale: 2.6,
       },
     ),
     /** Tree trunks and major branches — vertical grain, like the entrance wood. */
@@ -326,6 +461,9 @@ function createMaterials() {
       colorVariation: 0.06,
       roughnessVariation: 0.05,
       seed: 41,
+      // Bark is deeply fissured — the one place a strong perturbation is right.
+      normalStrength: 0.15,
+      normalScale: 2.5,
       anisotropy: [1, 0.18, 1],
     }),
     /** Sunlit foliage — canopy, shrubs, hedges. Muted sage, not garden green. */
@@ -334,6 +472,9 @@ function createMaterials() {
       colorVariation: 0.06,
       roughnessVariation: 0.05,
       seed: 53,
+      // Leaf-mass relief across a canopy cluster.
+      normalStrength: 0.09,
+      normalScale: 1.6,
     }),
     /** Shadowed foliage, layered under `foliageMid` for depth without a texture. */
     foliageDark: withVariation(standard({ color: '#3a4433', roughness: 0.9, metalness: 0 }), {
@@ -341,6 +482,9 @@ function createMaterials() {
       colorVariation: 0.06,
       roughnessVariation: 0.05,
       seed: 59,
+      // As the mid foliage.
+      normalStrength: 0.09,
+      normalScale: 1.6,
     }),
     /** Ornamental grass — warmer and drier than the foliage greens. */
     grass: withVariation(standard({ color: '#6b7347', roughness: 0.86, metalness: 0 }), {
@@ -348,6 +492,9 @@ function createMaterials() {
       colorVariation: 0.05,
       roughnessVariation: 0.04,
       seed: 67,
+      // Blade clumping in ornamental grass.
+      normalStrength: 0.05,
+      normalScale: 1.8,
     }),
     /**
      * The mown lawn's blades. Deliberately *not* the ornamental `grass`
@@ -369,6 +516,9 @@ function createMaterials() {
       colorVariation: 0.05,
       roughnessVariation: 0.03,
       seed: 79,
+      // Clod and crumb structure in bare soil.
+      normalStrength: 0.13,
+      normalScale: 1.6,
     }),
 
     // ── Interior palette (Phase 2F) ──────────────────────────────────────
@@ -386,6 +536,9 @@ function createMaterials() {
       colorVariation: 0.022,
       roughnessVariation: 0.04,
       seed: 83,
+      // Polished plaster: a trowelled wall is flat, not perfect.
+      normalStrength: 0.018,
+      normalScale: 3.4,
     }),
     /**
      * Honed pale limestone flooring for the principal rooms. Larger, softer
@@ -397,6 +550,9 @@ function createMaterials() {
       colorVariation: 0.04,
       roughnessVariation: 0.07,
       seed: 89,
+      // Honed stone floor — the same grain as the exterior, finer.
+      normalStrength: 0.03,
+      normalScale: 3.2,
     }),
     /**
      * Interior joinery timber — cabinetry, built-ins, bedroom flooring.
@@ -408,6 +564,9 @@ function createMaterials() {
       colorVariation: 0.055,
       roughnessVariation: 0.06,
       seed: 97,
+      // Sawn timber joinery.
+      normalStrength: 0.03,
+      normalScale: 4.0,
       anisotropy: [1, 0.12, 1],
     }),
     /**
@@ -420,6 +579,9 @@ function createMaterials() {
       colorVariation: 0.09,
       roughnessVariation: 0.05,
       seed: 101,
+      // Polished marble is almost perfectly flat; only the veining lifts.
+      normalStrength: 0.012,
+      normalScale: 2.2,
       anisotropy: [0.25, 1.6, 1],
     }),
     /** Principal upholstery — sofas, beds, headboards. Warm greige linen. */
@@ -428,6 +590,9 @@ function createMaterials() {
       colorVariation: 0.05,
       roughnessVariation: 0.04,
       seed: 103,
+      // Woven upholstery microstructure.
+      normalStrength: 0.06,
+      normalScale: 7.0,
     }),
     /** Accent upholstery — occasional chairs, stools, bed throws. */
     upholsteryDark: withVariation(standard({ color: '#4a463f', roughness: 0.96, metalness: 0 }), {
@@ -435,6 +600,9 @@ function createMaterials() {
       colorVariation: 0.06,
       roughnessVariation: 0.04,
       seed: 107,
+      // As the pale upholstery.
+      normalStrength: 0.06,
+      normalScale: 7.0,
     }),
     /** Deep-pile wool rugs. Coarse noise reads as pile at close range. */
     rug: withVariation(standard({ color: '#5f574a', roughness: 1, metalness: 0 }), {
@@ -442,6 +610,9 @@ function createMaterials() {
       colorVariation: 0.08,
       roughnessVariation: 0.03,
       seed: 109,
+      // Wool pile — the deepest of the interior fabrics.
+      normalStrength: 0.09,
+      normalScale: 6.5,
     }),
     /** Sanitaryware and tableware — glazed white ceramic. */
     ceramic: standard({ color: '#eef0ee', roughness: 0.12, metalness: 0.02 }),

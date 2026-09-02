@@ -1,7 +1,7 @@
 'use client';
 
 import { getMaterials } from '@/lib/three/materials';
-import { MergedBoxes, MergedSupports } from '../VillaPrimitives';
+import { MergedBoxes, MergedSupports, UPHOLSTERY_CHAMFER } from '../VillaPrimitives';
 import type { InteriorLayout } from './InteriorTypes';
 
 /**
@@ -17,11 +17,19 @@ export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
   return (
     <group name="InteriorFurnishings">
       <MergedBoxes name="furniture-joinery" specs={parts.joinery} material={materials.joinery} />
-      <MergedBoxes name="furniture-soft" specs={parts.soft} material={materials.upholstery} />
+      {/* Seats, backs, arms and mattresses take a far softer edge than the
+          building does — a cushion breaks over a couple of centimetres. */}
+      <MergedBoxes
+        name="furniture-soft"
+        specs={parts.soft}
+        material={materials.upholstery}
+        chamfer={UPHOLSTERY_CHAMFER}
+      />
       <MergedBoxes
         name="furniture-soft-dark"
         specs={parts.softDark}
         material={materials.upholsteryDark}
+        chamfer={UPHOLSTERY_CHAMFER}
       />
       <MergedBoxes name="furniture-stone" specs={parts.stone} material={materials.marble} />
       <MergedBoxes name="furniture-metal" specs={parts.metal} material={materials.bronze} />
@@ -38,6 +46,7 @@ export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
         specs={parts.rugs}
         material={materials.rug}
         castShadow={false}
+        chamfer={UPHOLSTERY_CHAMFER}
       />
       <MergedBoxes name="furniture-plaster" specs={parts.plaster} material={materials.plaster} />
       {/* Emissive fixture faces: lit surfaces, not light sources. */}
