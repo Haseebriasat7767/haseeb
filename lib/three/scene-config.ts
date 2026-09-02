@@ -63,9 +63,9 @@ export const INTERIOR_VIEWS: readonly CameraView[] = [
   {
     id: 'living',
     label: 'Living room',
-    position: [10.2, 2.3, 3.2],
-    target: [4.4, 1.7, -3.2],
-    fov: 56,
+    position: [3.6, 2.4, -3.0],
+    target: [9.6, 1.5, 3.6],
+    fov: 52,
   },
   {
     id: 'kitchen',

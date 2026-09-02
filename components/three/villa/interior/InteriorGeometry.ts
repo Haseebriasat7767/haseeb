@@ -28,6 +28,17 @@ import {
   createWC,
   emptyParts,
 } from './Furniture';
+import {
+  createArtwork,
+  createBedding,
+  createBooks,
+  createCurtains,
+  createHeadboard,
+  createPlant,
+  createTowels,
+  createTray,
+  createVessel,
+} from './InteriorDecor';
 import { createInteriorPlan, FLOOR_BUILD_UP, type Room } from './InteriorPlan';
 import type { InteriorConfig, InteriorLayout, InteriorLight } from './InteriorTypes';
 
@@ -51,10 +62,26 @@ export const INTERIOR_CONFIG: InteriorConfig = {
  * are actually mounted belongs to the lighting system, not to the
  * furniture, and is decided in `lib/three/lighting.ts`.
  */
-const DETAIL: Record<DetailTier, { seatDensity: number; accessories: boolean; shelves: number }> = {
-  low: { seatDensity: 0.5, accessories: false, shelves: 3 },
-  medium: { seatDensity: 0.75, accessories: true, shelves: 4 },
-  high: { seatDensity: 1, accessories: true, shelves: 5 },
+const DETAIL: Record<
+  DetailTier,
+  {
+    seatDensity: number;
+    accessories: boolean;
+    shelves: number;
+    /**
+     * Curtains, artwork, planting and the objects on surfaces. Dropped on
+     * the low tier, which keeps every piece that defines what a room *is* —
+     * bed, sofa, table, rug — and loses only what an interior designer
+     * would have added afterwards.
+     */
+    decor: boolean;
+    /** Styling for rooms no named camera ever enters. */
+    secondaryDecor: boolean;
+  }
+> = {
+  low: { seatDensity: 0.5, accessories: false, shelves: 3, decor: false, secondaryDecor: false },
+  medium: { seatDensity: 0.75, accessories: true, shelves: 4, decor: true, secondaryDecor: false },
+  high: { seatDensity: 1, accessories: true, shelves: 5, decor: true, secondaryDecor: true },
 };
 
 /** A range inset equally from both ends. */
@@ -292,6 +319,50 @@ export function createInteriorLayout(
     [livingRearZ, livingRearZ + 0.14],
     [living.floorY + 1.0, living.floorY + 2.4],
   );
+  // ── Living room styling ───────────────────────────────────────────────
+  // Everything below is Phase 7F: the room was correctly planned and
+  // completely unstaged, which is why it read as generated. Curtains first,
+  // because they are the largest soft mass and the one that gives the
+  // double-height glazing a sense of scale.
+  if (tier.decor) {
+    createCurtains(parts, 'living-curtain-front', {
+      across: inset(living.x, 0.25),
+      at: [living.z[1] - 0.34, living.z[1] - 0.16],
+      y: [living.floorY, living.ceilingY - 0.06],
+    });
+
+    createArtwork(
+      parts,
+      'living-art',
+      [living.x[0] + 0.9, living.x[0] + 3.1],
+      [living.floorY + 1.15, living.floorY + 2.55],
+      [livingRearZ + 0.14, livingRearZ + 0.2],
+      'z',
+      41,
+    );
+
+    createPlant(
+      parts,
+      'living-plant',
+      living.x[1] - 0.85,
+      living.z[1] - 1.5,
+      living.floorY,
+      2.1,
+      17,
+    );
+
+    // The coffee table, styled. A tray, a low stack of books beside it, and
+    // one vessel — the composition every interior photograph uses, because
+    // three objects of different heights read as arrangement and four read
+    // as clutter.
+    const tableTop = living.floorY + 0.42;
+    const tableCx = mid(living.x);
+    const tableCz = mid(living.z) + 0.9;
+    createTray(parts, 'living-tray', tableCx - 0.24, tableCz + 0.04, tableTop);
+    createBooks(parts, 'living-books', tableCx + 0.34, tableCz - 0.06, tableTop, 3, 23);
+    createVessel(parts, 'living-vase', tableCx - 0.2, tableCz + 0.02, tableTop + 0.022, 0.24, 0.07);
+  }
+
   createCove(
     parts,
     'living-cove',
@@ -318,6 +389,24 @@ export function createInteriorLayout(
     1.15,
     tier.seatDensity,
   );
+  if (tier.decor) {
+    // A centrepiece and a low run of objects on the sideboard: enough that
+    // the table reads as laid for the photograph, not for a meal.
+    createVessel(
+      parts,
+      'dining-centre',
+      diningCx,
+      mid(dining.z) + 0.4,
+      dining.floorY + 0.75,
+      0.36,
+      0.09,
+    );
+    createCurtains(parts, 'dining-curtain', {
+      across: inset(dining.x, 0.3),
+      at: [dining.z[1] - 0.34, dining.z[1] - 0.16],
+      y: [dining.floorY, dining.ceilingY - 0.06],
+    });
+  }
   // Held east of the kitchen opening so it backs onto solid wall rather
   // than standing in the doorway between the two rooms.
   createConsole(
@@ -380,6 +469,32 @@ export function createInteriorLayout(
   const islandX: Range = [mid(kitchen.x) - 2.0, mid(kitchen.x) + 2.0];
   const islandZ: Range = [mid(kitchen.z) - 0.55, mid(kitchen.z) + 0.55];
   createIsland(parts, 'kitchen-island', islandX, islandZ, kitchen.floorY, tier.accessories ? 3 : 2);
+  if (tier.decor) {
+    // A luxury kitchen in a brochure is nearly bare. Three objects at three
+    // heights, grouped at one end of the island so the run of stone reads.
+    const islandTop = kitchen.floorY + 0.92;
+    const stagedX = islandX[0] + 0.75;
+    createTray(parts, 'kitchen-board', stagedX, mid(islandZ), islandTop, 0.5, 0.32);
+    createVessel(
+      parts,
+      'kitchen-bowl',
+      stagedX + 0.05,
+      mid(islandZ),
+      islandTop + 0.022,
+      0.14,
+      0.13,
+    );
+    createVessel(
+      parts,
+      'kitchen-vase',
+      islandX[1] - 0.6,
+      mid(islandZ),
+      islandTop,
+      0.32,
+      0.075,
+      'stone',
+    );
+  }
   for (let i = 0; i < 2; i += 1) {
     createPendant(
       parts,
@@ -508,7 +623,18 @@ export function createInteriorLayout(
   // ── Upper floor: master suite ─────────────────────────────────────────
   const master = rooms.masterBedroom;
   const masterBedCz = master.z[0] + clear + 1.05;
-  createBed(parts, 'master-bed', mid(master.x), masterBedCz, master.floorY, 1.95, 2.1, 'south');
+  // The dressed bed replaces the plain slab `createBed` produced. It is the
+  // anchor of the room and the first thing the camera reads.
+  const masterBedX: Range = [mid(master.x) - 0.975, mid(master.x) + 0.975];
+  const masterBedZ: Range = [masterBedCz - 1.05, masterBedCz + 1.05];
+  createHeadboard(parts, 'master-headboard', masterBedX, masterBedZ[0], -1, master.floorY, 1.25);
+  createBedding(parts, 'master-bed', {
+    x: masterBedX,
+    z: masterBedZ,
+    floorY: master.floorY,
+    headAt: 'north',
+    seed: 61,
+  });
   createNightstand(
     parts,
     'master-night-a',
@@ -543,6 +669,51 @@ export function createInteriorLayout(
     'north',
   );
   createSideTable(parts, 'master-side', mid(master.x), master.z[1] - 0.9, master.floorY);
+
+  if (tier.decor) {
+    createCurtains(parts, 'master-curtain', {
+      across: inset(master.x, 0.3),
+      at: [master.z[1] - 0.34, master.z[1] - 0.16],
+      y: [master.floorY, master.ceilingY - 0.06],
+    });
+    createArtwork(
+      parts,
+      'master-art',
+      [mid(master.z) - 0.75, mid(master.z) + 0.75],
+      [master.floorY + 1.35, master.floorY + 2.45],
+      [master.x[0] + 0.1, master.x[0] + 0.16],
+      'x',
+      67,
+    );
+    createPlant(
+      parts,
+      'master-plant',
+      master.x[0] + 0.8,
+      master.z[1] - 1.2,
+      master.floorY,
+      1.5,
+      29,
+    );
+    // One object on each nightstand, and deliberately not the same object.
+    createVessel(
+      parts,
+      'master-night-vase',
+      mid(master.x) - 1.42,
+      master.z[0] + 0.5,
+      master.floorY + 0.56,
+      0.18,
+      0.055,
+    );
+    createBooks(
+      parts,
+      'master-night-books',
+      mid(master.x) + 1.42,
+      master.z[0] + 0.5,
+      master.floorY + 0.56,
+      2,
+      71,
+    );
+  }
   createBuiltIn(
     parts,
     'master-panel',
@@ -592,6 +763,37 @@ export function createInteriorLayout(
     'west',
   );
 
+  if (tier.decor) {
+    const vanityTop = masterBath.floorY + 0.9;
+    createTowels(
+      parts,
+      'master-bath-towels',
+      masterBath.x[0] + 0.55,
+      mid(masterBath.z) - 0.9,
+      vanityTop,
+      2,
+    );
+    createVessel(
+      parts,
+      'master-bath-bottle',
+      masterBath.x[0] + 1.5,
+      mid(masterBath.z) - 1.0,
+      vanityTop,
+      0.19,
+      0.045,
+      'ceramic',
+    );
+    createPlant(
+      parts,
+      'master-bath-plant',
+      masterBath.x[0] + 0.5,
+      masterBath.z[1] - 0.6,
+      masterBath.floorY,
+      0.7,
+      37,
+    );
+  }
+
   const dressing = rooms.dressing;
   createBuiltIn(parts, 'dressing-run-a', inset(dressing.x, 0.2), band(dressing.z, 'start', 0.62), [
     dressing.floorY,
@@ -631,7 +833,18 @@ export function createInteriorLayout(
   bedrooms.forEach(({ room, key }) => {
     const cx = mid(room.x);
     const cz = room.z[0] + clear + 1.05;
-    createBed(parts, `${key}-bed`, cx, cz, room.floorY, 1.7, 2.05, 'south');
+    // The same dressed bed the master gets, at a different width and with a
+    // different seed, so the three bedrooms are not one bed repeated.
+    const bedX: Range = [cx - 0.85, cx + 0.85];
+    const bedZ: Range = [cz - 1.025, cz + 1.025];
+    createHeadboard(parts, `${key}-headboard`, bedX, bedZ[0], -1, room.floorY, 1.05);
+    createBedding(parts, `${key}-bed`, {
+      x: bedX,
+      z: bedZ,
+      floorY: room.floorY,
+      headAt: 'north',
+      seed: key === 'bed2' ? 83 : 97,
+    });
     createNightstand(parts, `${key}-night-a`, cx - 1.25, room.z[0] + 0.45, room.floorY, true);
     createNightstand(parts, `${key}-night-b`, cx + 1.25, room.z[0] + 0.45, room.floorY, true);
     createRug(parts, `${key}-rug`, cx, cz + 0.35, room.floorY, 3.2, 2.9);
@@ -642,9 +855,29 @@ export function createInteriorLayout(
     if (tier.accessories) {
       createDesk(parts, `${key}-desk`, room.x[0] + 1.2, room.z[1] - 1.6, room.floorY, 'east', 1.4);
     }
+    if (tier.secondaryDecor) {
+      createCurtains(parts, `${key}-curtain`, {
+        across: inset(room.x, 0.4),
+        at: [room.z[1] - 0.32, room.z[1] - 0.16],
+        y: [room.floorY, room.ceilingY - 0.06],
+        density: 7,
+      });
+      createVessel(
+        parts,
+        `${key}-night-vase`,
+        cx - 1.25,
+        room.z[0] + 0.45,
+        room.floorY + 0.56,
+        0.16,
+        0.05,
+      );
+    }
   });
 
   const bath2 = rooms.bath2;
+  if (tier.secondaryDecor) {
+    createTowels(parts, 'bath2-towels', bath2.x[0] + 0.75, bath2.z[0] + 0.4, bath2.floorY + 0.9, 2);
+  }
   createVanity(
     parts,
     'bath2-vanity',

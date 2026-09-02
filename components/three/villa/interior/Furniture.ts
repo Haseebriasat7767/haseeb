@@ -39,6 +39,14 @@ export type Parts = {
   plaster: BoxSpec[];
   /** Turned elements — pendant stems, lamp columns, rails. */
   posts: ColumnSpec[];
+  /** Heavy curtain panels, gathered at the ends of an opening. */
+  drapery: BoxSpec[];
+  /** The sheer layer behind them — translucent, and lit from outside. */
+  sheer: BoxSpec[];
+  /** Books, artwork canvas edges, paper. */
+  paper: BoxSpec[];
+  /** Indoor planting. */
+  foliage: BoxSpec[];
 };
 
 export function emptyParts(): Parts {
@@ -55,6 +63,10 @@ export function emptyParts(): Parts {
     glow: [],
     plaster: [],
     posts: [],
+    drapery: [],
+    sheer: [],
+    paper: [],
+    foliage: [],
   };
 }
 
@@ -152,19 +164,32 @@ export function createSofa(
   parts.joinery.push(at(`${key}-plinth`, [-half, half], [0.05, 0.3], [0.08, depth - 0.05]));
   parts.softDark.push(at(`${key}-shadow`, [-half, half], [0.0, 0.05], [0.12, depth - 0.09]));
 
+  // Cushions, separated and individually nudged.
+  //
+  // They were flush blocks butted edge to edge, which is what made the sofa
+  // read as a bench with lines drawn on it. Real seat cushions sit proud of
+  // the frame, have a gap between them, and are never quite level with each
+  // other; the deterministic wobble below is small enough to read as use
+  // rather than as damage.
   const seats = Math.max(2, Math.round(width / 1.1));
   const step = (width - arm * 2) / seats;
   for (let i = 0; i < seats; i += 1) {
     const a0 = -half + arm + step * i;
+    const settle = ((Math.sin(i * 12.9898 + width) * 43758.5453) % 1) * 0.02;
     parts.soft.push(
-      at(`${key}-seat-${i}`, [a0 + 0.02, a0 + step - 0.02], [0.3, 0.44], [0.12, depth - 0.5]),
+      at(
+        `${key}-seat-${i}`,
+        [a0 + 0.035, a0 + step - 0.035],
+        [0.3, 0.46 - settle],
+        [0.07, depth - 0.48],
+      ),
     );
     parts.soft.push(
       at(
         `${key}-back-${i}`,
-        [a0 + 0.02, a0 + step - 0.02],
-        [0.44, 0.78],
-        [depth - 0.5, depth - 0.1],
+        [a0 + 0.045, a0 + step - 0.045],
+        [0.46 - settle, 0.8 - settle * 1.5],
+        [depth - 0.52, depth - 0.14],
       ),
     );
   }

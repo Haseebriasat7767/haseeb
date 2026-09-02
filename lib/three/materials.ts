@@ -659,6 +659,59 @@ function createMaterials() {
      * lighting. Emissive only: it costs nothing beyond a normal material and
      * carries no bloom or post-processing, which stays out of Phase 2F.
      */
+    /**
+     * Heavy curtain fabric — a warm oatmeal linen, matte and light-absorbing.
+     * Distinct from `upholstery`: a curtain hangs against a bright window and
+     * has to hold its own value against it, where a seat cushion is read
+     * against a floor.
+     */
+    drapery: withVariation(
+      standard({ color: '#a89b87', roughness: 0.97, metalness: 0, envMapIntensity: 0.35 }),
+      {
+        scale: 1.1,
+        colorVariation: 0.05,
+        roughnessVariation: 0.04,
+        seed: 149,
+        anisotropy: [1, 0.2, 1],
+        normalStrength: 0.05,
+        normalScale: 6.0,
+      },
+    ),
+    /**
+     * The sheer layer. Transparent rather than alpha-cut, because a voile is
+     * genuinely translucent — it should tint and soften the daylight behind
+     * it, not punch holes in it.
+     */
+    sheer: new MeshPhysicalMaterial({
+      color: '#e8e2d6',
+      roughness: 0.95,
+      metalness: 0,
+      transparent: true,
+      // Low: a voile is barely there, and at 0.3 it muted the view through
+      // the glazing it is meant to soften rather than hide.
+      opacity: 0.16,
+      side: DoubleSide,
+      envMapIntensity: 0.5,
+    }),
+    /** Book blocks and canvas edges. */
+    paper: withVariation(standard({ color: '#cfc6b6', roughness: 0.88, metalness: 0 }), {
+      scale: 2.6,
+      colorVariation: 0.14,
+      roughnessVariation: 0.05,
+      seed: 151,
+    }),
+    /** Indoor planting — deeper and glossier than the sun-bleached exterior. */
+    indoorFoliage: withVariation(
+      standard({ color: '#43563a', roughness: 0.72, metalness: 0, envMapIntensity: 0.6 }),
+      {
+        scale: 1.4,
+        colorVariation: 0.1,
+        roughnessVariation: 0.08,
+        seed: 157,
+        normalStrength: 0.09,
+        normalScale: 4.5,
+      },
+    ),
     lightGlow: standard({
       color: '#241d14',
       roughness: 0.6,

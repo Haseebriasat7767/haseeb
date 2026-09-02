@@ -49,6 +49,27 @@ export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
         chamfer={UPHOLSTERY_CHAMFER}
       />
       <MergedBoxes name="furniture-plaster" specs={parts.plaster} material={materials.plaster} />
+      {/* Curtains take the softest edge in the house: fabric hanging in
+          folds has no arris at all. */}
+      <MergedBoxes
+        name="furniture-drapery"
+        specs={parts.drapery}
+        material={materials.drapery}
+        chamfer={UPHOLSTERY_CHAMFER}
+      />
+      <MergedBoxes
+        name="furniture-sheer"
+        specs={parts.sheer}
+        material={materials.sheer}
+        castShadow={false}
+      />
+      <MergedBoxes name="furniture-paper" specs={parts.paper} material={materials.paper} />
+      <MergedBoxes
+        name="furniture-foliage"
+        specs={parts.foliage}
+        material={materials.indoorFoliage}
+        chamfer={UPHOLSTERY_CHAMFER}
+      />
       {/* Emissive fixture faces: lit surfaces, not light sources. */}
       <MergedBoxes
         name="furniture-glow"

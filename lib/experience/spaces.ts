@@ -86,7 +86,13 @@ export const SPACES: readonly Space[] = [
     description:
       'The glazed volume between the two stone wings, opening onto the terrace through a full-width sliding wall. A stone chimney breast anchors the back wall.',
     feature: 'Full-width sliding glazing to the terrace',
-    view: view('living', 'Living room', [10.2, 2.3, 3.2], [4.4, 1.7, -3.2], 56),
+    // Re-framed in Phase 7F. The old camera stood against the east glazing
+    // and looked away from it into the room's back wall, so the one thing
+    // that makes this room worth photographing — a full-height glazed corner
+    // onto the terrace — was behind the lens. It now looks across the
+    // seating toward the glass, which also gives the frame a real
+    // foreground, midground and background.
+    view: view('living', 'Living room', [3.6, 2.4, -3.0], [9.6, 1.5, 3.6], 52),
     level: 'ground',
     room: 'living',
     anchor: 'livingGlass',
