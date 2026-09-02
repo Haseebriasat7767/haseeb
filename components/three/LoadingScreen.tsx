@@ -4,6 +4,9 @@ import { useProgress } from '@react-three/drei';
 import { SITE } from '@/lib/constants/site';
 import { cn } from '@/lib/utils/cn';
 
+/** Segments in the progress scale. */
+const SEGMENTS = 16;
+
 type LoadingScreenProps = {
   /** Hide once the scene reports ready — never on a timer. */
   visible: boolean;
@@ -37,18 +40,25 @@ export function LoadingScreen({ visible, className }: LoadingScreenProps) {
         <span className="font-display text-alabaster text-3xl tracking-[0.5em] sm:text-4xl">
           {SITE.name}
         </span>
-        <span className="text-eyebrow text-stone uppercase">{SITE.tagline}</span>
+        <span className="text-eyebrow text-stone uppercase">Loading residence</span>
       </div>
 
-      <div className="flex w-40 flex-col gap-3">
-        <div className="bg-alabaster/15 h-px w-full">
-          <div
-            className="bg-gold ease-luxe h-px transition-[width] duration-500"
-            style={{ width: `${percent}%` }}
-          />
+      <div className="flex w-48 flex-col gap-3">
+        {/* A run of segments rather than a bar: it reads as a measured
+            architectural scale, and it is legible at a glance. */}
+        <div className="flex gap-1" aria-hidden="true">
+          {Array.from({ length: SEGMENTS }, (_, index) => (
+            <span
+              key={index}
+              className={cn(
+                'ease-luxe h-1 flex-1 transition-colors duration-500',
+                index < Math.round((percent / 100) * SEGMENTS) ? 'bg-gold' : 'bg-alabaster/15',
+              )}
+            />
+          ))}
         </div>
-        <span className="text-stone text-center text-[0.625rem] tracking-[0.28em] uppercase">
-          {percent > 0 ? `${percent}%` : 'Loading'}
+        <span className="text-stone text-center text-[0.625rem] tracking-[0.28em] uppercase tabular-nums">
+          {percent}%
         </span>
       </div>
 

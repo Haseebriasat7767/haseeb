@@ -3,7 +3,8 @@
 import { useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
 import { Fog } from 'three';
-import { applyLightingToMaterials, type ResolvedLighting } from '@/lib/three/lighting';
+import type { ResolvedLighting } from '@/lib/three/lighting';
+import { applyLightingToMaterials } from '@/lib/three/lighting-materials';
 
 type EnvironmentProps = {
   lighting: ResolvedLighting;

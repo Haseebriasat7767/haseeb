@@ -374,6 +374,61 @@ from 2048 to 4096 — not on principle, but because the wide frustum a low sun
 needs visibly stair-stepped the parapet edges from the aerial view at 2048,
 and an A/B at high tier showed the increase actually fixing it.
 
+### The experience layer
+
+Phase 4 turns the model into a site. Everything below is driven by one
+record type — `lib/experience/spaces.ts`. A space carries its copy, its
+camera framing, the room in the generated plan it corresponds to, and where
+its marker sits on the model. Adding a space adds it to the scroll journey,
+the explorer rail, the 3D hotspots, the floor plans, and the gallery at
+once, which is why none of those components carries a list of its own.
+
+**The scroll journey** (`components/journey/`) pins one canvas for eight
+chapters and scrolls the copy over it. Whichever chapter owns the middle of
+the viewport supplies the camera framing, and the camera's `journey` mode
+eases position, target, _and_ focal length toward it so a change of chapter
+reads as one camera move rather than a cut. The chapters are real in-flow
+markup, not text painted onto the stage, so the narrative survives both a
+search engine and a failure of the 3D layer.
+
+**The explorer** (`/experience`) is the same canvas with a space rail, the
+markers, a details panel, and the hour control. Selecting a space moves the
+camera; nothing navigates and the scene is never torn down.
+
+**The plans** (`/floor-plan`) are generated, not drawn.
+`lib/experience/floorplan.ts` projects the _same_ room schedule that
+generates the 3D model into SVG — change a partition in `InteriorPlan.ts`
+and the drawing changes with it. Room areas are computed from those
+outlines. This is the residence seen from above, not an illustration of it.
+
+**The gallery** (`/gallery`) has no photography, because there is no
+photograph to take. Each entry opens a full-screen frame rendered live at
+the framing its caption names, under whichever of the five hours is
+selected. Keyboard: arrows to move, Escape to close, focus held inside
+while open.
+
+**Camera.** `CameraController` gained the `journey` mode, a small
+pointer-driven parallax (fine pointers only, off under reduced motion), and
+aspect-aware framing: three's field of view is vertical, so a portrait phone
+would crop a composed elevation down its sides. Every framing is authored
+once against a 16:9 reference and widened automatically on narrower
+viewports, which is why no view needs a second set of numbers for mobile.
+
+### What Phase 4 does not do
+
+The contact form has real validation, error, loading, and success states,
+but this repository has **no backend**. Rather than fake a submission, an
+unconfigured build composes the enquiry and hands it to the visitor's mail
+client, and says so on screen. Set `NEXT_PUBLIC_ENQUIRY_ENDPOINT` (see
+`.env.example`) and the same form posts JSON to it with no other change —
+that variable is a public form-action URL, not a credential, and no secret
+of any kind is read anywhere in the client.
+
+Property areas, elevations, and grounds are demonstration figures for a
+fictional residence. Counts that can be derived — levels, rooms, bedrooms,
+bathrooms — are read from the generated room schedule and marked as such in
+the specification table, so nothing invented is presented as surveyed fact.
+
 ## External Asset Policy & Audit
 
 | Asset / Resource                 | Status       |
@@ -478,6 +533,24 @@ material response is a property set on the existing shared materials. No
 HDRI or environment map is fetched — which is also why the metals stay
 pulled back from maximum metalness, since with nothing to reflect they would
 render as flat black. `package.json` is unchanged.
+
+### Phase 4 Audit
+
+```text
+External 3D assets: 0
+External textures: 0
+Stock photography: 0
+HDRIs / environment maps: 0
+Model or texture loaders: 0
+External asset URLs: 0
+New dependencies: 0
+Secrets or API keys in the client: 0
+```
+
+Phase 4 added no dependency and no asset. The gallery contains no image
+files because it renders the model instead; the floor plans are SVG
+generated at runtime from the room schedule; the loading screen, cursor,
+and markers are all DOM and CSS. `package.json` is unchanged.
 
 ## Performance diagnostics
 
@@ -594,6 +667,28 @@ default presentation state is therefore also one of the cheaper ones.
 
 The high tier's shadow map moved from 2048 to 4096, which costs GPU memory
 rather than frame time and applies to no other tier.
+
+### Route weights (Phase 4)
+
+Three.js is never in a page bundle. Every route loads the renderer only
+through `ExperienceViewport`'s dynamic import, and only once the canvas
+approaches the viewport:
+
+| Route         | Page JS | First load |
+| ------------- | ------- | ---------- |
+| `/`           | 3.98 kB | 114 kB     |
+| `/experience` | 4.8 kB  | 115 kB     |
+| `/gallery`    | 4.21 kB | 111 kB     |
+| `/floor-plan` | 10 kB   | 116 kB     |
+| `/contact`    | 3.47 kB | 110 kB     |
+
+Two leaks were found and closed while building this. Passing the hotspots
+in as rendered nodes pulled all of three into `/experience` (252 kB); they
+are now constructed inside the dynamically imported canvas. The hour
+control importing the lighting presets pulled it in again (106 kB), because
+those presets sat in the same module as the function that mutates the
+shared materials; that bridge now lives in `lib/three/lighting-materials.ts`
+and the presets are pure data. `/experience` ends at 4.8 kB.
 
 Frame-time and FPS numbers were exercised in this sandbox using headless
 Chromium with SwiftShader — a software GL rasterizer, not a GPU — so those

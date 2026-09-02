@@ -1,9 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
+import type { HotspotConfig } from '@/lib/experience/spaces';
 import { cn } from '@/lib/utils/cn';
 import type { CameraMode, CameraView, SceneContent, TimeOfDay } from '@/types';
 
@@ -19,6 +20,12 @@ type ExperienceViewportProps = {
   content?: SceneContent;
   /** Architectural lighting state. Golden hour is the presentation default. */
   timeOfDay?: TimeOfDay;
+  /** Metres of pointer-driven camera parallax; 0 disables it. */
+  parallax?: number;
+  /** Mounts the architectural markers on the model when supplied. */
+  hotspots?: HotspotConfig;
+  /** Chrome rendered over the canvas, inside the same positioned box. */
+  children?: ReactNode;
   className?: string;
   /** Accessible description of what the canvas depicts. */
   label?: string;
@@ -34,6 +41,9 @@ export function ExperienceViewport({
   mode,
   content,
   timeOfDay,
+  parallax,
+  hotspots,
+  children,
   className,
   label = 'Interactive three-dimensional view of the residence',
 }: ExperienceViewportProps) {
@@ -69,8 +79,16 @@ export function ExperienceViewport({
       {webgl === false ? (
         <WebGLFallback reason="unsupported" />
       ) : webgl && inView ? (
-        <ExperienceCanvas view={view} mode={mode} content={content} timeOfDay={timeOfDay} />
+        <ExperienceCanvas
+          view={view}
+          mode={mode}
+          content={content}
+          timeOfDay={timeOfDay}
+          parallax={parallax}
+          hotspots={hotspots}
+        />
       ) : null}
+      {children}
     </div>
   );
 }

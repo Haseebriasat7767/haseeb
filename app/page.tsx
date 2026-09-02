@@ -1,16 +1,16 @@
-import { ExperiencePreview } from '@/components/experience/ExperiencePreview';
+import { JourneyStage } from '@/components/journey/JourneyStage';
 import { ArchitecturalStatement } from '@/components/property/ArchitecturalStatement';
 import { CallToAction } from '@/components/property/CallToAction';
-import { Hero } from '@/components/property/Hero';
 import { PropertyIntro } from '@/components/property/PropertyIntro';
+import { PropertySpecs } from '@/components/property/PropertySpecs';
 
 export default function HomePage() {
   return (
     <>
-      <Hero />
+      <JourneyStage />
       <ArchitecturalStatement />
       <PropertyIntro />
-      <ExperiencePreview />
+      <PropertySpecs />
       <CallToAction />
     </>
   );

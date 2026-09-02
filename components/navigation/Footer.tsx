@@ -43,7 +43,7 @@ export function Footer() {
           <span>
             &copy; {PROPERTY.year} {SITE.name}. All rights reserved.
           </span>
-          <span>Placeholder content — Phase 1 foundation</span>
+          <span>Demonstration project — a fictional residence, generated in code</span>
         </div>
       </Container>
     </footer>

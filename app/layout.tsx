@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Inter } from 'next/font/google';
+import { Cursor } from '@/components/effects/Cursor';
 import { GrainOverlay } from '@/components/effects/GrainOverlay';
 import { Footer } from '@/components/navigation/Footer';
 import { Header } from '@/components/navigation/Header';
@@ -74,6 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main id="main">{children}</main>
         <Footer />
         <GrainOverlay />
+        <Cursor />
       </body>
     </html>
   );

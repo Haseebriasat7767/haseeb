@@ -25,6 +25,10 @@ type SceneProps = {
   content?: SceneContent;
   /** Architectural lighting state. Golden hour is the presentation default. */
   timeOfDay?: TimeOfDay;
+  /** Metres of pointer-driven camera parallax; 0 disables it. */
+  parallax?: number;
+  /** Extra scene contents mounted alongside the building (hotspots, helpers). */
+  overlay?: ReactNode;
   /** Overrides `content` entirely when custom scene contents are needed. */
   children?: ReactNode;
   /** Mounts the dev-only performance sampler; a no-op when omitted. */
@@ -53,6 +57,8 @@ export function Scene({
   onReady,
   content = 'villa',
   timeOfDay = DEFAULT_TIME_OF_DAY,
+  parallax = 0,
+  overlay,
   children,
   diagnosticsEnabled = false,
   onMetrics,
@@ -86,7 +92,7 @@ export function Scene({
     >
       <color attach="background" args={[lighting.atmosphere.background]} />
 
-      <CameraController view={view} mode={mode} reducedMotion={reducedMotion} />
+      <CameraController view={view} mode={mode} parallax={parallax} reducedMotion={reducedMotion} />
       <SceneEnvironment
         lighting={lighting}
         shadows={quality.shadows}
@@ -105,6 +111,7 @@ export function Scene({
           ) : (
             <ProceduralVilla detail={quality.tier} lighting={lighting} />
           ))}
+        {overlay}
         <ReadySignal onReady={onReady} />
       </Suspense>
     </Canvas>

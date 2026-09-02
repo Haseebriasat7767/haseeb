@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { BoxGeometry, CylinderGeometry, type BufferGeometry, type Material } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { BoxSpec, ColumnSpec } from './VillaTypes';
-import { getVillaGeometries } from './VillaGeometry';
+import { getVillaGeometries } from './VillaPrimitiveCache';
 
 type MassingProps = {
   specs: readonly BoxSpec[];

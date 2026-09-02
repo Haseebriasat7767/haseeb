@@ -3,7 +3,8 @@
 import { useEffect, useMemo } from 'react';
 import { resolveLighting, type ResolvedLighting } from '@/lib/three/lighting';
 import type { DetailTier, VillaConfig } from './VillaTypes';
-import { VILLA_CONFIG, createVillaLayout, disposeVillaGeometries } from './VillaGeometry';
+import { VILLA_CONFIG, createVillaLayout } from './VillaGeometry';
+import { disposeVillaGeometries } from './VillaPrimitiveCache';
 import { VillaColumns } from './VillaColumns';
 import { VillaFacade } from './VillaFacade';
 import { VillaFoundation } from './VillaFoundation';

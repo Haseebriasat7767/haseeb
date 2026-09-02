@@ -15,8 +15,11 @@ export type CameraView = {
  */
 export type TimeOfDay = 'morning' | 'day' | 'goldenHour' | 'blueHour' | 'night';
 
-/** Camera behaviour modes the scene supports. */
-export type CameraMode = 'orbit' | 'cinematic' | 'fixed';
+/**
+ * Camera behaviour modes the scene supports. `journey` is the scroll-driven
+ * mode: it tweens position, target, and focal length between named views.
+ */
+export type CameraMode = 'orbit' | 'cinematic' | 'fixed' | 'journey';
 
 /** Which building the Canvas renders. */
 export type SceneContent = 'villa' | 'placeholder';
