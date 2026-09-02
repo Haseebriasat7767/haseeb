@@ -77,8 +77,8 @@ export function LandscapeExterior({
 
   return (
     <group name="LandscapeExterior">
-      <Trees layout={layout} />
-      <Shrubs layout={layout} />
+      <Trees layout={layout} detail={detail} />
+      <Shrubs layout={layout} detail={detail} />
       <Grasses layout={layout} />
       <Hedges layout={layout} />
       <LandscapeRocks layout={layout} />

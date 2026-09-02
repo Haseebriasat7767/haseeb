@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { resolveLighting, type ResolvedLighting } from '@/lib/three/lighting';
 import type { DetailTier, VillaConfig } from './VillaTypes';
 import { VILLA_CONFIG, createVillaLayout } from './VillaGeometry';
+import { disposeFoliageAtlas } from './landscape/FoliageAtlas';
 import { disposeVillaGeometries } from './VillaPrimitiveCache';
 import { ARCHITECTURAL_CHAMFER, ChamferProvider } from './VillaPrimitives';
 import { VillaColumns } from './VillaColumns';
@@ -101,7 +102,13 @@ export function ProceduralVilla({ config, detail = 'high', lighting }: Procedura
 
   // The shared unit primitives outlive individual parts; release them when
   // the villa leaves the scene entirely.
-  useEffect(() => disposeVillaGeometries, []);
+  useEffect(
+    () => () => {
+      disposeVillaGeometries();
+      disposeFoliageAtlas();
+    },
+    [],
+  );
 
   return (
     <ChamferProvider value={ARCHITECTURAL_CHAMFER[detail]}>

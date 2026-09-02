@@ -57,10 +57,14 @@ const LANDSCAPE_DETAIL: Record<
   {
     canopy: number;
     /**
-     * Icosahedron subdivision level for canopy masses. At 0 a canopy is 20
-     * flat triangles, which is precisely why the trees read as stylised
-     * low-poly props rather than planting; one subdivision quadruples the
-     * face count and is what lets the deformation resolve as foliage.
+     * Icosahedron subdivision level for canopy masses.
+     *
+     * Dialled back down in Phase 7E. Subdivision was raised in Phase 6 to
+     * fight the faceted low-poly silhouette, which it could only ever
+     * partly do — a closed convex surface has the wrong outline at any
+     * vertex count. Now that foliage cards draw the silhouette and these
+     * volumes are only the shadow-casting inner mass, their tessellation
+     * is no longer visible and the triangles are better spent elsewhere.
      */
     canopyDetail: BlobSpec['detail'];
     /** The same, for shrub masses, which sit closest to the camera. */
@@ -73,7 +77,7 @@ const LANDSCAPE_DETAIL: Record<
 > = {
   low: {
     canopy: 0.5,
-    canopyDetail: 1,
+    canopyDetail: 0,
     shrubDetail: 0,
     shrubs: 0.4,
     grass: 0.25,
@@ -91,7 +95,7 @@ const LANDSCAPE_DETAIL: Record<
   },
   high: {
     canopy: 1,
-    canopyDetail: 2,
+    canopyDetail: 1,
     shrubDetail: 1,
     shrubs: 1,
     grass: 1,
@@ -243,7 +247,7 @@ function makeTree(
     const lift = between(rng, 0.55, 0.95);
     const tip: Vector3Tuple = [
       trunkTop[0] + Math.cos(angle) * length * 0.7,
-      trunkTop[1] + length * lift * 0.6,
+      trunkTop[1] + length * lift * 1.05,
       trunkTop[2] + Math.sin(angle) * length * 0.7,
     ];
     trunks.push({
@@ -259,12 +263,12 @@ function makeTree(
   const clusterTotal = Math.max(1, canopyClusters);
   for (let c = 0; c < clusterTotal; c += 1) {
     const center = clusterCenters[c % clusterCenters.length]!;
-    const r = cfg.canopyRadius * between(rng, 0.6, 1.0);
+    const r = cfg.canopyRadius * between(rng, 0.34, 0.6);
     const spec: BlobSpec = {
       key: `${keyPrefix}-canopy-${c}`,
       position: [
         center[0] + between(rng, -cfg.canopySpread * 0.42, cfg.canopySpread * 0.42),
-        center[1] + between(rng, -0.35, 0.45),
+        center[1] + between(rng, -0.55, 1.15),
         center[2] + between(rng, -cfg.canopySpread * 0.42, cfg.canopySpread * 0.42),
       ],
       radius: r,
@@ -336,9 +340,16 @@ export function createLandscapeLayout(
   // boundary, where they give the elevations a treeline to sit against
   // instead of a bare horizon. Placed on a ring at deterministic angles
   // biased away from the front, so nothing grows into the hero view.
+  //
+  // The first two specimens used to stand just off the entrance stepping
+  // stones, which was right until Phase 7D paved that whole strip: one
+  // ended up inside the turning court and the other on the pool deck's
+  // edge. They now flank the arrival rather than stand in it — one well
+  // west of the court, one east of the drive beyond where the court ends —
+  // so they frame the approach instead of blocking it.
   const treePositions: Vector3Tuple[] = [
-    [ctx.approachX[0] - 1.6, 0, approachMidZ],
-    [ctx.approachX[1] + 1.9, 0, ctx.approachZ[0] + span(ctx.approachZ) * 0.78],
+    [ctx.approachX[0] - 13.4, 0, approachMidZ + 3.6],
+    [ctx.approachX[1] + 2.4, 0, ctx.approachZ[1] + 8.5],
   ];
   const ringCount = Math.max(0, treeCount - treePositions.length);
   for (let i = 0; i < ringCount; i += 1) {

@@ -471,6 +471,16 @@ No JPG, JPEG, PNG, WEBP, HDR, EXR, downloaded material textures, bark
 textures, leaf textures, ground textures, normal maps, roughness maps,
 displacement maps, or external texture URLs are used.
 
+Phase 7E introduced the project's first texture, and it is worth being
+exact about what it is. `components/three/villa/landscape/FoliageAtlas.ts`
+**draws** a 512x512 four-cell foliage atlas into an HTML canvas at runtime —
+a few hundred seeded leaf shapes per cell — and wraps it in a
+`CanvasTexture`. No image file exists in the repository, none is requested
+over the network, and there is no licence to record because nothing was
+obtained from anyone. A CC0 leaf cut-out would have been permissible under
+the Route B decision; it simply was not needed, since a foliage alpha is
+one of the few textures a program can draw convincingly.
+
 No HDRI files, downloaded environment maps, remote environment maps, or
 external skybox assets are used.
 

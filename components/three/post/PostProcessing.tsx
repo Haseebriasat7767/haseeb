@@ -6,10 +6,12 @@ import { HalfFloatType, Vector2, WebGLRenderTarget } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { PostGrade, PostProfile } from '@/lib/three/grading';
+import { hideAoExclusions, restoreAoExclusions } from './aoExclusions';
 import { GradingShader } from './GradingShader';
 
 type PostProcessingProps = {
@@ -76,6 +78,22 @@ export function PostProcessing({ profile, grade }: PostProcessingProps) {
 
     let aoPass: GTAOPass | null = null;
     if (profile.ambientOcclusion) {
+      // Alpha-cut geometry cannot be represented in GTAO's normal prepass,
+      // which overrides every material in the scene with one that has no
+      // map. Bracketing the pass keeps such objects out of it.
+      let hidden: ReturnType<typeof hideAoExclusions> = [];
+      const conceal = new Pass();
+      conceal.needsSwap = false;
+      conceal.render = () => {
+        hidden = hideAoExclusions();
+      };
+      const reveal = new Pass();
+      reveal.needsSwap = false;
+      reveal.render = () => {
+        restoreAoExclusions(hidden);
+        hidden = [];
+      };
+      instance.addPass(conceal);
       aoPass = new GTAOPass(
         scene,
         camera,
@@ -95,6 +113,7 @@ export function PostProcessing({ profile, grade }: PostProcessingProps) {
         screenSpaceRadius: false,
       });
       instance.addPass(aoPass);
+      instance.addPass(reveal);
     }
 
     let bloomPass: UnrealBloomPass | null = null;
