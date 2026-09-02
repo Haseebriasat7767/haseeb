@@ -24,6 +24,8 @@ import {
   ARCHITECTURAL_LIGHTING_CONFIG,
   createArchitecturalLighting,
 } from './lighting/LightingGeometry';
+import { EstateExterior } from './site/EstateExterior';
+import { ARRIVAL_CONFIG, createEstateLayout, OUTDOOR_CONFIG } from './site/EstateGeometry';
 import { SiteExterior } from './site/SiteExterior';
 import { createSiteLayout, SITE_CONFIG } from './site/SiteGeometry';
 
@@ -58,16 +60,44 @@ export function ProceduralVilla({ config, detail = 'high', lighting }: Procedura
   // `createSiteLayout` is the same pure function `SiteExterior` calls and is
   // documented safe for multiple callers, so the fixtures land on the real
   // paving rather than on a second guess at where it is.
-  const fixtures = useMemo(() => {
-    const site = createSiteLayout(SITE_CONFIG, layout.plan, detail);
-    return createArchitecturalLighting(
-      ARCHITECTURAL_LIGHTING_CONFIG,
-      layout.plan,
-      layout.levels,
-      site,
-      detail,
-    );
-  }, [layout.plan, layout.levels, detail]);
+  const site = useMemo(
+    () => createSiteLayout(SITE_CONFIG, layout.plan, detail),
+    [layout.plan, detail],
+  );
+
+  const fixtures = useMemo(
+    () =>
+      createArchitecturalLighting(
+        ARCHITECTURAL_LIGHTING_CONFIG,
+        layout.plan,
+        layout.levels,
+        site,
+        detail,
+      ),
+    [layout.plan, layout.levels, site, detail],
+  );
+
+  // The arrival sequence and the outdoor furniture, resolved from the same
+  // plan and site bounds everything else is placed from.
+  const estate = useMemo(
+    () => createEstateLayout(ARRIVAL_CONFIG, OUTDOOR_CONFIG, layout.plan, site, detail),
+    [layout.plan, site, detail],
+  );
+
+  // Grass is kept off the building's own paving and off everything the
+  // estate paves, which the estate reports rather than the call site
+  // restating — an exclusion that drifts from the paving is a driveway
+  // with grass growing through it.
+  const lawnPaving = useMemo(
+    () => [
+      {
+        x: [-(layout.plan.plinthHalfWidth + 2), layout.plan.plinthHalfWidth + 2] as const,
+        z: [-layout.plan.halfDepth - 5, layout.plan.plinthFrontZ + 24] as const,
+      },
+      ...estate.pavedGround.map((rect) => ({ x: rect.x, z: rect.z })),
+    ],
+    [layout.plan, estate],
+  );
 
   // The shared unit primitives outlive individual parts; release them when
   // the villa leaves the scene entirely.
@@ -89,14 +119,8 @@ export function ProceduralVilla({ config, detail = 'high', lighting }: Procedura
         <Interior plan={layout.plan} levels={layout.levels} detail={detail} lighting={rig} />
         <SiteExterior plan={layout.plan} detail={detail} />
         <LandscapeExterior plan={layout.plan} detail={detail} />
-        <Lawn
-          paving={{
-            x: layout.plan.plinthHalfWidth + 2,
-            zNear: -layout.plan.halfDepth - 5,
-            zFar: layout.plan.plinthFrontZ + 24,
-          }}
-          detail={detail}
-        />
+        <EstateExterior layout={estate} />
+        <Lawn paving={lawnPaving} detail={detail} />
         <ArchitecturalLighting layout={fixtures} lighting={rig} />
       </group>
     </ChamferProvider>

@@ -301,6 +301,44 @@ function createMaterials() {
         normalScale: 0.35,
       },
     ),
+    /**
+     * The arrival paving: a warm grey sawn stone, laid in large modules.
+     *
+     * Distinct from `stone`, which is the building's honed cladding. A
+     * drive is a harder, coarser, slightly darker material than the
+     * elevations it leads to — a court paved in the same stone as the
+     * facade reads as a plinth extending outward rather than as ground the
+     * building sits on.
+     */
+    paving: withVariation(
+      standard({ color: '#8f887c', roughness: 0.82, metalness: 0, envMapIntensity: 0.5 }),
+      {
+        scale: 0.42,
+        colorVariation: 0.07,
+        roughnessVariation: 0.12,
+        seed: 137,
+        normalStrength: 0.03,
+        normalScale: 2.6,
+      },
+    ),
+    /**
+     * Outdoor teak — the warm, silvered timber of terrace furniture, and
+     * deliberately much lighter than the interior `wood`, which is a dark
+     * stained joinery oak. Grain runs along the length via the same
+     * anisotropy the interior timbers use.
+     */
+    teak: withVariation(
+      standard({ color: '#8a6a45', roughness: 0.68, metalness: 0.02, envMapIntensity: 0.45 }),
+      {
+        scale: 1.6,
+        colorVariation: 0.07,
+        roughnessVariation: 0.07,
+        seed: 139,
+        anisotropy: [1, 0.16, 1],
+        normalStrength: 0.04,
+        normalScale: 5.0,
+      },
+    ),
     /** Legacy Phase 1 diagnostic massing only — kept simple deliberately. */
     glass: standard({
       color: '#0d1418',

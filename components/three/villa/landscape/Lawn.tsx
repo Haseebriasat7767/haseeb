@@ -26,9 +26,17 @@ const LAWN_RADIUS = 30;
 
 const LAWN_SEED = 0x4c41574e; // 'LAWN'
 
+/** A rectangle of ground, in plan, that grass must not grow through. */
+export type LawnExclusion = { x: readonly [number, number]; z: readonly [number, number] };
+
 type LawnProps = {
-  /** Half-extents of the paved area to keep clear, in metres. */
-  paving: { x: number; zNear: number; zFar: number };
+  /**
+   * Ground already covered by hard landscaping. Taken as a list rather
+   * than as one rectangle because the estate's drive and turning court sit
+   * well outside the building's own paving, and grass sown through a
+   * driveway would undo everything the driveway is there to say.
+   */
+  paving: readonly LawnExclusion[];
   detail?: DetailTier;
 };
 
@@ -83,7 +91,13 @@ export function Lawn({ paving, detail = 'high' }: LawnProps) {
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
 
-      const onPaving = Math.abs(x) < paving.x && z > paving.zNear && z < paving.zFar;
+      let onPaving = false;
+      for (const rect of paving) {
+        if (x > rect.x[0] && x < rect.x[1] && z > rect.z[0] && z < rect.z[1]) {
+          onPaving = true;
+          break;
+        }
+      }
       if (onPaving) continue;
 
       // Blades thin out toward the edge of the band so it fades into the
@@ -120,7 +134,7 @@ export function Lawn({ paving, detail = 'high' }: LawnProps) {
     if (instanced.instanceColor) instanced.instanceColor.needsUpdate = true;
     instanced.computeBoundingSphere();
     return instanced;
-  }, [geometry, materials.lawnBlade, detail, paving.x, paving.zNear, paving.zFar]);
+  }, [geometry, materials.lawnBlade, detail, paving]);
 
   useEffect(
     () => () => {

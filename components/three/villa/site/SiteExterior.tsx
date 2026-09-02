@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import type { DetailTier, VillaPlan } from '../VillaTypes';
 import { Pool } from './Pool';
 import { PoolDeck } from './PoolDeck';
-import { SiteApproach } from './SiteApproach';
 import { SiteEdges } from './SiteEdges';
 import { SitePlanters } from './SitePlanters';
 import { createSiteLayout, SITE_CONFIG } from './SiteGeometry';
@@ -33,7 +32,6 @@ export function SiteExterior({ plan, config, detail = 'high' }: SiteExteriorProp
     <group name="SiteExterior">
       <Pool layout={layout} />
       <PoolDeck layout={layout} />
-      <SiteApproach layout={layout} />
       <SitePlanters layout={layout} />
       <SiteEdges layout={layout} />
     </group>

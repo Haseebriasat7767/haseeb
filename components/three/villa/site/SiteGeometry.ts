@@ -308,7 +308,12 @@ export function createSiteLayout(
     ),
   ];
 
-  // ── Approach path: large stepping slabs from the entrance stairs out ────
+  // ── Approach axis: the line the front door faces ───────────────────────
+  // These slabs are no longer drawn — the Phase 7D arrival court paves the
+  // same ground continuously from the stair foot out to the drive — but the
+  // axis they define is still what the landscape keeps its trees and beds
+  // clear of, so the geometry is retained and `bounds.approachX/Z` keeps
+  // meaning exactly what it always meant.
   const approachX: Range = [
     plan.entranceOffsetX - approach.slabWidth / 2,
     plan.entranceOffsetX + approach.slabWidth / 2,
