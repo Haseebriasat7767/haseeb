@@ -1,7 +1,7 @@
 'use client';
 
 import { getMaterials } from '@/lib/three/materials';
-import { MergedBoxes, MergedSupports, UPHOLSTERY_CHAMFER } from '../VillaPrimitives';
+import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../VillaPrimitives';
 import type { InteriorLayout } from './InteriorTypes';
 
 /**
@@ -23,13 +23,15 @@ export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
         name="furniture-soft"
         specs={parts.soft}
         material={materials.upholstery}
-        chamfer={UPHOLSTERY_CHAMFER}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes
         name="furniture-soft-dark"
         specs={parts.softDark}
         material={materials.upholsteryDark}
-        chamfer={UPHOLSTERY_CHAMFER}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes name="furniture-stone" specs={parts.stone} material={materials.marble} />
       <MergedBoxes name="furniture-metal" specs={parts.metal} material={materials.bronze} />
@@ -46,7 +48,8 @@ export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
         specs={parts.rugs}
         material={materials.rug}
         castShadow={false}
-        chamfer={UPHOLSTERY_CHAMFER}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes name="furniture-plaster" specs={parts.plaster} material={materials.plaster} />
       {/* Curtains take the softest edge in the house: fabric hanging in
@@ -55,7 +58,8 @@ export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
         name="furniture-drapery"
         specs={parts.drapery}
         material={materials.drapery}
-        chamfer={UPHOLSTERY_CHAMFER}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes
         name="furniture-sheer"
@@ -68,7 +72,8 @@ export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
         name="furniture-foliage"
         specs={parts.foliage}
         material={materials.indoorFoliage}
-        chamfer={UPHOLSTERY_CHAMFER}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
       />
       {/* Emissive fixture faces: lit surfaces, not light sources. */}
       <MergedBoxes

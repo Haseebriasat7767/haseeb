@@ -50,6 +50,19 @@ export const ARCHITECTURAL_CHAMFER: Record<'low' | 'medium' | 'high', number> = 
  */
 export const UPHOLSTERY_CHAMFER = 0.022;
 
+/**
+ * The radius and tessellation soft goods actually need.
+ *
+ * Phase 7B softened upholstery with a 22 mm flat arris, which was an
+ * improvement on a razor edge and still left every cushion reading as a
+ * box with its corners knocked off. A seat cushion has a radius of five or
+ * six centimetres and it is *round*; swept through three facets it finally
+ * stops being a prism. Costs about 204 triangles a volume against 44, which
+ * is why it is reserved for the pieces a camera actually gets close to.
+ */
+export const SOFT_RADIUS = 0.055;
+export const SOFT_SEGMENTS = 3;
+
 export const ChamferProvider = ChamferContext.Provider;
 
 /** The edge in force here, unless a call site overrides it. */
@@ -66,6 +79,12 @@ type MassingProps = {
   receiveShadow?: boolean;
   /** Edge size in metres, overriding the inherited architectural default. */
   chamfer?: number;
+  /**
+   * Facets across each edge. One is a flat arris — correct for building
+   * fabric, where an edge is cut. Soft goods pass three, which sweeps a
+   * real quarter round.
+   */
+  chamferSegments?: number;
 };
 
 /**
@@ -84,6 +103,7 @@ export function Massing({
   castShadow = true,
   receiveShadow = true,
   chamfer,
+  chamferSegments = 1,
 }: MassingProps) {
   const edge = useChamfer(chamfer);
   const unitBox = getVillaGeometries().box;
@@ -113,7 +133,13 @@ export function Massing({
         <mesh
           key={spec.key}
           name={spec.key}
-          geometry={getChamferedBox(spec.scale[0], spec.scale[1], spec.scale[2], edge)}
+          geometry={getChamferedBox(
+            spec.scale[0],
+            spec.scale[1],
+            spec.scale[2],
+            edge,
+            chamferSegments,
+          )}
           material={material}
           position={spec.position}
           castShadow={castShadow}
@@ -143,6 +169,7 @@ export function MergedBoxes({
   castShadow = true,
   receiveShadow = true,
   chamfer,
+  chamferSegments = 1,
 }: MergedBoxesProps) {
   const edge = useChamfer(chamfer);
 
@@ -150,7 +177,13 @@ export function MergedBoxes({
     if (specs.length === 0) return null;
 
     const parts = specs.map((spec) => {
-      const part = createChamferedBox(spec.scale[0], spec.scale[1], spec.scale[2], edge);
+      const part = createChamferedBox(
+        spec.scale[0],
+        spec.scale[1],
+        spec.scale[2],
+        edge,
+        chamferSegments,
+      );
       part.translate(...spec.position);
       return part;
     });
@@ -158,7 +191,7 @@ export function MergedBoxes({
     const merged = mergeGeometries(parts, false);
     parts.forEach((part) => part.dispose());
     return merged;
-  }, [specs, edge]);
+  }, [specs, edge, chamferSegments]);
 
   useEffect(() => () => geometry?.dispose(), [geometry]);
 

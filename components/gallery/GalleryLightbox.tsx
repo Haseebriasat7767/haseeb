@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import type { Space } from '@/lib/experience/spaces';
@@ -22,6 +22,12 @@ type GalleryLightboxProps = {
  * rendered live at the framing the caption names, which is the honest
  * version of a gallery for a building that only exists as code.
  *
+ * Path traced rather than rasterized. This is the one place in the site
+ * where a still image is the entire product and nobody is navigating, so
+ * it is worth spending seconds of convergence on real global illumination
+ * instead of the real-time approximation the explorer needs. Same geometry,
+ * same materials, same sky — more light paths.
+ *
  * The canvas mounts on open and unmounts on close, so a closed gallery
  * holds no GPU resources.
  */
@@ -35,6 +41,15 @@ export function GalleryLightbox({
   onNext,
 }: GalleryLightboxProps) {
   const open = space !== null;
+  const [converged, setConverged] = useState(0);
+
+  // Reset whenever the framing changes; each space converges from scratch.
+  useEffect(() => setConverged(0), [space?.id, timeOfDay]);
+
+  const handleProgress = useCallback((samples: number, maxSamples: number) => {
+    setConverged(Math.min(1, samples / Math.max(1, maxSamples)));
+  }, []);
+
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreTo = useRef<HTMLElement | null>(null);
 
@@ -114,9 +129,25 @@ export function GalleryLightbox({
           className="absolute inset-0 h-full w-full"
           view={space.view}
           mode="fixed"
+          cinematic
+          onCinematicProgress={handleProgress}
           timeOfDay={timeOfDay}
-          label={`${space.name} — live rendered frame`}
+          label={`${space.name} — path-traced frame`}
         />
+        {/* Convergence, and only while it matters. A progress figure that
+            lingers on a finished image is chrome competing with the
+            architecture, which is the one thing this page must not do. */}
+        {converged < 1 ? (
+          <div className="pointer-events-none absolute right-6 bottom-6 flex items-center gap-3">
+            <div className="bg-alabaster/20 h-px w-24 overflow-hidden">
+              <div
+                className="bg-gold h-px transition-[width] duration-300"
+                style={{ width: `${Math.round(converged * 100)}%` }}
+              />
+            </div>
+            <span className="text-eyebrow text-mist uppercase tabular-nums">Resolving</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="px-gutter flex shrink-0 items-end justify-between gap-8 py-8">

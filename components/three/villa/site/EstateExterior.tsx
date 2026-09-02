@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { getMaterials } from '@/lib/three/materials';
-import { MergedBoxes, MergedSupports, UPHOLSTERY_CHAMFER } from '../VillaPrimitives';
+import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../VillaPrimitives';
 import type { DetailTier, VillaPlan } from '../VillaTypes';
 import { ARRIVAL_CONFIG, createEstateLayout, OUTDOOR_CONFIG } from './EstateGeometry';
 import type { EstateLayout } from './EstateTypes';
@@ -30,13 +30,15 @@ export function EstateExterior({ layout }: { layout: EstateLayout }) {
         name="estate-cushions"
         specs={layout.cushions}
         material={materials.upholstery}
-        chamfer={UPHOLSTERY_CHAMFER}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes
         name="estate-accents"
         specs={layout.accents}
         material={materials.upholsteryDark}
-        chamfer={UPHOLSTERY_CHAMFER}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes name="estate-stone" specs={layout.stone} material={materials.stone} />
       <MergedBoxes name="estate-metal" specs={layout.metal} material={materials.darkMetal} />

@@ -2,7 +2,16 @@
 
 import { useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
-import { MathUtils, PMREMGenerator, Scene, Vector3, type IUniform } from 'three';
+import {
+  CubeCamera,
+  HalfFloatType,
+  MathUtils,
+  PMREMGenerator,
+  Scene,
+  Vector3,
+  WebGLCubeRenderTarget,
+  type IUniform,
+} from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import type { ResolvedLighting } from '@/lib/three/lighting';
 
@@ -90,6 +99,22 @@ export function ProceduralSky({ lighting }: { lighting: ResolvedLighting }) {
     scene.environment = target.texture;
     scene.environmentIntensity = skyModel.environmentIntensity;
 
+    // A second copy of the same sky, as a cube texture.
+    //
+    // The path tracer cannot use the PMREM output: that is a 2D texture in
+    // a pre-filtered layout with no readable pixels, and the tracer needs
+    // to build an importance-sampling distribution over the environment
+    // before it can aim a single ray at the sun. It does accept a cube
+    // texture, so the identical dome is rendered once into one and parked
+    // on the scene for the tracer to swap in. Cheap — one render of one
+    // mesh, at the same moment the PMREM bake already happens — and it
+    // means the traced image is lit by the same sky as the rasterized one
+    // rather than by an approximation of it.
+    const cubeTarget = new WebGLCubeRenderTarget(256, { type: HalfFloatType });
+    const cubeCamera = new CubeCamera(0.1, SKY_SCALE * 2, cubeTarget);
+    cubeCamera.update(gl, source);
+    scene.userData.aureliaSkyCube = cubeTarget.texture;
+
     generator.dispose();
     probe.geometry.dispose();
     probe.material.dispose();
@@ -97,6 +122,8 @@ export function ProceduralSky({ lighting }: { lighting: ResolvedLighting }) {
 
     return () => {
       scene.environment = null;
+      delete scene.userData.aureliaSkyCube;
+      cubeTarget.dispose();
       target.dispose();
     };
   }, [sky, gl, scene, invalidate, skyModel, sun.azimuth, atmosphere.exposure]);

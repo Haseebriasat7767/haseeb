@@ -48,11 +48,12 @@ export function getChamferedBox(
   height: number,
   depth: number,
   chamfer: number,
+  segments = 1,
 ): BufferGeometry {
-  const key = `${mm(width)}:${mm(height)}:${mm(depth)}:${mm(chamfer)}`;
+  const key = `${mm(width)}:${mm(height)}:${mm(depth)}:${mm(chamfer)}:${segments}`;
   let geometry = chamferedCache.get(key);
   if (!geometry) {
-    geometry = createChamferedBox(width, height, depth, chamfer);
+    geometry = createChamferedBox(width, height, depth, chamfer, segments);
     chamferedCache.set(key, geometry);
   }
   return geometry;

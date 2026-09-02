@@ -15,6 +15,7 @@ import { PerformanceMonitor } from './dev/PerformanceMonitor';
 import type { PerformanceSnapshot } from './dev/performance-types';
 import { SceneEnvironment } from './Environment';
 import { PlaceholderMassing } from './PlaceholderMassing';
+import { PathTracer } from './post/PathTracer';
 import { PostProcessing } from './post/PostProcessing';
 import { Terrain } from './Terrain';
 import { ProceduralVilla } from './villa/ProceduralVilla';
@@ -30,6 +31,14 @@ type SceneProps = {
   timeOfDay?: TimeOfDay;
   /** Metres of pointer-driven camera parallax; 0 disables it. */
   parallax?: number;
+  /**
+   * Renders this view by path tracing instead of rasterizing. For still
+   * hero framings only — it converges over seconds and does not survive a
+   * moving camera.
+   */
+  cinematic?: boolean;
+  /** Convergence progress, so chrome can show it and then withdraw. */
+  onCinematicProgress?: (samples: number, maxSamples: number) => void;
   /** Extra scene contents mounted alongside the building (hotspots, helpers). */
   overlay?: ReactNode;
   /** Overrides `content` entirely when custom scene contents are needed. */
@@ -57,6 +66,8 @@ function ReadySignal({ onReady }: { onReady?: () => void }) {
 export function Scene({
   view = DEFAULT_VIEW,
   mode = 'orbit',
+  cinematic = false,
+  onCinematicProgress,
   onReady,
   content = 'villa',
   timeOfDay = DEFAULT_TIME_OF_DAY,
@@ -100,7 +111,12 @@ export function Scene({
       }}
       camera={{ position: view.position, fov: view.fov }}
       // Renders only when something changes — idle scenes cost no GPU time.
-      frameloop={mode === 'fixed' ? 'demand' : 'always'}
+      // A fixed camera renders on demand so an idle view costs no GPU
+      // time — except while path tracing, which converges by accumulating
+      // samples and therefore needs every frame it can get. Without this the
+      // tracer sat below its minimum sample count forever and quietly showed
+      // its rasterized fallback, which looked like the tracer doing nothing.
+      frameloop={mode === 'fixed' && !cinematic ? 'demand' : 'always'}
       className="h-full w-full"
     >
       <color attach="background" args={[lighting.atmosphere.background]} />
@@ -112,7 +128,14 @@ export function Scene({
         shadowMapSize={quality.shadowMapSize}
       />
 
-      {post.enabled ? <PostProcessing profile={post} grade={grade} /> : null}
+      {/* The two finishing paths are mutually exclusive: a traced frame has
+          already resolved its own exposure and tone curve, and running it
+          through the composer would grade an already-graded image. */}
+      {cinematic ? (
+        <PathTracer active onProgress={onCinematicProgress} />
+      ) : post.enabled ? (
+        <PostProcessing profile={post} grade={grade} />
+      ) : null}
 
       {diagnosticsEnabled && onMetrics ? (
         <PerformanceMonitor qualityTier={quality.tier} onUpdate={onMetrics} />

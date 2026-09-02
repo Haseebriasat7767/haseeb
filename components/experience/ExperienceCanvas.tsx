@@ -23,6 +23,9 @@ type ExperienceCanvasProps = {
   hotspots?: HotspotConfig;
   /** Fires once the scene graph has mounted and the loading state clears. */
   onReady?: () => void;
+  /** Path-traces this framing instead of rasterizing it. Stills only. */
+  cinematic?: boolean;
+  onCinematicProgress?: (samples: number, maxSamples: number) => void;
 };
 
 /**
@@ -37,6 +40,8 @@ export function ExperienceCanvas({
   parallax,
   hotspots,
   onReady,
+  cinematic,
+  onCinematicProgress,
 }: ExperienceCanvasProps) {
   const [ready, setReady] = useState(false);
   const handleReady = useCallback(() => {
@@ -65,6 +70,8 @@ export function ExperienceCanvas({
             />
           ) : null
         }
+        cinematic={cinematic}
+        onCinematicProgress={onCinematicProgress}
         onReady={handleReady}
         diagnosticsEnabled={diagnosticsEnabled}
         onMetrics={diagnosticsEnabled ? setMetrics : undefined}

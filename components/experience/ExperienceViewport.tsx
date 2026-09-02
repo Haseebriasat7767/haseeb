@@ -26,6 +26,9 @@ type ExperienceViewportProps = {
   hotspots?: HotspotConfig;
   /** Fires once the scene is mounted and the loading state has cleared. */
   onReady?: () => void;
+  /** Path-traces this framing instead of rasterizing it. Stills only. */
+  cinematic?: boolean;
+  onCinematicProgress?: (samples: number, maxSamples: number) => void;
   /** Chrome rendered over the canvas, inside the same positioned box. */
   children?: ReactNode;
   className?: string;
@@ -59,6 +62,8 @@ export function ExperienceViewport({
   parallax,
   hotspots,
   onReady,
+  cinematic,
+  onCinematicProgress,
   children,
   className,
   label = 'Interactive three-dimensional view of the residence',
@@ -102,6 +107,8 @@ export function ExperienceViewport({
           timeOfDay={timeOfDay}
           parallax={parallax}
           hotspots={hotspots}
+          cinematic={cinematic}
+          onCinematicProgress={onCinematicProgress}
           onReady={onReady}
         />
       ) : null}

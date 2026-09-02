@@ -158,6 +158,14 @@ export function createChamferedBox(
   height: number,
   depth: number,
   chamfer: number,
+  /**
+   * Facets across each edge. One is the flat 45-degree arris this file was
+   * built for — right for architecture, where an edge is cut, not curved.
+   * Three or more sweeps a quarter round instead, which is what upholstery,
+   * cushions and soft goods need: a sofa arm has a radius, and no number of
+   * flat chamfers on a rectangular prism will ever read as one.
+   */
+  segments = 1,
 ): BufferGeometry {
   const hx = width / 2;
   const hy = height / 2;
@@ -187,22 +195,39 @@ export function createChamferedBox(
   pushQuad(positions, normals, uvs, [ix, -iy, -hz], [-ix, -iy, -hz], [-ix, iy, -hz], [ix, iy, -hz]);
 
   if (c > 0) {
-    // ── Twelve edge chamfers ────────────────────────────────────────────
-    // Each runs the length of one axis between two adjacent main faces.
+    const steps = Math.max(1, Math.round(segments));
+
+    // Offsets along a quarter circle, from one face's plane to the next.
+    // At one step this yields the single 45-degree facet; above that it is
+    // a real fillet.
+    const arc: [number, number][] = [];
+    for (let i = 0; i <= steps; i += 1) {
+      const angle = (i / steps) * (Math.PI / 2);
+      arc.push([Math.cos(angle), Math.sin(angle)]);
+    }
+
+    // ── Twelve edge fillets ─────────────────────────────────────────────
+    // Each runs the length of one axis between two adjacent main faces,
+    // swept through the arc above.
     for (const [sy, sz] of [
       [1, 1],
       [1, -1],
       [-1, 1],
       [-1, -1],
     ] as const) {
-      // Edges running along X, between a ±Y face and a ±Z face.
-      const q: [Vec3, Vec3, Vec3, Vec3] = [
-        [-ix, sy * hy, sz * iz],
-        [ix, sy * hy, sz * iz],
-        [ix, sy * iy, sz * hz],
-        [-ix, sy * iy, sz * hz],
-      ];
-      pushQuad(positions, normals, uvs, q[0], q[1], q[2], q[3]);
+      for (let i = 0; i < steps; i += 1) {
+        const [a0, b0] = arc[i]!;
+        const [a1, b1] = arc[i + 1]!;
+        pushQuad(
+          positions,
+          normals,
+          uvs,
+          [-ix, sy * (iy + c * b0), sz * (iz + c * a0)],
+          [ix, sy * (iy + c * b0), sz * (iz + c * a0)],
+          [ix, sy * (iy + c * b1), sz * (iz + c * a1)],
+          [-ix, sy * (iy + c * b1), sz * (iz + c * a1)],
+        );
+      }
     }
 
     for (const [sx, sz] of [
@@ -211,14 +236,19 @@ export function createChamferedBox(
       [-1, 1],
       [-1, -1],
     ] as const) {
-      // Edges running along Y, between a ±X face and a ±Z face.
-      const q: [Vec3, Vec3, Vec3, Vec3] = [
-        [sx * hx, -iy, sz * iz],
-        [sx * hx, iy, sz * iz],
-        [sx * ix, iy, sz * hz],
-        [sx * ix, -iy, sz * hz],
-      ];
-      pushQuad(positions, normals, uvs, q[0], q[1], q[2], q[3]);
+      for (let i = 0; i < steps; i += 1) {
+        const [a0, b0] = arc[i]!;
+        const [a1, b1] = arc[i + 1]!;
+        pushQuad(
+          positions,
+          normals,
+          uvs,
+          [sx * (ix + c * a0), -iy, sz * (iz + c * b0)],
+          [sx * (ix + c * a0), iy, sz * (iz + c * b0)],
+          [sx * (ix + c * a1), iy, sz * (iz + c * b1)],
+          [sx * (ix + c * a1), -iy, sz * (iz + c * b1)],
+        );
+      }
     }
 
     for (const [sx, sy] of [
@@ -227,22 +257,45 @@ export function createChamferedBox(
       [-1, 1],
       [-1, -1],
     ] as const) {
-      // Edges running along Z, between a ±X face and a ±Y face.
-      const q: [Vec3, Vec3, Vec3, Vec3] = [
-        [sx * hx, sy * iy, -iz],
-        [sx * hx, sy * iy, iz],
-        [sx * ix, sy * hy, iz],
-        [sx * ix, sy * hy, -iz],
-      ];
-      pushQuad(positions, normals, uvs, q[0], q[1], q[2], q[3]);
+      for (let i = 0; i < steps; i += 1) {
+        const [a0, b0] = arc[i]!;
+        const [a1, b1] = arc[i + 1]!;
+        pushQuad(
+          positions,
+          normals,
+          uvs,
+          [sx * (ix + c * a0), sy * (iy + c * b0), -iz],
+          [sx * (ix + c * a0), sy * (iy + c * b0), iz],
+          [sx * (ix + c * a1), sy * (iy + c * b1), iz],
+          [sx * (ix + c * a1), sy * (iy + c * b1), -iz],
+        );
+      }
     }
 
-    // ── Eight corner triangles closing the three chamfers that meet ─────
+    // ── Eight corner patches ────────────────────────────────────────────
+    // A spherical octant, tessellated as rings of quads with a triangle fan
+    // at the pole, closing the three fillets that meet at each corner.
     for (const [sx, sy, sz] of OCTANTS) {
-      const a: Vec3 = [sx * hx, sy * iy, sz * iz];
-      const b: Vec3 = [sx * ix, sy * hy, sz * iz];
-      const d: Vec3 = [sx * ix, sy * iy, sz * hz];
-      pushTriangle(positions, normals, uvs, a, b, d);
+      const at = (theta: number, phi: number): Vec3 => [
+        sx * (ix + c * Math.cos(phi) * Math.cos(theta)),
+        sy * (iy + c * Math.sin(phi)),
+        sz * (iz + c * Math.cos(phi) * Math.sin(theta)),
+      ];
+
+      for (let i = 0; i < steps; i += 1) {
+        const p0 = (i / steps) * (Math.PI / 2);
+        const p1 = ((i + 1) / steps) * (Math.PI / 2);
+        for (let j = 0; j < steps; j += 1) {
+          const t0 = (j / steps) * (Math.PI / 2);
+          const t1 = ((j + 1) / steps) * (Math.PI / 2);
+          if (i === steps - 1) {
+            // The top ring collapses to the pole.
+            pushTriangle(positions, normals, uvs, at(t0, p0), at(t1, p0), at(t0, p1));
+          } else {
+            pushQuad(positions, normals, uvs, at(t0, p0), at(t1, p0), at(t1, p1), at(t0, p1));
+          }
+        }
+      }
     }
   }
 
