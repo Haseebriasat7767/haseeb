@@ -27,6 +27,7 @@ import {
   createVanity,
   createWC,
   emptyParts,
+  turned,
 } from './Furniture';
 import {
   createArtwork,
@@ -106,6 +107,20 @@ function band(r: Range, from: 'start' | 'end', depth: number): Range {
  * There is no randomness of any kind: the same villa always furnishes
  * identically.
  */
+/**
+ * Height of the skirting run, and how far it stands proud of the wall.
+ *
+ * Deliberately small on both counts. A tall skirting belongs to a
+ * traditional interior; this one is a shallow modern band, present enough
+ * to catch a highlight along its top and never enough to be noticed as a
+ * moulding.
+ */
+const SKIRTING_HEIGHT = 0.085;
+const SKIRTING_PROUD = 0.016;
+
+/** Depth and inset of the recessed slot the ceiling hangs inside. */
+const CEILING_SHADOW_GAP = 0.035;
+
 export function createInteriorLayout(
   config: InteriorConfig,
   plan: VillaPlan,
@@ -142,13 +157,52 @@ export function createInteriorLayout(
       target.push(box(`${room.id}-floor`, room.x, floorY, room.z));
     }
 
+    // ── Skirting ────────────────────────────────────────────────────────
+    // A run of skirting around the foot of every wall, in the wall's own
+    // plaster. It reads not as a different colour but as a line — the
+    // chamfer along its top arris catches light where the wall above does
+    // not — and that line is one of the details whose *absence* is most
+    // legible: a wall meeting a floor at a mathematically sharp corner is
+    // something no built room has ever done, and the eye knows it without
+    // being able to name it.
+    const skirtTop = room.floorY + SKIRTING_HEIGHT;
+    const skirtY: Range = [room.floorY, skirtTop];
+    panelling.push(
+      box(`${room.id}-skirt-w`, [room.x[0], room.x[0] + SKIRTING_PROUD], skirtY, room.z),
+      box(`${room.id}-skirt-e`, [room.x[1] - SKIRTING_PROUD, room.x[1]], skirtY, room.z),
+      box(`${room.id}-skirt-n`, [room.x[0] + SKIRTING_PROUD, room.x[1] - SKIRTING_PROUD], skirtY, [
+        room.z[0],
+        room.z[0] + SKIRTING_PROUD,
+      ]),
+      box(`${room.id}-skirt-s`, [room.x[0] + SKIRTING_PROUD, room.x[1] - SKIRTING_PROUD], skirtY, [
+        room.z[1] - SKIRTING_PROUD,
+        room.z[1],
+      ]),
+    );
+
     if (noCeiling.has(room.id)) return;
+
+    // ── Ceiling, on a shadow gap ────────────────────────────────────────
+    // The ceiling stops short of the walls and hangs slightly below the
+    // soffit, leaving a continuous recessed slot around the room.
+    //
+    // This is the defining detail of the architecture the residence is
+    // written in, and it is worth being precise about why it matters so
+    // much for so little geometry. A ceiling butted into a wall produces a
+    // single hard line and nothing else. A ceiling on a shadow gap produces
+    // a band of genuine darkness that follows the room's perimeter, reads
+    // the depth of the slot, and turns a corner — so the room acquires a
+    // sense of its own construction. Every photograph of a house of this
+    // kind has that band in it.
     ceilings.push(
       box(
         `${room.id}-ceiling`,
-        room.x,
-        [room.ceilingY - config.ceilingDepth, room.ceilingY],
-        room.z,
+        [room.x[0] + CEILING_SHADOW_GAP, room.x[1] - CEILING_SHADOW_GAP],
+        [
+          room.ceilingY - config.ceilingDepth - CEILING_SHADOW_GAP,
+          room.ceilingY - CEILING_SHADOW_GAP,
+        ],
+        [room.z[0] + CEILING_SHADOW_GAP, room.z[1] - CEILING_SHADOW_GAP],
       ),
     );
   });
@@ -285,22 +339,18 @@ export function createInteriorLayout(
     1.7,
     0.9,
   );
-  createArmchair(
-    parts,
-    'living-chair-a',
-    living.x[0] + 1.5,
-    living.z[1] - 1.1,
-    living.floorY,
-    'north',
-  );
-  createArmchair(
-    parts,
-    'living-chair-b',
-    living.x[0] + 3.4,
-    living.z[1] - 1.1,
-    living.floorY,
-    'north',
-  );
+  // The pair of chairs facing the seating group, each turned in toward it.
+  // Square-on they read as waiting-room furniture; a few degrees of toe-in
+  // is what an arrangement someone actually sits in looks like.
+  const chairAx = living.x[0] + 1.5;
+  const chairBx = living.x[0] + 3.4;
+  const chairZ = living.z[1] - 1.1;
+  turned(parts, -0.19, chairAx, chairZ, () => {
+    createArmchair(parts, 'living-chair-a', chairAx, chairZ, living.floorY, 'north');
+  });
+  turned(parts, 0.14, chairBx, chairZ, () => {
+    createArmchair(parts, 'living-chair-b', chairBx, chairZ, living.floorY, 'north');
+  });
   // The chimney breast projects from the back wall, so the panelling above
   // stops beside it instead of running flush across.
   const fireplaceX: Range = [living.x[1] - 3.4, living.x[1] - 0.6];
@@ -652,22 +702,17 @@ export function createInteriorLayout(
     true,
   );
   createRug(parts, 'master-rug', mid(master.x), masterBedCz + 0.3, master.floorY, 4.4, 3.6);
-  createArmchair(
-    parts,
-    'master-chair-a',
-    mid(master.x) - 1.1,
-    master.z[1] - 0.9,
-    master.floorY,
-    'north',
-  );
-  createArmchair(
-    parts,
-    'master-chair-b',
-    mid(master.x) + 1.1,
-    master.z[1] - 0.9,
-    master.floorY,
-    'north',
-  );
+  // The two chairs in the window bay, turned toward each other across the
+  // side table between them.
+  const masterChairZ = master.z[1] - 0.9;
+  const masterChairAx = mid(master.x) - 1.1;
+  const masterChairBx = mid(master.x) + 1.1;
+  turned(parts, 0.28, masterChairAx, masterChairZ, () => {
+    createArmchair(parts, 'master-chair-a', masterChairAx, masterChairZ, master.floorY, 'north');
+  });
+  turned(parts, -0.28, masterChairBx, masterChairZ, () => {
+    createArmchair(parts, 'master-chair-b', masterChairBx, masterChairZ, master.floorY, 'north');
+  });
   createSideTable(parts, 'master-side', mid(master.x), master.z[1] - 0.9, master.floorY);
 
   if (tier.decor) {
@@ -714,12 +759,24 @@ export function createInteriorLayout(
       71,
     );
   }
+  // The timber lining behind the bed.
+  //
+  // It used to start four hundred millimetres above the floor and stop well
+  // short of the ceiling, inset over a metre from each side wall — which
+  // meant a large slab of dark timber with daylight visible all the way
+  // around it. Nothing holds a panel like that up, and the frames read it
+  // exactly as what it was: a rectangle hanging in the air behind the bed.
+  //
+  // A lining is built into the room. This one lands on the floor, runs up
+  // to the ceiling's shadow gap, and stops close enough to each side wall
+  // to read as the wall's own finish rather than as furniture standing
+  // against it.
   createBuiltIn(
     parts,
     'master-panel',
-    inset(master.x, 1.1),
+    inset(master.x, 0.32),
     band(master.z, 'start', 0.1),
-    [master.floorY + 0.4, master.floorY + 2.8],
+    [master.floorY, master.ceilingY - config.ceilingDepth - 0.035],
     1.3,
   );
   createCove(

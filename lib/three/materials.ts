@@ -1,8 +1,10 @@
 import {
+  CubeTexture,
   DoubleSide,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   type Material,
+  type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
 import { getSurfaceMaps, type SurfaceFamily } from '@/components/three/textures/SurfaceMaps';
@@ -247,6 +249,283 @@ function withVariation<T extends Material>(material: T, options: VariationOption
 }
 
 /**
+ * The sky, as a cube texture, for surfaces that need to know what colour the
+ * air in front of them is.
+ *
+ * `ProceduralSky` already bakes one of these for the path tracer. Holding a
+ * reference to it here lets a rasterized material sample the sky along its
+ * own view ray, which is the difference between fog that is approximately
+ * the right colour and haze that is exactly it.
+ */
+const skyCube: { value: Texture | null } = { value: null };
+
+/**
+ * A single black texel per face, bound whenever no sky has been baked yet.
+ *
+ * A `samplerCube` uniform must be bound to something for the program to be
+ * valid, and the aerial-perspective mix below is driven to zero in the same
+ * frames this stands in, so it is never actually seen.
+ */
+let fallbackCube: CubeTexture | null = null;
+
+function getFallbackCube(): CubeTexture {
+  if (fallbackCube) return fallbackCube;
+  const faces = Array.from({ length: 6 }, () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas;
+  });
+  fallbackCube = new CubeTexture(faces);
+  fallbackCube.needsUpdate = true;
+  return fallbackCube;
+}
+
+/** Uniform objects handed to every aerial-perspective program, so one
+ *  assignment updates all of them. */
+const aerialUniforms = {
+  map: { value: null as Texture | null },
+  strength: { value: 0 },
+};
+
+/**
+ * Publishes the baked sky so aerial perspective has something to sample.
+ * Called by `ProceduralSky` each time the hour changes; passing null (on
+ * unmount) disables the effect rather than leaving a stale sky behind.
+ */
+export function setSkyCube(texture: Texture | null): void {
+  skyCube.value = texture;
+  aerialUniforms.map.value = texture ?? getFallbackCube();
+  aerialUniforms.strength.value = texture ? 1 : 0;
+}
+
+/**
+ * Aerial perspective: distance dissolving a surface into the sky in front
+ * of it.
+ *
+ * ## Why the ground needed this specifically
+ *
+ * The terrain is a finite plane. Rendered without haze it ends in a dead
+ * straight line against the sky, and that line is the single most reliable
+ * tell in the whole exterior — it says "this is a ground plane in a 3D
+ * scene" more loudly than any material problem, because no real landscape
+ * has an edge.
+ *
+ * Scene fog already exists and already runs on everything, but fog is one
+ * colour in every direction, and the sky is not. At golden hour the sun's
+ * quarter of the dome is warm and the opposite quarter is a cool grey, so a
+ * single fog colour is visibly wrong across half of any wide shot: the
+ * distant ground either glows warm against a cool sky or goes grey against
+ * a warm one, and either way the seam it was meant to hide is still there.
+ *
+ * Sampling the baked sky along the fragment's own view direction gives the
+ * exact colour of the sky *directly behind* that piece of ground. Blend to
+ * it and the horizon does not soften — it stops existing, because the last
+ * visible ground is by construction the same colour as the sky above it.
+ *
+ * The material carrying this turns three's own fog off; the two are the
+ * same effect and would otherwise compound.
+ */
+function withAerialPerspective<T extends MeshStandardMaterial>(
+  material: T,
+  /** Metres at which haze begins. */
+  start: number,
+  /** Metres at which the surface is entirely sky. */
+  end: number,
+): T {
+  material.fog = false;
+
+  const existing = material.onBeforeCompile;
+
+  material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
+    existing?.(shader, undefined as never);
+
+    shader.uniforms.uSkyCube = aerialUniforms.map;
+    shader.uniforms.uAerial = aerialUniforms.strength;
+    shader.uniforms.uAerialStart = { value: start };
+    shader.uniforms.uAerialEnd = { value: end };
+
+    if (!shader.vertexShader.includes('vAureliaWorldPos')) {
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', `#include <common>\nvarying vec3 vAureliaWorldPos;`)
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>\n  vAureliaWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+        );
+    }
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform samplerCube uSkyCube;
+uniform float uAerial;
+uniform float uAerialStart;
+uniform float uAerialEnd;`,
+      )
+      .replace(
+        '#include <opaque_fragment>',
+        `#include <opaque_fragment>
+  {
+    vec3 toEye = vAureliaWorldPos - cameraPosition;
+    float haze = smoothstep(uAerialStart, uAerialEnd, length(toEye)) * uAerial;
+    if (haze > 0.0) {
+      // The sky along this fragment's own view ray, which is precisely what
+      // would be visible if the ground were not in the way.
+      vec3 sky = textureCube(uSkyCube, normalize(toEye)).rgb;
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, sky, haze);
+    }
+  }`,
+      );
+  };
+
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : 'aurelia'}-aerial-${start}-${end}`;
+
+  return material;
+}
+
+/**
+ * Fresnel on the transparency of architectural glazing.
+ *
+ * ## The problem this fixes
+ *
+ * Glass was drawn with a flat 55 percent opacity, and a flat opacity is
+ * wrong in a way that is immediately legible. A real pane seen square-on is
+ * mostly transmissive — you look through it into the room — and the *same*
+ * pane seen at a glancing angle is very nearly a mirror. Every photograph
+ * of a glazed villa relies on that: the panes facing the camera show the
+ * interior, the panes raking away show the sky and the landscape, and the
+ * facade reads as glass precisely because the two behave differently.
+ *
+ * With one constant opacity every pane behaved identically, so the facade
+ * read as a grid of identical grey panels — which is exactly what the
+ * rendered frames showed.
+ *
+ * Schlick's approximation gives the reflectance directly from the angle
+ * between the view ray and the surface normal, both of which the shader
+ * already has, so this costs a dot product and a power.
+ *
+ * ## The intensity compensation
+ *
+ * Alpha blending multiplies the *whole* fragment by its alpha, reflection
+ * included, while a real reflection adds to whatever is behind the glass
+ * rather than replacing part of it. A 55-percent-opaque pane therefore
+ * loses 45 percent of its reflection, which is why the sky never showed in
+ * the glazing however bright the environment was. Dividing the environment
+ * contribution by the alpha it is about to be multiplied by restores it.
+ * This is a compensation for the blend model, not a physical parameter —
+ * hence the clamp, which stops a nearly-transparent pane from producing an
+ * unbounded highlight.
+ */
+function withGlassFresnel<T extends MeshPhysicalMaterial>(material: T): T {
+  material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+  float aureliaFacing = clamp(abs(dot(normalize(vViewPosition), normal)), 0.0, 1.0);
+  // Schlick, with the base reflectance folded into the ramp: a pane goes
+  // from the hour's opacity face-on to effectively solid at the grazing
+  // angles that rake along a facade.
+  float aureliaFresnel = pow(1.0 - aureliaFacing, 5.0);
+  float aureliaAlpha = mix(diffuseColor.a, 1.0, aureliaFresnel);
+  diffuseColor.a = aureliaAlpha;`,
+      )
+      .replace(
+        '#include <lights_physical_fragment>',
+        `#include <lights_physical_fragment>
+  material.specularColor *= clamp(1.0 / max(aureliaAlpha, 0.25), 1.0, 4.0);`,
+      );
+  };
+
+  material.customProgramCacheKey = () => 'aurelia-glass-fresnel';
+  return material;
+}
+
+/**
+ * The surface of the pool.
+ *
+ * Water was the flattest thing in the whole image: a single navy quad with
+ * a constant opacity, no ripple and no horizon in it. Three things are
+ * wrong with that and all three are fixed here.
+ *
+ * **It had no slope.** Still water is not flat — it carries a slow swell a
+ * few millimetres high and metres across, and that swell is the only reason
+ * a pool reflects a *broken* image of the sky rather than a mirror image.
+ * The waves below are deliberately long and shallow; anything faster reads
+ * as a lake in wind rather than a heated pool.
+ *
+ * **It faded its own detail out.** The shared variation pass drops its
+ * relief between nine and thirty-four metres, which is right for a plaster
+ * wall whose grain genuinely stops resolving, and wrong for water, which is
+ * usually *first* seen from across a terrace. The ripple here does not fade.
+ *
+ * **It was equally transparent everywhere.** Water follows the same Fresnel
+ * law as glass, and far more visibly: you see the basin floor at your feet
+ * and the sky at the far end. That gradient across the surface is most of
+ * what makes water read as water.
+ */
+function withWaterSurface<T extends MeshPhysicalMaterial>(material: T): T {
+  material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\nvarying vec3 vAureliaWaterPos;`)
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>\n  vAureliaWaterPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vAureliaWaterPos;
+
+// Four long crossing swells. Their analytic slope is the sum of the same
+// four cosines, so the normal falls out without differencing anything.
+vec3 aureliaWaterNormal(vec2 p) {
+  vec2 d1 = vec2(0.92, 0.39);
+  vec2 d2 = vec2(-0.42, 0.91);
+  vec2 d3 = vec2(0.71, -0.70);
+  vec2 d4 = vec2(0.15, 0.99);
+  float s = 0.0;
+  vec2 g = vec2(0.0);
+  g += d1 * (0.055 * cos(dot(p, d1) * 1.7 + 0.3));
+  g += d2 * (0.038 * cos(dot(p, d2) * 2.9 + 1.9));
+  g += d3 * (0.024 * cos(dot(p, d3) * 5.3 + 3.4));
+  g += d4 * (0.016 * cos(dot(p, d4) * 9.1 + 5.1));
+  s = 1.0;
+  return normalize(vec3(-g.x, s, -g.y));
+}`,
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+  {
+    vec3 rippleWorld = aureliaWaterNormal(vAureliaWaterPos.xz);
+    vec3 rippleView = normalize(mat3(viewMatrix) * rippleWorld);
+    // The basin is horizontal, so the swell is applied about the world up
+    // rather than blended into an arbitrary normal.
+    normal = normalize(mix(normal, rippleView, 0.85));
+  }
+  float aureliaFacing = clamp(abs(dot(normalize(vViewPosition), normal)), 0.0, 1.0);
+  float aureliaFresnel = pow(1.0 - aureliaFacing, 4.0);
+  float aureliaAlpha = mix(0.62, 1.0, aureliaFresnel);
+  diffuseColor.a = min(diffuseColor.a, aureliaAlpha);`,
+      )
+      .replace(
+        '#include <lights_physical_fragment>',
+        `#include <lights_physical_fragment>
+  material.specularColor *= clamp(1.0 / max(aureliaAlpha, 0.3), 1.0, 3.2);`,
+      );
+  };
+
+  material.customProgramCacheKey = () => 'aurelia-water-surface';
+  return material;
+}
+
+/**
  * Attaches a family's albedo, roughness and normal maps to a material.
  *
  * Deliberately additive. The material keeps its own colour, its own base
@@ -351,16 +630,27 @@ function createMaterials() {
      * mown lawn, with enough tonal variation across it to read as a
      * landscaped property rather than a fill colour.
      */
-    terrain: withVariation(
-      standard({ color: '#57633a', roughness: 0.96, metalness: 0, envMapIntensity: 0.6 }),
-      {
-        scale: 0.055,
-        colorVariation: 0.3,
-        roughnessVariation: 0.12,
-        seed: 131,
-        normalStrength: 0.1,
-        normalScale: 0.35,
-      },
+    terrain: withAerialPerspective(
+      withVariation(
+        standard({ color: '#6a7245', roughness: 0.96, metalness: 0, envMapIntensity: 0.6 }),
+        {
+          scale: 0.055,
+          colorVariation: 0.34,
+          roughnessVariation: 0.12,
+          seed: 131,
+          normalStrength: 0.1,
+          normalScale: 0.35,
+        },
+      ),
+      // A clear evening has crisp visibility for kilometres, so haze must
+      // not touch the estate itself: the first attempt began at seventy
+      // metres and washed the whole property grey, which traded one wrong
+      // image for another. Nothing within a hundred and forty metres is
+      // affected at all — the site, the drive and the tree line all read
+      // sharp — and by four hundred the ground is entirely air, comfortably
+      // inside the plane's own edge.
+      140,
+      400,
     ),
     /**
      * The arrival paving: a warm grey sawn stone, laid in large modules.
@@ -479,81 +769,92 @@ function createMaterials() {
       1.0,
     ),
     /**
-     * Architectural glazing. Clearcoat rather than transmission: it reads as
-     * deep reflective glass without the render-target cost transmission adds
-     * on mobile GPUs. Double-sided so interiors are not hollow from behind.
-     * Kept free of the procedural-noise pass — glass should read flawless
-     * and machined, not organic.
+     * Architectural glazing. A tinted dielectric with a real Fresnel term
+     * rather than transmission: it reads as deep reflective glass without
+     * the render-target cost transmission adds on mobile GPUs. Double-sided
+     * so interiors are not hollow from behind. Kept free of the procedural
+     * noise pass — glass should read flawless and machined, not organic.
      */
-    glazing: new MeshPhysicalMaterial({
-      color: '#1b2b36',
-      roughness: 0.035,
-      metalness: 0.08,
-      clearcoat: 1,
-      clearcoatRoughness: 0.02,
-      reflectivity: 0.9,
-      // The environment map is doing the work here: the sky reflected off
-      // the glazing at a grazing angle is what makes a facade read as glass
-      // instead of as a dark panel.
-      envMapIntensity: 1.5,
-      transparent: true,
-      opacity: 0.58,
-      side: DoubleSide,
-    }),
+    glazing: withGlassFresnel(
+      new MeshPhysicalMaterial({
+        color: '#1b2b36',
+        roughness: 0.035,
+        metalness: 0.05,
+        reflectivity: 1,
+        // The environment map is doing the work here: the sky reflected off
+        // the glazing at a grazing angle is what makes a facade read as glass
+        // instead of as a dark panel. It only became true once the
+        // environment gained a ground below its horizon — until then the
+        // lower half of every reflection was one flat colour, and no amount
+        // of intensity could turn that into an image.
+        envMapIntensity: 2.4,
+        transparent: true,
+        opacity: 0.58,
+        side: DoubleSide,
+      }),
+    ),
     /**
      * Glazing applied to the face of a solid volume. Opaque, because there is
      * no void behind it to see into — transparency would read as tinted film
      * over the wall rather than as a window.
      */
     glazingSurface: new MeshPhysicalMaterial({
-      color: '#1b2b36',
+      color: '#16242e',
       roughness: 0.05,
-      metalness: 0.08,
-      clearcoat: 1,
-      clearcoatRoughness: 0.02,
-      reflectivity: 0.9,
-      envMapIntensity: 1.5,
+      metalness: 0.05,
+      reflectivity: 1,
+      envMapIntensity: 2.2,
     }),
     /**
-     * Pool water. Clearcoat gives a wet specular response without the cost
-     * of transmission/refraction — deliberately cheap, per the Phase 2C
-     * constraint against reflection render targets or simulated water. A
-     * very low-amplitude noise pass reads as gentle depth variation across
-     * the surface rather than a perfectly flat plane of colour.
+     * Pool water — see `withWaterSurface` for the swell, the Fresnel ramp
+     * and why the shared variation pass was the wrong tool for it. Still no
+     * reflection render target and no simulation, per the Phase 2C
+     * constraint: the environment supplies the reflected image and the
+     * analytic swell supplies the slope that breaks it up.
      */
-    poolWater: withVariation(
+    poolWater: withWaterSurface(
       new MeshPhysicalMaterial({
-        color: '#0e3a41',
+        color: '#2f7c85',
         // Water is very nearly a mirror, and with a sky to reflect it can
         // finally behave like one — the reflected dome is what gives the
         // pool its colour, not the albedo underneath.
-        roughness: 0.045,
-        envMapIntensity: 1.35,
+        roughness: 0.03,
+        envMapIntensity: 2.2,
         // After dark the submerged lighting is carried by the water body
         // itself rather than by the basin walls, so the pool reads as a
         // soft luminous plane instead of a glowing outline.
         emissive: '#22403f',
         emissiveIntensity: 0,
-        metalness: 0.04,
-        clearcoat: 1,
-        clearcoatRoughness: 0.06,
+        metalness: 0.02,
+        reflectivity: 1,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.92,
       }),
-      { scale: 0.3, colorVariation: 0.05, seed: 71, normalStrength: 0.045, normalScale: 0.8 },
     ),
     /**
-     * Dark plaster pool interior — basin, steps, and the infinity channel.
-     * Carries an emissive term that stays at zero through the day and comes
-     * up after dark, which is how the submerged perimeter lighting reads
+     * The pool interior — basin, steps, and the infinity channel.
+     *
+     * Pale, not dark, and this is the single decision that decides whether
+     * the pool reads as water or as a hole. Water is very slightly
+     * absorbing and almost entirely clear; a swimming pool gets its colour
+     * from the light that goes *through* it, bounces off the basin, and
+     * comes back out. Line the basin in near-black and there is nothing to
+     * come back — the surface has only its own reflection to show, and
+     * every angle that is not reflecting the sky renders as a black
+     * rectangle, which is exactly what the frames showed.
+     *
+     * A pale honed plaster returns that light, and the water above it goes
+     * to the blue-green a pool is actually photographed as. Still carries
+     * the emissive term that stays at zero through the day and comes up
+     * after dark, which is how the submerged perimeter lighting reads
      * without a single dynamic light inside the water.
      */
     poolInterior: withVariation(
       standard({
-        color: '#12222a',
-        roughness: 0.85,
+        color: '#8fa6a4',
+        roughness: 0.62,
         metalness: 0,
-        emissive: '#16262b',
+        emissive: '#9fc4c6',
         emissiveIntensity: 0,
       }),
       {
@@ -718,8 +1019,10 @@ function createMaterials() {
         colorVariation: 0.05,
         roughnessVariation: 0.04,
         seed: 103,
-        // Woven upholstery microstructure.
-        normalStrength: 0.0158,
+        // Woven upholstery microstructure. The relief itself is now the
+        // map's job; this is only the slow drift across a large cushion
+        // that keeps one from reading as a single flat tone.
+        normalStrength: 0.009,
         normalScale: 8.5,
       }),
       'linen',

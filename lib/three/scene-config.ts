@@ -52,6 +52,19 @@ export const CAMERA_VIEWS: readonly CameraView[] = [
  * out of `CAMERA_VIEWS` so the public explore page still lists approaches
  * to the house rather than rooms within it.
  */
+/**
+ * Every interior framing opens up by the same amount.
+ *
+ * Just over one stop, arrived at from the rendered frames rather than
+ * from theory: at the hour's own setting the principal rooms came out two
+ * stops under, reading as brown and muddy, while their windows sat at a
+ * comfortable mid grey — which is the exact signature of a camera exposed
+ * for the view rather than for the room. Opening up puts the walls where
+ * they belong and lets the glazing go bright, which is what an interior
+ * photograph does.
+ */
+const INTERIOR_EXPOSURE = 1.05;
+
 export const INTERIOR_VIEWS: readonly CameraView[] = [
   {
     id: 'foyer',
@@ -59,6 +72,7 @@ export const INTERIOR_VIEWS: readonly CameraView[] = [
     position: [-6, 2.6, 2.7],
     target: [-6.2, 2.1, -3.4],
     fov: 58,
+    exposure: INTERIOR_EXPOSURE,
   },
   {
     id: 'living',
@@ -66,6 +80,7 @@ export const INTERIOR_VIEWS: readonly CameraView[] = [
     position: [3.6, 2.4, -3.0],
     target: [9.6, 1.5, 3.6],
     fov: 52,
+    exposure: INTERIOR_EXPOSURE,
   },
   {
     id: 'kitchen',
@@ -73,6 +88,7 @@ export const INTERIOR_VIEWS: readonly CameraView[] = [
     position: [-3.4, 2.3, 1.6],
     target: [1.4, 1.6, -7.4],
     fov: 58,
+    exposure: INTERIOR_EXPOSURE,
   },
   {
     id: 'stair',
@@ -80,6 +96,7 @@ export const INTERIOR_VIEWS: readonly CameraView[] = [
     position: [-6.0, 2.3, -1.4],
     target: [-6.4, 3.4, -8.4],
     fov: 58,
+    exposure: INTERIOR_EXPOSURE,
   },
   {
     id: 'master',
@@ -87,6 +104,7 @@ export const INTERIOR_VIEWS: readonly CameraView[] = [
     position: [-8.4, 6.8, -0.8],
     target: [-12.6, 6.1, -5.2],
     fov: 56,
+    exposure: INTERIOR_EXPOSURE,
   },
   {
     id: 'library',
@@ -94,6 +112,7 @@ export const INTERIOR_VIEWS: readonly CameraView[] = [
     position: [13.8, 6.6, 7.2],
     target: [5.2, 5.9, -3.2],
     fov: 56,
+    exposure: INTERIOR_EXPOSURE,
   },
 ] as const;
 

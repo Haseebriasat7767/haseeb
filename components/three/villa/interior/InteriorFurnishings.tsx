@@ -1,7 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
 import { getMaterials } from '@/lib/three/materials';
+import { FoliageCards } from '../landscape/FoliageCards';
+import { createFoliageCards } from '../landscape/FoliageGeometry';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../VillaPrimitives';
+import type { DetailTier } from '../VillaTypes';
 import type { InteriorLayout } from './InteriorTypes';
 
 /**
@@ -10,9 +14,28 @@ import type { InteriorLayout } from './InteriorTypes';
  * furnished two-storey house inside the same draw-call budget the empty
  * shell had.
  */
-export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
+export function InteriorFurnishings({
+  layout,
+  detail = 'high',
+}: {
+  layout: InteriorLayout;
+  detail?: DetailTier;
+}) {
   const materials = getMaterials();
   const parts = layout.furniture;
+
+  // Houseplants share the trees' card technique. Sized down hard: an
+  // outdoor cluster's cards run three to five times its radius because a
+  // crown is mostly gaps, while a potted plant is a dense little mass and
+  // cards that big would fill the room.
+  const plantCards = useMemo(
+    () =>
+      createFoliageCards(parts.foliageClusters, detail, {
+        sizeScale: 0.42,
+        cells: [0, 1, 2, 3],
+      }),
+    [parts.foliageClusters, detail],
+  );
 
   return (
     <group name="InteriorFurnishings">
@@ -75,6 +98,7 @@ export function InteriorFurnishings({ layout }: { layout: InteriorLayout }) {
         chamfer={SOFT_RADIUS}
         chamferSegments={SOFT_SEGMENTS}
       />
+      <FoliageCards name="furniture-plants" cards={plantCards} castShadow={detail === 'high'} />
       {/* Emissive fixture faces: lit surfaces, not light sources. */}
       <MergedBoxes
         name="furniture-glow"

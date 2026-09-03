@@ -96,11 +96,18 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
    * from a blue sky — rather than by tinting the whole frame orange.
    */
   goldenHour: {
-    slope: [1.035, 1.0, 0.965],
-    offset: [0.002, 0.005, 0.014],
-    power: [1.0, 1.0, 1.01],
-    saturation: 1.06,
-    contrast: 1.06,
+    // Warmer and firmer than it was. The hero framing looks away from the
+    // sun, so the half of the sky it sees is the cool half, and at the
+    // previous settings the whole frame resolved as a flat grey-green wash
+    // that could have been any overcast afternoon. A stronger slope
+    // separation puts the warmth back into the sunlit fabric without
+    // tinting the shadows, and the extra contrast is what stops the image
+    // sitting in its middle third.
+    slope: [1.075, 1.005, 0.925],
+    offset: [0.0, 0.004, 0.016],
+    power: [0.985, 1.0, 1.02],
+    saturation: 1.14,
+    contrast: 1.13,
     vignette: 0.18,
     bloomStrength: 0.16,
     bloomThreshold: 1.55,

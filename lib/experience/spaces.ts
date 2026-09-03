@@ -51,9 +51,21 @@ function view(
   position: CameraView['position'],
   target: CameraView['target'],
   fov: number,
+  /** Exposure compensation in stops — see `CameraView`. */
+  exposure?: number,
 ): CameraView {
-  return { id, label, position, target, fov };
+  return exposure === undefined
+    ? { id, label, position, target, fov }
+    : { id, label, position, target, fov, exposure };
 }
+
+/**
+ * Every framing inside the house opens up by the same amount, matching
+ * `INTERIOR_EXPOSURE` in `lib/three/scene-config.ts`. Duplicated as a value
+ * rather than imported because that module pulls in the villa's geometry
+ * constants, and the journey has no business depending on those.
+ */
+const INSIDE = 1.05;
 
 export const SPACES: readonly Space[] = [
   {
@@ -74,7 +86,7 @@ export const SPACES: readonly Space[] = [
     description:
       'A double-height slot cut through both storeys and closed at the top by a glazed laylight. The stair hall opens off it to the north; the principal rooms open east.',
     feature: 'Daylit through a roof-level laylight',
-    view: view('foyer', 'Foyer', [-6, 2.6, 2.7], [-6.2, 2.1, -3.4], 58),
+    view: view('foyer', 'Foyer', [-6, 2.6, 2.7], [-6.2, 2.1, -3.4], 58, INSIDE),
     level: 'ground',
     room: 'foyer',
     anchor: 'entrance',
@@ -92,7 +104,7 @@ export const SPACES: readonly Space[] = [
     // onto the terrace — was behind the lens. It now looks across the
     // seating toward the glass, which also gives the frame a real
     // foreground, midground and background.
-    view: view('living', 'Living room', [3.6, 2.4, -3.0], [9.6, 1.5, 3.6], 52),
+    view: view('living', 'Living room', [3.6, 2.4, -3.0], [9.6, 1.5, 3.6], 52, INSIDE),
     level: 'ground',
     room: 'living',
     anchor: 'livingGlass',
@@ -104,7 +116,7 @@ export const SPACES: readonly Space[] = [
     description:
       'Set between the foyer and the living room, with the kitchen opening directly behind it. A row of pendants marks the table axis.',
     feature: 'Open to both the kitchen and the terrace',
-    view: view('dining', 'Dining', [-3.4, 2.3, 3.4], [0.4, 1.8, -3.6], 56),
+    view: view('dining', 'Dining', [-3.4, 2.3, 3.4], [0.4, 1.8, -3.6], 56, INSIDE),
     level: 'ground',
     room: 'dining',
   },
@@ -115,7 +127,7 @@ export const SPACES: readonly Space[] = [
     description:
       'A working island parallel to a full run of cabinetry along the north wall, with the pantry and utility rooms continuing east behind it.',
     feature: 'Four-metre island with integrated seating',
-    view: view('kitchen', 'Kitchen', [-3.4, 2.3, 1.6], [1.4, 1.6, -7.4], 58),
+    view: view('kitchen', 'Kitchen', [-3.4, 2.3, 1.6], [1.4, 1.6, -7.4], 58, INSIDE),
     level: 'ground',
     room: 'kitchen',
   },
@@ -126,7 +138,7 @@ export const SPACES: readonly Space[] = [
     description:
       'A dog-leg stair in two equal flights around a half-landing, rising through a void cut in the floor plate above and arriving on the upper landing.',
     feature: 'Open stairwell with frameless glass guarding',
-    view: view('stair', 'Stair hall', [-6.0, 2.3, -1.4], [-6.4, 3.4, -8.4], 58),
+    view: view('stair', 'Stair hall', [-6.0, 2.3, -1.4], [-6.4, 3.4, -8.4], 58, INSIDE),
     level: 'ground',
     room: 'stairHall',
   },
@@ -137,7 +149,7 @@ export const SPACES: readonly Space[] = [
     description:
       'The whole west end of the upper floor: bedroom facing the roof terrace, with the bathroom and dressing room behind it across a single partition.',
     feature: 'Private roof terrace through a sliding wall',
-    view: view('master', 'Master suite', [-8.4, 6.8, -0.8], [-12.6, 6.1, -5.2], 56),
+    view: view('master', 'Master suite', [-8.4, 6.8, -0.8], [-12.6, 6.1, -5.2], 56, INSIDE),
     level: 'upper',
     room: 'masterBedroom',
     anchor: 'roofTerrace',
@@ -149,7 +161,7 @@ export const SPACES: readonly Space[] = [
     description:
       'Inside the cantilever, projecting four metres past the building line over the terrace. Glazed on two sides, with a double-sided bookcase dividing it from the upper hall.',
     feature: 'Cantilevered over the terrace on two glazed sides',
-    view: view('library', 'Library', [13.8, 6.6, 7.2], [5.2, 5.9, -3.2], 56),
+    view: view('library', 'Library', [13.8, 6.6, 7.2], [5.2, 5.9, -3.2], 56, INSIDE),
     level: 'upper',
     room: 'library',
     anchor: 'cantilever',

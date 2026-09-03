@@ -120,6 +120,20 @@ export type BoxSpec = {
   key: string;
   position: Vector3Tuple;
   scale: Vector3Tuple;
+  /**
+   * Rotation about the vertical axis, in radians, applied about the
+   * volume's own centre.
+   *
+   * Optional, and absent almost everywhere on purpose: a building is
+   * orthogonal, and the villa, the site and the interior fabric are all
+   * written as bounds on world axes because that is what they are. It
+   * exists for the things in a room that are *not* — an armchair turned
+   * toward the view, a stool pushed out from under a table. Nothing in a
+   * furnished room sits at exactly ninety degrees to everything else, and
+   * a whole house where everything does is one of the quieter reasons an
+   * interior reads as generated rather than photographed.
+   */
+  rotationY?: number;
 };
 
 /** A vertical structural support, resolved to a unit-cylinder transform. */

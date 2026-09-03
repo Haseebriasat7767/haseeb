@@ -11,6 +11,8 @@ type EnvironmentProps = {
   lighting: ResolvedLighting;
   shadows: boolean;
   shadowMapSize: number;
+  /** Exposure compensation for the active framing, in stops. */
+  exposure?: number;
 };
 
 /**
@@ -23,7 +25,12 @@ type EnvironmentProps = {
  * Code-only: no HDRI is fetched and no environment map exists, which is
  * also why the metals are tuned the way they are in `materials.ts`.
  */
-export function SceneEnvironment({ lighting, shadows, shadowMapSize }: EnvironmentProps) {
+export function SceneEnvironment({
+  lighting,
+  shadows,
+  shadowMapSize,
+  exposure = 0,
+}: EnvironmentProps) {
   const scene = useThree((state) => state.scene);
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
@@ -41,10 +48,12 @@ export function SceneEnvironment({ lighting, shadows, shadowMapSize }: Environme
   // the renderer and the material library never disagree about the time of
   // day. `invalidate` matters because fixed-camera views render on demand.
   useEffect(() => {
-    gl.toneMappingExposure = atmosphere.exposure;
+    // A stop is a doubling, so the framing's compensation is a power of two
+    // on the hour's own exposure rather than an addition to it.
+    gl.toneMappingExposure = atmosphere.exposure * Math.pow(2, exposure);
     applyLightingToMaterials(lighting);
     invalidate();
-  }, [gl, invalidate, lighting, atmosphere.exposure]);
+  }, [gl, invalidate, lighting, atmosphere.exposure, exposure]);
 
   return (
     <>

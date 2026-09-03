@@ -241,8 +241,13 @@ function makeRecipes(): Record<SurfaceFamily, Recipe> {
      */
     linen: {
       base: [190, 180, 163],
-      metres: 0.34,
-      normalScale: 0.15,
+      // A third of a metre per tile put the weave's pitch at nearly eight
+      // millimetres, which is not linen — it is corduroy, and the rendered
+      // sofa read exactly that way, in visible vertical ribs. Tiling three
+      // times as often brings the thread down to roughly two millimetres,
+      // where it stops being a stripe and starts being a surface.
+      metres: 0.1,
+      normalScale: 0.1,
       sample: (u, v) => {
         const threads = 44;
         // Warp and weft summed rather than multiplied: the product of two
@@ -253,7 +258,7 @@ function makeRecipes(): Record<SurfaceFamily, Recipe> {
         const weave = (warp + weft) * 0.25 + 0.5;
         const slub = fbm(u * 7, v * 7, 7, 89, 3);
         return {
-          height: 0.5 + (weave - 0.5) * 0.35 + (slub - 0.5) * 0.14,
+          height: 0.5 + (weave - 0.5) * 0.22 + (slub - 0.5) * 0.14,
           tone: 1 + (weave - 0.5) * 0.025 + (slub - 0.5) * 0.035,
           rough: 0.94 + (weave - 0.5) * 0.02,
         };

@@ -40,7 +40,7 @@ export function Interior({ plan, levels, config, detail = 'high', lighting }: In
   return (
     <group name="Interior">
       <InteriorArchitecture layout={layout} />
-      <InteriorFurnishings layout={layout} />
+      <InteriorFurnishings layout={layout} detail={detail} />
 
       {/*
         Practicals, in the plan's own ranked order. How many run and how

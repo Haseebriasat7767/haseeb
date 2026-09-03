@@ -126,6 +126,7 @@ export function Scene({
         lighting={lighting}
         shadows={quality.shadows}
         shadowMapSize={quality.shadowMapSize}
+        exposure={view.exposure}
       />
 
       {/* The two finishing paths are mutually exclusive: a traced frame has

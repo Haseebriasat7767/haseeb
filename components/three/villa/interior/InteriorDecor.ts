@@ -342,27 +342,32 @@ export function createPlant(
     scale: [height * 0.022, height * 0.36, height * 0.022],
   });
 
-  // Clusters roughly as deep as they are wide. The first version made them
-  // four times wider than tall, which read as a stack of shelves rather
-  // than as a plant — the one proportion that has to be right for a mass of
-  // boxes to pass as foliage.
-  const canopyBase = floorY + potHeight + height * 0.26;
-  const clusters = 7;
+  // The crown, as foliage clusters rather than as volumes.
+  //
+  // Nothing about a plant's silhouette survives being built from boxes, and
+  // no amount of jitter in the box sizes fixes it — the outline is still a
+  // union of rectangles, and a rectangle is the one shape leaves never make.
+  // These clusters carry only where the foliage is and how big it is; the
+  // card pass turns each into a handful of alpha-cut quads whose edges are
+  // decided by the atlas.
+  const canopyBase = floorY + potHeight + height * 0.3;
+  const clusters = 5;
   for (let i = 0; i < clusters; i += 1) {
     const t = i / (clusters - 1);
-    const spread = height * (0.24 - t * 0.1) * (0.72 + wobble(seed, i) * 0.55);
-    const ox = (wobble(seed, i * 3 + 1) - 0.5) * height * 0.3;
-    const oz = (wobble(seed, i * 3 + 2) - 0.5) * height * 0.3;
-    const y0 = canopyBase + t * height * 0.48;
-    const tall = spread * (1.25 + wobble(seed, i * 3 + 3) * 0.8);
-    parts.foliage.push(
-      box(
-        `${key}-leaf-${i}`,
-        [cx + ox - spread, cx + ox + spread],
-        [y0, y0 + tall],
-        [cz + oz - spread * 0.85, cz + oz + spread * 0.85],
-      ),
-    );
+    const radius = height * (0.2 - t * 0.055) * (0.8 + wobble(seed, i) * 0.5);
+    parts.foliageClusters.push({
+      key: `${key}-crown-${i}`,
+      position: [
+        cx + (wobble(seed, i * 3 + 1) - 0.5) * height * 0.24,
+        canopyBase + t * height * 0.42,
+        cz + (wobble(seed, i * 3 + 2) - 0.5) * height * 0.24,
+      ],
+      radius,
+      scale: [1, 0.9, 1],
+      seed: seed + i * 977,
+      deform: 0.4,
+      detail: 0,
+    });
   }
 }
 

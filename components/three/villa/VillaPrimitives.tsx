@@ -118,6 +118,7 @@ export function Massing({
             geometry={unitBox}
             material={material}
             position={spec.position}
+            rotation={[0, spec.rotationY ?? 0, 0]}
             scale={spec.scale}
             castShadow={castShadow}
             receiveShadow={receiveShadow}
@@ -142,6 +143,7 @@ export function Massing({
           )}
           material={material}
           position={spec.position}
+          rotation={[0, spec.rotationY ?? 0, 0]}
           castShadow={castShadow}
           receiveShadow={receiveShadow}
         />
@@ -184,6 +186,9 @@ export function MergedBoxes({
         edge,
         chamferSegments,
       );
+      // About the volume's own centre, which is where it still is: the
+      // translation below is what puts it in the room.
+      if (spec.rotationY) part.rotateY(spec.rotationY);
       part.translate(...spec.position);
       return part;
     });

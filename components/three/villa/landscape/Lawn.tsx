@@ -9,20 +9,29 @@ import { mulberry32 } from './LandscapeGeometry';
 /** Blades per tier. One instanced mesh, so this is one draw call at any count. */
 const DENSITY: Record<DetailTier, number> = {
   low: 6_000,
-  medium: 18_000,
-  high: 42_000,
+  medium: 22_000,
+  high: 48_000,
 };
 
 /**
  * How far out from the property the sown band reaches, in metres.
  *
- * Deliberately tight. The first attempt sowed to 62 m, which spread the
- * same budget so thin that individual blades read as scattered needles on
- * bare ground — worse than no grass at all. Concentrating the count into
- * the band the camera actually flies through is what turns the same
- * instances into turf; past it the ground's own colour variation carries.
+ * Deliberately tight, and tightened again after looking at what a thirty
+ * metre band actually rendered as. Coverage is what decides whether
+ * instanced blades read as turf or as confetti, and coverage is the blade
+ * count divided by the area it is spread over. Forty-odd thousand blades a
+ * few centimetres across, sown to thirty metres, covered about a tenth of
+ * the ground — so nine tenths of every "lawn" pixel was bare terrain
+ * showing between scattered green needles, which is precisely how the
+ * rendered frames read.
+ *
+ * The same budget over a sixteen metre band is five times the coverage,
+ * and sixteen metres is the whole distance over which a blade is ever
+ * resolvable anyway. Past it the ground's own tonal variation carries the
+ * lawn, which is what a mown field looks like from that far off: a
+ * surface, not a collection of blades.
  */
-const LAWN_RADIUS = 30;
+const LAWN_RADIUS = 16;
 
 const LAWN_SEED = 0x4c41574e; // 'LAWN'
 
@@ -102,7 +111,7 @@ export function Lawn({ paving, detail = 'high' }: LawnProps) {
 
       // Blades thin out toward the edge of the band so it fades into the
       // ground rather than ending on a visible ring.
-      if (radius > 22 && random() > 0.55) continue;
+      if (radius > 12 && random() > 0.55) continue;
 
       // Short and broad, not long and thin: a mown lawn is a nap a few
       // centimetres deep, and tall blades at this scale read as weeds.

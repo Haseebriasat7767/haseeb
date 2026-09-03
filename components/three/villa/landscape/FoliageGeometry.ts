@@ -24,8 +24,11 @@ export type FoliageCard = {
 /** Cards per foliage cluster, and how much of the crown they cover. */
 const CARD_DETAIL: Record<DetailTier, { perCluster: number; shrubCards: number }> = {
   low: { perCluster: 2, shrubCards: 1 },
-  medium: { perCluster: 3, shrubCards: 1 },
-  high: { perCluster: 4, shrubCards: 2 },
+  // Enough cards that no viewing angle finds a gap between them. Four left
+  // holes the inner mass showed through, and a crown with a hole in it
+  // reads as broken geometry rather than as a tree.
+  medium: { perCluster: 5, shrubCards: 2 },
+  high: { perCluster: 7, shrubCards: 3 },
 };
 
 const between = (rng: () => number, lo: number, hi: number) => lo + rng() * (hi - lo);

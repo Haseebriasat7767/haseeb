@@ -1,4 +1,5 @@
 import type { BoxSpec, ColumnSpec, Range } from '../VillaTypes';
+import type { BlobSpec } from '../landscape/LandscapeTypes';
 import { box, column, mid, span } from '../SpecBuilders';
 
 /**
@@ -47,6 +48,18 @@ export type Parts = {
   paper: BoxSpec[];
   /** Indoor planting. */
   foliage: BoxSpec[];
+  /**
+   * Where indoor foliage is, rather than what shape it is.
+   *
+   * Houseplants were built from the same boxes as everything else, and a
+   * plant is the one object that cannot survive that: the frames showed a
+   * stack of green cubes on a stick standing in the living room's hero
+   * view, which was the most artificial thing in the whole image. These
+   * clusters feed the same alpha-cut card technique the trees outside
+   * already use, so a plant's outline is decided by a texture with leaves
+   * and gaps in it rather than by geometry.
+   */
+  foliageClusters: BlobSpec[];
 };
 
 export function emptyParts(): Parts {
@@ -67,7 +80,84 @@ export function emptyParts(): Parts {
     sheer: [],
     paper: [],
     foliage: [],
+    foliageClusters: [],
   };
+}
+
+/**
+ * Turns a whole piece of furniture about a point on the floor.
+ *
+ * Every builder below authors its piece square to the world axes, which is
+ * the right way to write them: a sofa is described across its width, up
+ * from its floor and back from its front, and the four cardinal facings
+ * cover where such a piece actually goes. What that cannot express is a
+ * chair angled toward a view, or a stool left pushed out — and a room in
+ * which nothing is angled reads as a plan, not as a place someone lives.
+ *
+ * Rather than teach nineteen builders about arbitrary angles, this runs one
+ * of them and then rotates whatever it produced. Volumes added during the
+ * call are swept about the given point: their centres move around it, and
+ * each keeps the same turn about its own axis so the piece stays rigid.
+ * Turned elements — lamp stems, table legs on a lathe — move with it and
+ * need no rotation of their own, being round.
+ */
+export function turned(
+  parts: Parts,
+  /** Radians, counter-clockwise seen from above. */
+  angle: number,
+  /** The floor point the piece pivots about — normally its own centre. */
+  pivotX: number,
+  pivotZ: number,
+  build: () => void,
+): void {
+  const boxKeys = [
+    'joinery',
+    'soft',
+    'softDark',
+    'stone',
+    'metal',
+    'dark',
+    'ceramic',
+    'glass',
+    'rugs',
+    'glow',
+    'plaster',
+    'drapery',
+    'sheer',
+    'paper',
+    'foliage',
+  ] as const;
+
+  const before = new Map<string, number>();
+  for (const key of boxKeys) before.set(key, parts[key].length);
+  const postsBefore = parts.posts.length;
+
+  build();
+
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const sweep = (position: readonly [number, number, number]): [number, number, number] => {
+    const dx = position[0] - pivotX;
+    const dz = position[2] - pivotZ;
+    return [pivotX + dx * cos + dz * sin, position[1], pivotZ - dx * sin + dz * cos];
+  };
+
+  for (const key of boxKeys) {
+    const list = parts[key];
+    for (let i = before.get(key) ?? 0; i < list.length; i += 1) {
+      const spec = list[i]!;
+      list[i] = {
+        ...spec,
+        position: sweep(spec.position),
+        rotationY: (spec.rotationY ?? 0) + angle,
+      };
+    }
+  }
+
+  for (let i = postsBefore; i < parts.posts.length; i += 1) {
+    const spec = parts.posts[i]!;
+    parts.posts[i] = { ...spec, position: sweep(spec.position) };
+  }
 }
 
 /**
@@ -863,10 +953,29 @@ export function createCove(parts: Parts, key: string, x: Range, z: Range, y: num
  * reveal around it, and a light washing down its face.
  */
 export function createNiche(parts: Parts, key: string, x: Range, z: Range, y: Range): void {
-  parts.plaster.push(box(`${key}-back`, x, y, z));
-  parts.metal.push(box(`${key}-reveal-a`, [x[0] - 0.03, x[0]], y, z));
-  parts.metal.push(box(`${key}-reveal-b`, [x[1], x[1] + 0.03], y, z));
-  parts.glow.push(box(`${key}-wash`, [x[0], x[1]], [y[1] - 0.03, y[1]], [z[0], z[1] + 0.06]));
+  // Lined in timber rather than in the wall's own plaster.
+  //
+  // A recess finished in the same colour as the wall around it is not
+  // visible as a recess: there is no tonal step at its edge, so nothing in
+  // the image says the surface went backwards. The rendered frames showed
+  // the consequence — the niche vanished and its lighting strip was left
+  // reading as a bare white bar floating on a blank wall. A darker lining
+  // gives the opening a shadow to be read against.
+  parts.joinery.push(box(`${key}-back`, x, y, z));
+
+  // Reveals on all four sides, so the opening is a box the wall was cut
+  // into rather than a panel applied to it.
+  const face: Range = [z[0], z[1] + 0.03];
+  parts.metal.push(box(`${key}-reveal-a`, [x[0] - 0.03, x[0]], y, face));
+  parts.metal.push(box(`${key}-reveal-b`, [x[1], x[1] + 0.03], y, face));
+  parts.metal.push(box(`${key}-reveal-head`, x, [y[1], y[1] + 0.03], face));
+  parts.metal.push(box(`${key}-reveal-sill`, x, [y[0] - 0.03, y[0]], face));
+
+  // The wash sits inside the opening, tucked under its head. Standing proud
+  // of the face is what turned it into a light fitting stuck on the wall.
+  parts.glow.push(
+    box(`${key}-wash`, [x[0] + 0.04, x[1] - 0.04], [y[1] - 0.035, y[1] - 0.005], [z[0], z[1]]),
+  );
 }
 
 /**

@@ -162,7 +162,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       fogFar: 330,
       exposure: 0.44,
     },
-    interior: { intensity: 7, activeLights: 3 },
+    interior: { intensity: 20, activeLights: 6 },
     exterior: { intensity: 0, activeLights: 0 },
     surfaces: { glazingOpacity: 0.6, poolGlow: 0.02, fixtureEmissive: 0.5 },
   },
@@ -196,7 +196,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       fogFar: 360,
       exposure: 0.4,
     },
-    interior: { intensity: 4, activeLights: 2 },
+    interior: { intensity: 16, activeLights: 5 },
     exterior: { intensity: 0, activeLights: 0 },
     surfaces: { glazingOpacity: 0.62, poolGlow: 0, fixtureEmissive: 0.25 },
   },
@@ -226,10 +226,14 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       // the approach view does not look that way; pushing turbidity and
       // pulling rayleigh back carries the warmth across the whole dome, so
       // the hour reads from every camera rather than from one.
-      turbidity: 7,
-      rayleigh: 2.1,
-      mieCoefficient: 0.019,
-      mieDirectionalG: 0.83,
+      // Turbidity carries the warmth; rayleigh carries the depth of colour
+      // away from the sun. Pushed too far toward haze the dome loses both
+      // its blue and its gradient and renders as flat grey, which is what
+      // the hero framing — which looks away from the sun — was getting.
+      turbidity: 5.4,
+      rayleigh: 2.9,
+      mieCoefficient: 0.021,
+      mieDirectionalG: 0.84,
       elevation: 6.5,
       environmentIntensity: 0.55,
     },
@@ -242,7 +246,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       fogFar: 315,
       exposure: 0.56,
     },
-    interior: { intensity: 13, activeLights: 4 },
+    interior: { intensity: 34, activeLights: 7 },
     exterior: { intensity: 22, activeLights: 1 },
     surfaces: { glazingOpacity: 0.55, poolGlow: 0.07, fixtureEmissive: 0.5 },
   },
