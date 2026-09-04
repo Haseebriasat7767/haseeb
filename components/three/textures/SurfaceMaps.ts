@@ -1,9 +1,11 @@
+import { hasScannedMaps, loadScannedMaps } from './ScannedMaps';
 import {
   CanvasTexture,
   LinearMipmapLinearFilter,
   LinearFilter,
   RepeatWrapping,
   SRGBColorSpace,
+  type Texture,
 } from 'three';
 
 /**
@@ -40,15 +42,44 @@ import {
  */
 
 /** Side of every generated map, in pixels. */
-const SIZE = 512;
+/**
+ * Bake resolution, per tier.
+ *
+ * Texel density is the quiet half of "material scale". A limestone family
+ * tiled every 1.2 metres and baked at 512 gives 2.3 mm per texel, which is
+ * about where honed stone stops resolving its own grain; oak at 512 over a
+ * two-metre tile was 4 mm per texel, and at that density a plank's figure
+ * is a suggestion rather than a surface. Doubling the bake for the tier
+ * that can afford it is the cheapest real gain available without scanned
+ * maps.
+ *
+ * The lower tiers keep 512 — they already skip the maps entirely on `low`,
+ * and `medium` is the mobile budget where twenty-odd megabytes of texture
+ * is the wrong place to spend.
+ */
+let SIZE = 512;
+
+/**
+ * Sets the bake resolution. Called before the first `getSurfaceMaps`, and
+ * disposes anything already baked at the old size so the change takes.
+ */
+export function setSurfaceMapResolution(size: 512 | 1024): void {
+  if (size === SIZE) return;
+  SIZE = size;
+  disposeSurfaceMaps();
+}
 
 export type SurfaceFamily =
   'plaster' | 'stone' | 'oak' | 'marble' | 'linen' | 'wool' | 'leather' | 'paving';
 
 export type SurfaceMaps = {
-  map: CanvasTexture;
-  roughnessMap: CanvasTexture;
-  normalMap: CanvasTexture;
+  // `Texture` rather than `CanvasTexture`: the procedural path bakes into a
+  // canvas, and the scanned path loads image files. Both satisfy every use
+  // downstream, and naming the base type is what lets one replace the other
+  // without touching a single call site.
+  map: Texture;
+  roughnessMap: Texture;
+  normalMap: Texture;
   /** Metres of real surface one tile of these maps covers. */
   metres: number;
   /** Sensible normal-map strength for this family. */
@@ -181,7 +212,10 @@ function makeRecipes(): Record<SurfaceFamily, Recipe> {
      */
     oak: {
       base: [136, 119, 97],
-      metres: 2.2,
+      // Eight boards to the tile at 180 mm each — the width European oak
+      // is actually milled to, and a tile small enough that the texel
+      // density carries the grain.
+      metres: 1.44,
       normalScale: 0.26,
       sample: (u, v) => {
         // Boards: eight across the tile, each shifted along its length so
@@ -216,7 +250,7 @@ function makeRecipes(): Record<SurfaceFamily, Recipe> {
      */
     marble: {
       base: [222, 218, 210],
-      metres: 2.4,
+      metres: 2.0,
       normalScale: 0.09,
       sample: (u, v) => {
         // Turbulence-warped bands: a straight sine warped by noise is the
@@ -268,8 +302,8 @@ function makeRecipes(): Record<SurfaceFamily, Recipe> {
     /** Wool pile: dense fine clumping with no directional structure. */
     wool: {
       base: [150, 141, 128],
-      metres: 0.5,
-      normalScale: 0.28,
+      metres: 0.32,
+      normalScale: 0.26,
       sample: (u, v) => {
         const pile = fbm(u * P * 3, v * P * 3, P * 3, 97, 3);
         const clump = fbm(u * 9, v * 9, 9, 101, 2);
@@ -288,8 +322,8 @@ function makeRecipes(): Record<SurfaceFamily, Recipe> {
      */
     leather: {
       base: [120, 109, 99],
-      metres: 0.8,
-      normalScale: 0.13,
+      metres: 0.35,
+      normalScale: 0.11,
       sample: (u, v) => {
         // A cheap cellular field: two offset noise layers differenced,
         // which produces the closed irregular cells hide grain has.
@@ -444,11 +478,23 @@ function bake(recipe: Recipe): SurfaceMaps {
 
 const cache = new Map<SurfaceFamily, SurfaceMaps>();
 
-/** The maps for one family, baked once and shared by every material using it. */
+/**
+ * The maps for one family, resolved once and shared by every material using
+ * it.
+ *
+ * Real scans win where they exist. See `ScannedMaps.ts` for the file layout
+ * and for why none are present: the two CC0 sources this project would draw
+ * on are blocked by the environment's egress policy, so every family below
+ * currently resolves to the procedural bake. That is generated geometry
+ * statistics, not measured ones, and nothing here claims otherwise.
+ */
 export function getSurfaceMaps(family: SurfaceFamily): SurfaceMaps {
   let maps = cache.get(family);
   if (!maps) {
-    maps = bake(makeRecipes()[family]);
+    const recipe = makeRecipes()[family];
+    maps = hasScannedMaps(family)
+      ? loadScannedMaps(family, recipe.metres, recipe.normalScale)
+      : bake(recipe);
     cache.set(family, maps);
   }
   return maps;

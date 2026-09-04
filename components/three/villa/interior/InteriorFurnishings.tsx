@@ -32,7 +32,7 @@ export function InteriorFurnishings({
   const plantCards = useMemo(
     () =>
       createFoliageCards(parts.foliageClusters, detail, {
-        sizeScale: 0.62,
+        sizeScale: 0.55,
         cells: [0, 1, 2, 3],
       }),
     [parts.foliageClusters, detail],

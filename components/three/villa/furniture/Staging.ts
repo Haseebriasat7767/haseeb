@@ -154,61 +154,71 @@ export function createPlanted(
   });
 
   // Trunk, tapering from the soil to the first fork.
+  //
+  // Slim and tall. The previous version forked low and threw five limbs out
+  // at wide angles, and because the foliage sat only at their tips the
+  // whole armature stayed visible — the rendered plant read as green balls
+  // on crossed sticks. A specimen ficus of this kind has one clean stem
+  // that divides high and late, and almost none of its structure showing.
   const trunkBase = floorY + potHeight - 0.03;
-  const forkY = trunkBase + height * 0.34;
+  const forkY = trunkBase + height * 0.44;
   forms.push({
     kind: 'turned',
     key: `${key}-trunk`,
     material: 'joinery',
     position: [at[0], trunkBase, at[1]],
     profile: [
-      [height * 0.028, 0],
-      [height * 0.022, height * 0.1],
-      [height * 0.017, height * 0.24],
-      [height * 0.014, forkY - trunkBase],
+      [height * 0.023, 0],
+      [height * 0.019, height * 0.12],
+      [height * 0.015, height * 0.3],
+      [height * 0.012, forkY - trunkBase],
     ],
     segments: 12,
   });
 
-  // Three limbs off the fork, each leaning a different way, each carrying a
-  // mass of foliage at its end.
-  const limbs = 5;
+  // Three limbs, leaning far less than before, and foliage massed *along*
+  // them rather than parked on the ends — which is both how a canopy grows
+  // and what hides the branch that carries it.
+  const limbs = 3;
   for (let i = 0; i < limbs; i += 1) {
-    const angle = (i / limbs) * Math.PI * 2 + wobble(seed, i) * 1.1;
-    const lean = 0.28 + wobble(seed, i + 7) * 0.22;
-    const rise = height * (0.2 + wobble(seed, i + 3) * 0.14);
-    const reach = height * lean * 0.5;
+    const angle = (i / limbs) * Math.PI * 2 + wobble(seed, i) * 1.4;
+    const rise = height * (0.3 + wobble(seed, i + 3) * 0.12);
+    const reach = height * (0.13 + wobble(seed, i + 7) * 0.09);
     const tipX = at[0] + Math.cos(angle) * reach;
     const tipZ = at[1] + Math.sin(angle) * reach;
+    const span = Math.hypot(reach, rise);
 
     forms.push({
       kind: 'turned',
       key: `${key}-limb-${i}`,
       material: 'joinery',
-      position: [(at[0] + tipX) / 2, forkY - 0.02, (at[1] + tipZ) / 2],
+      position: [(at[0] + tipX) / 2, forkY + rise / 2 - 0.02, (at[1] + tipZ) / 2],
       rotationY: -angle,
       tiltX: Math.atan2(reach, rise),
       profile: [
-        [height * 0.013, -Math.hypot(reach, rise) / 2],
-        [height * 0.008, Math.hypot(reach, rise) / 2],
+        [height * 0.011, -span / 2],
+        [height * 0.007, span / 2],
       ],
       segments: 8,
     });
 
-    // Two or three foliage masses per limb, of different sizes, offset off
-    // the tip — a crown is never centred on the branch that carries it.
-    const masses = 3 + (i % 2);
+    // Four masses up each limb, growing toward the top and drifting off
+    // its axis, so the crown is a loose vertical drift rather than a ball.
+    const masses = 5;
     for (let j = 0; j < masses; j += 1) {
-      const spread = height * 0.16;
+      const t = (j + 0.6) / masses;
+      const drift = height * 0.13;
       clusters.push({
         key: `${key}-crown-${i}-${j}`,
         position: [
-          tipX + (wobble(seed, i * 5 + j) - 0.5) * spread * 2,
-          forkY + rise + (wobble(seed, i * 5 + j + 11) - 0.4) * spread,
-          tipZ + (wobble(seed, i * 5 + j + 23) - 0.5) * spread * 2,
+          at[0] + (tipX - at[0]) * t + (wobble(seed, i * 9 + j) - 0.5) * drift,
+          forkY + rise * t - height * 0.04 + (wobble(seed, i * 9 + j + 11) - 0.5) * drift * 0.7,
+          at[1] + (tipZ - at[1]) * t + (wobble(seed, i * 9 + j + 23) - 0.5) * drift,
         ],
-        radius: height * (0.15 + wobble(seed, i * 7 + j) * 0.07),
-        scale: [1, 0.86, 1],
+        // Smaller and more numerous than the old tip-masses: a mass the
+        // size of the whole crown can only ever be a ball.
+        radius: height * (0.115 + wobble(seed, i * 13 + j) * 0.055) * (0.75 + t * 0.55),
+        scale: [1, 0.82, 1],
         seed: seed + i * 131 + j * 17,
         deform: 0.4,
         detail: 0,

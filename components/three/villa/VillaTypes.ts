@@ -215,7 +215,7 @@ export type VillaLayout = {
   foundation: { plinth: BoxSpec[]; reveal: BoxSpec[] };
   groundFloor: { mass: BoxSpec[]; recess: BoxSpec[]; entrance: BoxSpec[] };
   upperFloor: { mass: BoxSpec[]; cantilever: BoxSpec[]; slab: BoxSpec[]; terrace: BoxSpec[] };
-  roof: { slabs: BoxSpec[]; parapets: BoxSpec[] };
+  roof: { slabs: BoxSpec[]; parapets: BoxSpec[]; drips: BoxSpec[] };
   terrace: { deck: BoxSpec[]; trim: BoxSpec[] };
   /** Frames, glazing, doors, and the punched facade skin. */
   openings: OpeningsGeometry;

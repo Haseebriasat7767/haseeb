@@ -121,6 +121,22 @@ function distribute(
  * Resolves a configuration into the complete building. Pure and deterministic:
  * the same config always produces the same layout, so callers can memoise it.
  */
+/** How far a drip groove sits back from the arris, and how deep it runs. */
+const DRIP = { set: 0.042, depth: 0.02, height: 0.024 } as const;
+
+/**
+ * Turns a list of slab edges into the groove boxes cut under them. Each
+ * entry gives the run of the edge in plan and the underside it belongs to.
+ */
+function dripsFor(
+  edges: readonly { x: Range; z: Range; y: number }[],
+  keyPrefix: string,
+): BoxSpec[] {
+  return edges.map((edge, index) =>
+    box(`${keyPrefix}-${index}`, edge.x, [edge.y, edge.y + DRIP.height], edge.z),
+  );
+}
+
 export function createVillaLayout(
   config: VillaConfig = VILLA_CONFIG,
   detail: DetailTier = 'high',
@@ -455,6 +471,11 @@ export function createVillaLayout(
   };
 
   // ── Roof ──────────────────────────────────────────────────────────────
+  // Drip groove: how far the groove is set back from the slab's arris, and
+  // how deep it is cut. Both are construction dimensions — a drip is a
+  // twenty-millimetre groove about forty back from the edge — and both are
+  // small enough that the detail reads as a shadow line rather than as a
+  // moulding.
   const roofY: Range = [upperFloorTopY, roofTopY];
   const parapetY: Range = [roofTopY, roofTopY + config.roofParapetHeight];
 
@@ -478,6 +499,74 @@ export function createVillaLayout(
         cantileverFrontZ + ov - inset,
       ]),
     ],
+    // ── Drips ───────────────────────────────────────────────────────────
+    //
+    // A groove run along the underside of every projecting slab edge, set
+    // back from the arris.
+    //
+    // This is a real detail and not a decorative one: rainwater running off
+    // a slab will otherwise track back along the soffit by surface tension
+    // and stain the wall beneath it, so every oversailing edge in
+    // construction gets a drip to break that path. It is also, from the
+    // outside, a continuous line of deep shadow under every horizontal in
+    // the building — which at the distance the hero camera stands is worth
+    // more than any amount of surface detail, because it is what tells the
+    // eye the slab has thickness and is made of something.
+    //
+    // Emitted only on the elevations the exterior framings actually see.
+    drips: dripsFor(
+      [
+        // Roof. Each run follows the front of the slab it belongs to, and
+        // the volumes do not share a front: the west block stops well short
+        // of the east one, and the cantilever runs further forward again. A
+        // single run across the whole width left a groove hanging in open
+        // air past the west elevation, which is exactly what the first
+        // render showed.
+        {
+          x: [-halfW - ov, entX1],
+          z: [upperWestFrontZ + ov - DRIP.set, upperWestFrontZ + ov],
+          y: roofY[0],
+        },
+        {
+          x: [entX2, cantileverX1],
+          z: [upperFrontZ + ov - DRIP.set, upperFrontZ + ov],
+          y: roofY[0],
+        },
+        {
+          x: [cantileverX1, halfW + ov],
+          z: [cantileverFrontZ + ov - DRIP.set, cantileverFrontZ + ov],
+          y: roofY[0],
+        },
+        {
+          x: [halfW + ov - DRIP.set, halfW + ov],
+          z: [rearZ - ov, cantileverFrontZ + ov],
+          y: roofY[0],
+        },
+        // The upper floor's slab, which is the strongest horizontal in the
+        // building and reads at every exterior camera.
+        {
+          x: [-halfW - reveal, entX1],
+          z: [upperWestFrontZ + reveal - DRIP.set, upperWestFrontZ + reveal],
+          y: slabY[0],
+        },
+        {
+          x: [entX2, cantileverX1],
+          z: [upperFrontZ + reveal - DRIP.set, upperFrontZ + reveal],
+          y: slabY[0],
+        },
+        {
+          x: [cantileverX1, halfW + reveal],
+          z: [cantileverFrontZ + reveal - DRIP.set, cantileverFrontZ + reveal],
+          y: slabY[0],
+        },
+        {
+          x: [halfW + reveal - DRIP.set, halfW + reveal],
+          z: [rearZ - reveal, cantileverFrontZ + reveal],
+          y: slabY[0],
+        },
+      ],
+      'drip',
+    ),
   };
 
   // ── Terrace ───────────────────────────────────────────────────────────

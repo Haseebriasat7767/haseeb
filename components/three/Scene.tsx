@@ -6,6 +6,7 @@ import { ACESFilmicToneMapping } from 'three';
 import { useQualityTier } from '@/hooks/useQualityTier';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { getPostProfile, resolveGrade } from '@/lib/three/grading';
+import { setSurfaceMapResolution } from '@/components/three/textures/SurfaceMaps';
 import { setSurfaceMapsEnabled } from '@/lib/three/materials';
 import { DEFAULT_TIME_OF_DAY, resolveLighting } from '@/lib/three/lighting';
 import { DEFAULT_VIEW } from '@/lib/three/scene-config';
@@ -94,6 +95,11 @@ export function Scene({
   // built lazily by the children below, so the answer has to be in place
   // before they first ask for it.
   useMemo(() => setSurfaceMapsEnabled(quality.tier !== 'low'), [quality.tier]);
+
+  // Texel density is the quiet half of material scale, and the top tier can
+  // afford twice as much of it. Settled here alongside the other material
+  // decisions, and before the children below first ask for a map.
+  useMemo(() => setSurfaceMapResolution(quality.tier === 'high' ? 1024 : 512), [quality.tier]);
 
   const post = useMemo(() => getPostProfile(quality.tier), [quality.tier]);
   const grade = useMemo(() => resolveGrade(timeOfDay ?? DEFAULT_TIME_OF_DAY), [timeOfDay]);
