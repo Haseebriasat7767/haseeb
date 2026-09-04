@@ -2,7 +2,9 @@
 
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { WebGLPathTracer } from 'three-gpu-pathtracer';
+import { HalfFloatType, LinearFilter, WebGLRenderTarget, type IUniform, type Texture } from 'three';
+import { FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
+import { DenoiseMaterial, WebGLPathTracer } from 'three-gpu-pathtracer';
 
 type PathTracerProps = {
   /** Whether to trace at all. False leaves the raster pipeline untouched. */
@@ -16,6 +18,54 @@ type PathTracerProps = {
   /** Multiplier on the hour's exposure while tracing. See the note below. */
   exposureBoost?: number;
 };
+
+/**
+ * How hard the denoiser works, as a function of how converged the image is.
+ *
+ * A spatial denoiser trades detail for noise, and the right trade changes
+ * completely over the life of a render. At ten samples the image is almost
+ * entirely noise and there is very little detail to protect, so a wide
+ * kernel with a generous edge threshold is a pure win. At three hundred the
+ * noise is nearly gone and the same kernel would do nothing but soften the
+ * stone, so it has to stand down.
+ *
+ * Ramping between the two is what makes the early frames worth looking at
+ * without costing anything at the end — which is the whole point of having
+ * a denoiser rather than simply waiting for more samples.
+ */
+function denoiseStrength(
+  samples: number,
+  maxSamples: number,
+): { sigma: number; threshold: number } {
+  // Reaches its tight end at forty percent of the sample budget rather than
+  // at the end of it: by roughly a hundred and thirty samples a scene this
+  // size is already clean enough that the filter should be doing almost
+  // nothing but softening detail.
+  const t = Math.min(1, Math.max(0, samples / Math.max(1, maxSamples * 0.4)));
+  const eased = t * t;
+  return {
+    // Kernel radius, in pixels.
+    sigma: 6.0 - eased * 4.4,
+    // Edge threshold: how different two samples may be before the filter
+    // stops mixing them.
+    //
+    // This has to start far wider than an edge-preserving filter normally
+    // wants, because the dominant artefact early in a path trace is not
+    // grain but *fireflies* — single pixels that caught an improbably
+    // bright path and sit an order of magnitude above their neighbours. To
+    // a bilateral filter a firefly looks exactly like an edge, so a tight
+    // threshold preserves every one of them; the rendered frames showed
+    // precisely that, with the flat areas cleaned up and the building still
+    // covered in speckle. Opening the threshold lets the filter average
+    // them away, and the ramp closes it again as the samples accumulate and
+    // there is real detail worth protecting.
+    // Settled by looking at both ends. At 0.55 the filter absorbed every
+    // firefly and took the building's edges with them; at 0.1 the flat
+    // areas cleaned up and the speckle survived untouched. Thirty is the
+    // point where fireflies go and silhouettes stay.
+    threshold: 0.3 - eased * 0.28,
+  };
+}
 
 /**
  * Progressive path tracing of the live scene.
@@ -76,6 +126,42 @@ export function PathTracer({
 
   const reported = useRef(-1);
 
+  // ── Denoising ─────────────────────────────────────────────────────────
+  //
+  // `three-gpu-pathtracer` ships the filter but composes nothing: it is a
+  // fullscreen material and the wiring is left to the application. The hook
+  // it provides is `renderToCanvasCallback`, which hands over the traced
+  // target, the renderer and the tracer's own display quad just before that
+  // quad is drawn to the canvas.
+  //
+  // The filter is inserted *before* that quad rather than in place of it,
+  // which matters: the display quad owns the cross-fade opacity, the tone
+  // curve and the blend mode that lets the traced image come up over the
+  // rasterized one. Replacing it would denoise the image and lose all
+  // three. Denoising into an intermediate target and then pointing the
+  // quad at that keeps every one of them exactly as it was.
+  const denoise = useMemo(() => {
+    const material = new DenoiseMaterial();
+    const quad = new FullScreenQuad(material);
+    // Half float, because the traced image is HDR and the display quad
+    // still has tone mapping to do after this.
+    const target = new WebGLRenderTarget(1, 1, {
+      type: HalfFloatType,
+      minFilter: LinearFilter,
+      magFilter: LinearFilter,
+      depthBuffer: false,
+    });
+    return { material, quad, target };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      denoise.quad.dispose();
+      denoise.material.dispose();
+      denoise.target.dispose();
+    };
+  }, [denoise]);
+
   useEffect(() => {
     if (!active) return;
 
@@ -113,6 +199,47 @@ export function PathTracer({
     if (!active) return;
     tracer.updateCamera();
   }, [active, tracer, size.width, size.height]);
+
+  useEffect(() => {
+    if (!active) return;
+
+    const previous = tracer.renderToCanvasCallback;
+    tracer.renderToCanvasCallback = (target, renderer, quad) => {
+      const source = target.texture;
+      const width = target.width;
+      const height = target.height;
+
+      if (denoise.target.width !== width || denoise.target.height !== height) {
+        denoise.target.setSize(width, height);
+      }
+
+      const { sigma, threshold } = denoiseStrength(tracer.samples, maxSamples);
+      // `DenoiseMaterial` declares its uniforms in its own constructor, so
+      // they are always present; the index signature simply cannot say so.
+      const uniforms = denoise.material.uniforms as Record<string, IUniform>;
+      uniforms.map!.value = source;
+      uniforms.sigma!.value = sigma;
+      uniforms.threshold!.value = threshold;
+      uniforms.kSigma!.value = 1;
+
+      const restore = renderer.getRenderTarget();
+      renderer.setRenderTarget(denoise.target);
+      denoise.quad.render(renderer);
+      renderer.setRenderTarget(restore);
+
+      // Hand the tracer's own display quad the filtered image and let it do
+      // everything it was already doing.
+      (quad.material as unknown as { map: Texture | null }).map = denoise.target.texture;
+      const autoClear = renderer.autoClear;
+      renderer.autoClear = false;
+      quad.render(renderer);
+      renderer.autoClear = autoClear;
+    };
+
+    return () => {
+      tracer.renderToCanvasCallback = previous;
+    };
+  }, [active, tracer, denoise, maxSamples]);
 
   // Exposure has to be re-decided for a traced image.
   //

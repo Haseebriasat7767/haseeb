@@ -212,7 +212,13 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     id: 'goldenHour',
     label: 'Golden hour',
     sun: {
-      elevation: 13,
+      // Lower. Thirteen degrees was already low, but the shadows it threw
+      // were short enough that the terrace — a large pale plane occupying
+      // the bottom third of the hero — took the light flat and read as an
+      // empty slab. At nine the overhangs, the parapets and the planting
+      // all lay their shadows across it, which is what gives a golden-hour
+      // exterior its modelling.
+      elevation: 9,
       // Swung forward, onto the elevation the cameras actually look at.
       //
       // Azimuth here is measured from +Z toward +X, and the terrace, the
@@ -222,7 +228,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       // round it went behind the building entirely. Just over fifty puts
       // the key in front and to the right, which lights the front elevation
       // while still throwing the long shadows the hour is chosen for.
-      azimuth: 52,
+      azimuth: 64,
       intensity: 3.6,
       color: '#ffd6ab',
       shadowExtent: 54,

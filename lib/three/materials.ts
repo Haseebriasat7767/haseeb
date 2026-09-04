@@ -387,6 +387,111 @@ uniform float uAerialEnd;`,
 }
 
 /**
+ * The signature of a maintained lawn: the mow itself.
+ *
+ * ## Why this and not more grass
+ *
+ * The lawn was the largest dead area left in the exterior — a broad field of
+ * one green, with instanced blades near the house and nothing beyond them.
+ * The obvious response is more blades, and it is the wrong one: blades stop
+ * resolving past fifteen metres or so, and sowing them further only spends
+ * the budget on noise nobody can see.
+ *
+ * What actually reads at that distance is the *mow*. A cylinder mower lays
+ * the grass over in the direction it travelled, and grass lying away from
+ * you reflects differently from grass lying toward you, so a mown lawn is
+ * banded in broad alternating stripes. That banding is present in almost
+ * every photograph of a maintained property, it is legible at any distance,
+ * and it is the single clearest signal separating landscaping from a field.
+ *
+ * Kept deliberately quiet — a few percent, over bands several metres wide,
+ * with the band edges softened and drifting so they never read as a
+ * repeating pattern. The aim is that a viewer registers "this lawn is
+ * looked after" without ever consciously seeing a stripe.
+ */
+// Self-contained: this block is injected ahead of the shared noise helpers
+// (the ashlar and variation passes both anchor on the same include, and the
+// last one to patch ends up first), so it cannot call them.
+const MOWN_GLSL = `
+uniform float uMowWidth;
+uniform float uMowStrength;
+uniform float uMowAngle;
+
+float aureliaMowWander(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  vec4 h = vec4(
+    dot(i + vec2(0.0, 0.0), vec2(127.1, 311.7)),
+    dot(i + vec2(1.0, 0.0), vec2(127.1, 311.7)),
+    dot(i + vec2(0.0, 1.0), vec2(127.1, 311.7)),
+    dot(i + vec2(1.0, 1.0), vec2(127.1, 311.7))
+  );
+  h = fract(sin(h) * 43758.5453);
+  return mix(mix(h.x, h.y, f.x), mix(h.z, h.w, f.x), f.y);
+}
+
+float aureliaMow(vec3 worldPos) {
+  vec2 dir = vec2(cos(uMowAngle), sin(uMowAngle));
+  float along = dot(worldPos.xz, dir);
+
+  // The mower does not drive in a perfectly straight line, and the bands it
+  // leaves wander by a few centimetres over their length. Warping the phase
+  // with a very low-frequency noise sample is what stops the stripes
+  // reading as a printed pattern.
+  float wander = aureliaMowWander(worldPos.xz * 0.02) - 0.5;
+  float phase = (along / uMowWidth) + wander * 0.35;
+
+  // A soft square wave: flat across each band, eased at the edges, because
+  // the boundary between two passes of a mower is a blend and not a line.
+  float band = sin(phase * 3.14159265);
+  return sign(band) * smoothstep(0.0, 0.55, abs(band));
+}
+`;
+
+/**
+ * Applies the mow above, on top of whatever the material already does.
+ *
+ * The band is folded into both the albedo and the roughness. Both matter:
+ * grass lying away from the viewer is not merely darker, it is glossier,
+ * and it is that difference in sheen — not the tone — that survives when
+ * the sun comes round.
+ */
+function withMownBands<T extends MeshStandardMaterial>(
+  material: T,
+  options: { width: number; strength: number; angle: number },
+): T {
+  const existing = material.onBeforeCompile;
+
+  material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
+    existing?.(shader, undefined as never);
+
+    shader.uniforms.uMowWidth = { value: options.width };
+    shader.uniforms.uMowStrength = { value: options.strength };
+    shader.uniforms.uMowAngle = { value: options.angle };
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${MOWN_GLSL}`)
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+  float aureliaMowBand = aureliaMow(vAureliaWorldPos);
+  diffuseColor.rgb *= 1.0 + aureliaMowBand * uMowStrength;`,
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+  roughnessFactor = clamp(roughnessFactor - aureliaMowBand * 0.06, 0.05, 1.0);`,
+      );
+  };
+
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.customProgramCacheKey = () => `${previousKey ? previousKey() : 'aurelia'}-mown`;
+
+  return material;
+}
+
+/**
  * Ashlar: a facade built from stone slabs rather than painted one colour.
  *
  * ## What was actually wrong
@@ -672,11 +777,48 @@ function withAshlar<T extends MeshStandardMaterial>(material: T, options: Ashlar
  */
 function withGlassFresnel<T extends MeshPhysicalMaterial>(material: T): T {
   material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\nvarying vec3 vAureliaGlassPos;`)
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>\n  vAureliaGlassPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+      );
+
     shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vAureliaGlassPos;
+
+// Pane-to-pane variation.
+//
+// A curtain wall is not one sheet of glass. It is dozens of panes, each
+// from a different part of a different batch, each with slightly different
+// coating thickness and a different room behind it — so a real facade has
+// visible tonal drift from pane to pane, and that drift is most of what
+// stops a glazed elevation reading as a printed grid. Rendered as one
+// uniform material the whole wall resolved to the same dark rectangle
+// repeated, which is exactly how the frames read it.
+//
+// The cell is derived in world space from the surface's dominant axis, at
+// roughly the mullion spacing the facade is actually set out on.
+float aureliaPaneShade(vec3 worldPos, vec3 viewNormal) {
+  vec3 n = abs(mat3(inverse(viewMatrix)) * viewNormal);
+  vec2 p;
+  if (n.y >= n.x && n.y >= n.z) p = worldPos.xz;
+  else if (n.x >= n.z) p = vec2(worldPos.z, worldPos.y);
+  else p = vec2(worldPos.x, worldPos.y);
+
+  vec2 cell = floor(p / vec2(1.45, 2.6));
+  float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+  return (h - 0.5) * 2.0;
+}`,
+      )
       .replace(
         '#include <normal_fragment_maps>',
         `#include <normal_fragment_maps>
   float aureliaFacing = clamp(abs(dot(normalize(vViewPosition), normal)), 0.0, 1.0);
+  float aureliaPane = aureliaPaneShade(vAureliaGlassPos, normal);
   // Schlick, with the base reflectance folded into the ramp: a pane goes
   // from the hour's opacity face-on to effectively solid at the grazing
   // angles that rake along a facade.
@@ -687,7 +829,13 @@ function withGlassFresnel<T extends MeshPhysicalMaterial>(material: T): T {
       .replace(
         '#include <lights_physical_fragment>',
         `#include <lights_physical_fragment>
-  material.specularColor *= clamp(1.0 / max(aureliaAlpha, 0.25), 1.0, 4.0);`,
+  material.specularColor *= clamp(1.0 / max(aureliaAlpha, 0.25), 1.0, 4.0);
+  // Each pane reflects a little more or a little less than its neighbour,
+  // and sits a little warmer or cooler. Small numbers on purpose: the aim
+  // is that no two panes match, not that any one of them stands out.
+  material.specularColor *= 1.0 + aureliaPane * 0.16;
+  material.diffuseColor *= 1.0 + aureliaPane * 0.09;
+  material.roughness = clamp(material.roughness + aureliaPane * 0.012, 0.01, 1.0);`,
       );
   };
 
@@ -918,16 +1066,19 @@ function createMaterials() {
      * landscaped property rather than a fill colour.
      */
     terrain: withAerialPerspective(
-      withVariation(
-        standard({ color: '#7c8354', roughness: 0.96, metalness: 0, envMapIntensity: 0.7 }),
-        {
-          scale: 0.045,
-          colorVariation: 0.42,
-          roughnessVariation: 0.12,
-          seed: 131,
-          normalStrength: 0.1,
-          normalScale: 0.35,
-        },
+      withMownBands(
+        withVariation(
+          standard({ color: '#7c8354', roughness: 0.96, metalness: 0, envMapIntensity: 0.7 }),
+          {
+            scale: 0.045,
+            colorVariation: 0.42,
+            roughnessVariation: 0.12,
+            seed: 131,
+            normalStrength: 0.1,
+            normalScale: 0.35,
+          },
+        ),
+        { width: 3.6, strength: 0.055, angle: 0.42 },
       ),
       // A clear evening has crisp visibility for kilometres, so haze must
       // not touch the estate itself: the first attempt began at seventy
