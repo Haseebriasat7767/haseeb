@@ -213,9 +213,18 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     label: 'Golden hour',
     sun: {
       elevation: 13,
-      azimuth: 74,
+      // Swung forward, onto the elevation the cameras actually look at.
+      //
+      // Azimuth here is measured from +Z toward +X, and the terrace, the
+      // pool and all three exterior framings are on the +Z side. At
+      // seventy-four degrees the sun was almost due +X, raking the end
+      // elevation and leaving the long glazed face barely lit; further
+      // round it went behind the building entirely. Just over fifty puts
+      // the key in front and to the right, which lights the front elevation
+      // while still throwing the long shadows the hour is chosen for.
+      azimuth: 52,
       intensity: 3.6,
-      color: '#ffcf9a',
+      color: '#ffd6ab',
       shadowExtent: 54,
       shadowBias: -0.0005,
       shadowNormalBias: 0.075,

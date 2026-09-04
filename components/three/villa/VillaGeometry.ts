@@ -66,7 +66,7 @@ export const VILLA_CONFIG: VillaConfig = {
   facadeSkinDepth: 0.24,
   facadeRevealGap: 0.09,
   frameWidth: 0.07,
-  frameDepth: 0.1,
+  frameDepth: 0.2,
   glassThickness: 0.03,
   mullionSpacing: 1.6,
 

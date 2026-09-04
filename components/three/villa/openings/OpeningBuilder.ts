@@ -96,7 +96,7 @@ function buildSkin(wall: FacadeWall, params: OpeningParams, out: OpeningsGeometr
  */
 function layerDepths(wall: FacadeWall, params: OpeningParams) {
   const perimeter: Range = wall.skin ? [0.02, params.skinDepth] : [0, params.frameDepth];
-  const glassAt = wall.skin ? params.skinDepth * 0.22 : params.frameDepth * 0.35;
+  const glassAt = wall.skin ? params.skinDepth * 0.22 : params.frameDepth * 0.16;
   const mullion: Range = [glassAt - 0.015, glassAt + params.frameDepth * 0.8];
   return { perimeter, mullion, glassAt };
 }

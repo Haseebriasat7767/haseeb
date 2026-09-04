@@ -12,9 +12,9 @@ export const CAMERA_VIEWS: readonly CameraView[] = [
     // A standing architectural camera rather than an aerial one. See the
     // note on the journey's arrival framing: at thirteen metres the roof
     // was a quarter of the frame and the site read as a map.
-    position: [28, 5.5, 36],
-    target: [-2, 4, 2],
-    fov: 40,
+    position: [21, 3.8, 27],
+    target: [-4, 4.9, 0],
+    fov: 46,
   },
   {
     id: 'front',

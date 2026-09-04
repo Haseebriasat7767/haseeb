@@ -103,11 +103,15 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
     // separation puts the warmth back into the sunlit fabric without
     // tinting the shadows, and the extra contrast is what stops the image
     // sitting in its middle third.
-    slope: [1.075, 1.005, 0.925],
-    offset: [0.0, 0.004, 0.016],
-    power: [0.985, 1.0, 1.02],
-    saturation: 1.14,
-    contrast: 1.13,
+    // Warm, but not amber. The previous separation put nearly fifteen
+    // percent between the red and blue gain, which on a pale stone facade
+    // came out as ochre rather than as sunlit limestone. Half that reads as
+    // the same hour without staining the building.
+    slope: [1.04, 1.002, 0.962],
+    offset: [0.0, 0.004, 0.014],
+    power: [0.99, 1.0, 1.012],
+    saturation: 1.08,
+    contrast: 1.12,
     vignette: 0.18,
     bloomStrength: 0.16,
     bloomThreshold: 1.55,

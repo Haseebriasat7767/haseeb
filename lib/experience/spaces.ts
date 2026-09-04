@@ -75,7 +75,7 @@ export const SPACES: readonly Space[] = [
     description:
       'The drive arrives obliquely, so the residence is never seen head-on until you are standing on it. Stepping slabs cross the grade to a recessed entrance held between two full-height blades.',
     feature: 'Two-storey entrance slot, roofed in glass',
-    view: view('arrival', 'Arrival', [28, 5.5, 36], [-2, 4, 2], 40),
+    view: view('arrival', 'Arrival', [21, 3.8, 27], [-4, 4.9, 0], 46),
     level: 'site',
     anchor: 'approach',
   },

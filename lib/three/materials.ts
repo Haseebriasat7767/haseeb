@@ -387,6 +387,257 @@ uniform float uAerialEnd;`,
 }
 
 /**
+ * Ashlar: a facade built from stone slabs rather than painted one colour.
+ *
+ * ## What was actually wrong
+ *
+ * The elevations were a single continuous surface carrying fine-grained
+ * noise. Every square metre of it was statistically identical to every
+ * other, and that is not what stone looks like from any distance. A clad
+ * facade is an assembly of *pieces*: each slab comes off a different part of
+ * a block, so it sits a shade warmer or cooler or darker than its
+ * neighbours, and between them runs a narrow recessed joint that catches a
+ * line of shadow. Those two facts — piece-to-piece variation and the joint
+ * grid — are the whole read. Without them, no amount of surface noise
+ * stops a wall looking like tinted plaster, which is exactly what the
+ * rendered frames showed.
+ *
+ * ## How it is built
+ *
+ * Slabs are laid out in world space, not in UV space. That matters: a
+ * building is clad by a mason working to the world horizontal, so courses
+ * run level across every wall and turn the corners in register. Deriving
+ * the coordinates from the world position and the world normal gives that
+ * for free, on geometry that carries no unwrap at all.
+ *
+ * The plane a slab lies in is chosen from the surface's dominant world
+ * axis, which also decides its format: vertical faces get wall-format
+ * ashlar laid in a running bond, and horizontal faces get square paving.
+ * That is not a shortcut — it is how the two are actually laid, and it
+ * means the same material clads a wall and paves the terrace correctly.
+ *
+ * The joint is a genuine recess as far as the shading is concerned: it
+ * darkens, it roughens, and — the part that does the work — it tilts the
+ * normal outward on each side, so the joint has two small chamfers that
+ * light and shade separately as the sun moves. A drawn dark line cannot do
+ * that, and a drawn dark line is what the brief rightly rules out.
+ *
+ * ## Where the scanned textures will go
+ *
+ * This is procedural and is not a substitute for a scanned slab. The
+ * structure is deliberately the one a real map set slots into: when
+ * `SurfaceMaps` gains real albedo/roughness/normal for limestone, they
+ * attach through `withMaps` exactly as now and this pass keeps supplying
+ * the thing a tiling texture cannot — joints in the right place on this
+ * particular building, and variation that does not repeat with the map.
+ */
+type AshlarOptions = {
+  /** Slab face dimensions on a vertical surface, in metres. */
+  course: [number, number];
+  /** Slab dimension on a horizontal surface, in metres. Paving is square. */
+  paver: number;
+  /** Joint width, in metres. Six to ten millimetres is architectural. */
+  joint: number;
+  /** How dark the joint runs, 0-1. */
+  jointDepth: number;
+  /** Peak normal tilt at the joint's chamfer. */
+  jointRelief: number;
+  /** Slab-to-slab tonal spread, as a fraction. */
+  slabVariation: number;
+  /** Slab-to-slab roughness spread. */
+  slabRoughness: number;
+  /** Distinct integer, so two ashlar materials never lay out identically. */
+  seed: number;
+};
+
+const ASHLAR_GLSL = `
+varying vec3 vAureliaWorldNormal;
+uniform vec2 uAshlarCourse;
+uniform float uAshlarPaver;
+uniform float uAshlarJoint;
+uniform float uAshlarDepth;
+uniform float uAshlarRelief;
+uniform float uAshlarTone;
+uniform float uAshlarRough;
+uniform float uAshlarSeed;
+
+float aureliaSlabHash(vec2 cell, float salt) {
+  float h = sin(dot(cell, vec2(127.1, 311.7)) + salt * 13.37 + uAshlarSeed) * 43758.5453;
+  return fract(h);
+}
+
+// Everything a fragment needs to know about the slab it belongs to.
+struct AureliaSlab {
+  float joint;    // 1 inside the joint, 0 in the field
+  float tone;     // per-slab tonal offset, centred on zero
+  float rough;    // per-slab roughness offset, centred on zero
+  vec2 chamfer;   // tilt direction in the slab's own plane
+  vec3 planeU;    // world direction of the plane's first axis
+  vec3 planeV;    // and its second
+};
+
+AureliaSlab aureliaAshlar(vec3 worldPos, vec3 worldNormal) {
+  AureliaSlab slab;
+
+  // Pick the plane from the dominant world axis, and with it the format:
+  // a wall is laid in courses, a floor is paved in squares.
+  vec3 a = abs(normalize(worldNormal));
+  vec2 p;
+  vec2 size;
+  float jointWidth = uAshlarJoint;
+  if (a.y >= a.x && a.y >= a.z) {
+    p = worldPos.xz;
+    size = vec2(uAshlarPaver);
+    jointWidth = uAshlarJoint * 2.6;
+    slab.planeU = vec3(1.0, 0.0, 0.0);
+    slab.planeV = vec3(0.0, 0.0, 1.0);
+  } else if (a.x >= a.z) {
+    p = vec2(worldPos.z, worldPos.y);
+    size = uAshlarCourse;
+    slab.planeU = vec3(0.0, 0.0, 1.0);
+    slab.planeV = vec3(0.0, 1.0, 0.0);
+  } else {
+    p = vec2(worldPos.x, worldPos.y);
+    size = uAshlarCourse;
+    slab.planeU = vec3(1.0, 0.0, 0.0);
+    slab.planeV = vec3(0.0, 1.0, 0.0);
+  }
+
+  // Running bond: every other course steps half a slab, which is how stone
+  // is actually laid and what stops the perpends lining up into columns.
+  float row = floor(p.y / size.y);
+  // Running bond on a wall, stack bond on the floor: large-format paving is
+  // laid square, and staggering it reads as brick paving rather than stone.
+  float bond = (a.y >= a.x && a.y >= a.z) ? 0.0 : 1.0;
+  float stagger = mod(row, 2.0) * 0.5 * size.x * bond;
+  float shifted = p.x + stagger;
+  float col = floor(shifted / size.x);
+
+  // A little length variation per course, so the wall is not a perfect grid.
+  float lengthJitter = (aureliaSlabHash(vec2(col, row), 3.0) - 0.5) * 0.16;
+  float fx = fract(shifted / size.x + lengthJitter * 0.0);
+  float fy = fract(p.y / size.y);
+
+  // Distance to the nearest joint, in metres, on each axis separately —
+  // the nearer one decides which way the chamfer faces.
+  float dx = min(fx, 1.0 - fx) * size.x;
+  float dy = min(fy, 1.0 - fy) * size.y;
+
+  float halfJoint = jointWidth * 0.5;
+  float nearest = min(dx, dy);
+  slab.joint = 1.0 - smoothstep(halfJoint * 0.35, halfJoint * 1.9, nearest);
+
+  // How wide a pixel is on this surface, in the same metres.
+  float footprint = max(fwidth(nearest), 1e-5);
+  slab.joint *= 1.0 - smoothstep(jointWidth * 0.6, jointWidth * 2.4, footprint);
+
+  vec2 cell = vec2(col, row);
+  slab.tone = (aureliaSlabHash(cell, 1.0) - 0.5) * 2.0;
+  slab.rough = (aureliaSlabHash(cell, 2.0) - 0.5) * 2.0;
+
+  // Paving carries more piece-to-piece spread than cladding, and needs to:
+  // a facade is read at a grazing angle where the joint line does the work,
+  // while a terrace is read from above at a distance where the hairline
+  // joint has already fallen below a pixel. Without a tonal difference
+  // between slabs that survives that, a paved terrace renders as one poured
+  // plane — which is exactly how the hero framing showed it.
+  if (a.y >= a.x && a.y >= a.z) {
+    slab.tone *= 2.4;
+    slab.rough *= 1.6;
+  }
+
+  // The chamfer runs outward from the slab's centre, on whichever axis the
+  // joint is nearer, and only within the joint itself.
+  float ramp = slab.joint * (1.0 - smoothstep(0.0, halfJoint * 0.5, nearest - halfJoint * 0.5));
+  float horizontal = step(dx, dy);
+  slab.chamfer = vec2(
+    (fx < 0.5 ? -1.0 : 1.0) * horizontal,
+    (fy < 0.5 ? -1.0 : 1.0) * (1.0 - horizontal)
+  ) * ramp;
+
+  return slab;
+}
+`;
+
+/**
+ * Applies the ashlar pass on top of whatever the material already does.
+ * Wraps rather than replaces `onBeforeCompile`, so the surface variation
+ * and the map pipeline both survive underneath it.
+ */
+function withAshlar<T extends MeshStandardMaterial>(material: T, options: AshlarOptions): T {
+  const existing = material.onBeforeCompile;
+
+  material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
+    existing?.(shader, undefined as never);
+
+    shader.uniforms.uAshlarCourse = { value: options.course };
+    shader.uniforms.uAshlarPaver = { value: options.paver };
+    shader.uniforms.uAshlarJoint = { value: options.joint };
+    shader.uniforms.uAshlarDepth = { value: options.jointDepth };
+    shader.uniforms.uAshlarRelief = { value: options.jointRelief };
+    shader.uniforms.uAshlarTone = { value: options.slabVariation };
+    shader.uniforms.uAshlarRough = { value: options.slabRoughness };
+    shader.uniforms.uAshlarSeed = { value: options.seed };
+
+    if (!shader.vertexShader.includes('vAureliaWorldPos')) {
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', `#include <common>\nvarying vec3 vAureliaWorldPos;`)
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>\n  vAureliaWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+        );
+    }
+
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\nvarying vec3 vAureliaWorldNormal;`)
+      .replace(
+        '#include <beginnormal_vertex>',
+        `#include <beginnormal_vertex>\n  vAureliaWorldNormal = mat3(modelMatrix) * objectNormal;`,
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${ASHLAR_GLSL}`)
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+  AureliaSlab aureliaSlab = aureliaAshlar(vAureliaWorldPos, vAureliaWorldNormal);
+  // Piece-to-piece variation first, then the joint darkening over it.
+  diffuseColor.rgb *= 1.0 + aureliaSlab.tone * uAshlarTone;
+  diffuseColor.rgb *= 1.0 - aureliaSlab.joint * uAshlarDepth;`,
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+  roughnessFactor = clamp(
+    roughnessFactor + aureliaSlab.rough * uAshlarRough + aureliaSlab.joint * 0.09,
+    0.05,
+    1.0
+  );`,
+      )
+      // After the shared variation has had its say, so the joint's chamfer
+      // sits on top of the stone's own grain rather than being averaged
+      // away by it.
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+  {
+    vec3 tiltWorld =
+      aureliaSlab.planeU * aureliaSlab.chamfer.x + aureliaSlab.planeV * aureliaSlab.chamfer.y;
+    vec3 tiltView = mat3(viewMatrix) * tiltWorld;
+    tiltView -= normal * dot(tiltView, normal);
+    normal = normalize(normal + tiltView * uAshlarRelief);
+  }`,
+      );
+  };
+
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : 'aurelia'}-ashlar-${options.seed}`;
+
+  return material;
+}
+
+/**
  * Fresnel on the transparency of architectural glazing.
  *
  * ## The problem this fixes
@@ -587,42 +838,78 @@ function createMaterials() {
      * at close range and disappears into a flat premium surface from the
      * hero camera distance.
      */
-    concrete: withMaps(
-      withVariation(
-        standard({ color: '#a1968a', roughness: 0.64, metalness: 0.02, envMapIntensity: 0.62 }),
-        {
-          scale: 1.1,
-          colorVariation: 0.035,
-          roughnessVariation: 0.09,
-          seed: 11,
-          // Fine aggregate and formwork pores in fair-faced concrete.
-          normalStrength: 0.0123,
-          normalScale: 2.4,
-        },
+    concrete: withAshlar(
+      withMaps(
+        withVariation(
+          standard({ color: '#c7bfae', roughness: 0.62, metalness: 0.01, envMapIntensity: 0.62 }),
+          {
+            // Wide, soft mottling at roughly the scale a block of limestone
+            // varies over — this is the bedding, and the ashlar pass on top
+            // supplies the pieces it is cut into.
+            scale: 0.42,
+            colorVariation: 0.07,
+            roughnessVariation: 0.1,
+            seed: 11,
+            // Slightly stretched along the bedding plane, as quarried stone
+            // is, rather than isotropic like aggregate.
+            anisotropy: [1, 0.55, 1],
+            normalStrength: 0.011,
+            normalScale: 2.4,
+          },
+        ),
+        'stone',
+        0.9,
       ),
-      'plaster',
-      0.8,
+      {
+        // Large-format cladding: a metre and a half by three-quarters is
+        // the size these elevations are actually detailed at, and it keeps
+        // the joint grid reading as architecture rather than as tiling.
+        course: [2.4, 1.2],
+        paver: 1.2,
+        joint: 0.007,
+        jointDepth: 0.13,
+        jointRelief: 0.28,
+        slabVariation: 0.019,
+        slabRoughness: 0.05,
+        seed: 3,
+      },
     ),
     /**
      * Honed limestone / travertine — warm off-white, restrained natural
      * irregularity. Coarser noise cells than concrete so it reads as large
      * quarried slabs, not aggregate.
      */
-    stone: withMaps(
-      withVariation(
-        standard({ color: '#b0a48d', roughness: 0.68, metalness: 0, envMapIntensity: 0.68 }),
-        {
-          scale: 0.55,
-          colorVariation: 0.055,
-          roughnessVariation: 0.12,
-          seed: 23,
-          // The open grain and shallow pitting of honed limestone.
-          normalStrength: 0.0112,
-          normalScale: 2.1,
-        },
+    stone: withAshlar(
+      withMaps(
+        withVariation(
+          standard({ color: '#cbc3b1', roughness: 0.66, metalness: 0, envMapIntensity: 0.68 }),
+          {
+            scale: 0.45,
+            colorVariation: 0.06,
+            roughnessVariation: 0.12,
+            seed: 23,
+            anisotropy: [1, 0.6, 1],
+            // The open grain and shallow pitting of honed limestone.
+            normalStrength: 0.0112,
+            normalScale: 2.1,
+          },
+        ),
+        'stone',
+        1.0,
       ),
-      'stone',
-      1.0,
+      {
+        // Heavier pieces than the cladding — a plinth, a coping and a
+        // retaining wall are all built from thicker stone than a facade
+        // panel, and the coursing shows it.
+        course: [1.8, 0.85],
+        paver: 1.0,
+        joint: 0.008,
+        jointDepth: 0.15,
+        jointRelief: 0.3,
+        slabVariation: 0.022,
+        slabRoughness: 0.055,
+        seed: 7,
+      },
     ),
     /**
      * The surrounding ground. Previously a near-black plane, which is what
@@ -632,10 +919,10 @@ function createMaterials() {
      */
     terrain: withAerialPerspective(
       withVariation(
-        standard({ color: '#6a7245', roughness: 0.96, metalness: 0, envMapIntensity: 0.6 }),
+        standard({ color: '#7c8354', roughness: 0.96, metalness: 0, envMapIntensity: 0.7 }),
         {
-          scale: 0.055,
-          colorVariation: 0.34,
+          scale: 0.045,
+          colorVariation: 0.42,
           roughnessVariation: 0.12,
           seed: 131,
           normalStrength: 0.1,
@@ -787,7 +1074,7 @@ function createMaterials() {
         // environment gained a ground below its horizon — until then the
         // lower half of every reflection was one flat colour, and no amount
         // of intensity could turn that into an image.
-        envMapIntensity: 2.4,
+        envMapIntensity: 3.2,
         transparent: true,
         opacity: 0.58,
         side: DoubleSide,
@@ -803,7 +1090,7 @@ function createMaterials() {
       roughness: 0.05,
       metalness: 0.05,
       reflectivity: 1,
-      envMapIntensity: 2.2,
+      envMapIntensity: 2.8,
     }),
     /**
      * Pool water — see `withWaterSurface` for the swell, the Fresnel ramp
@@ -917,7 +1204,7 @@ function createMaterials() {
      * ground at distance instead of as separate objects on top of it.
      */
     lawnBlade: standard({
-      color: '#63713e',
+      color: '#77854a',
       roughness: 0.94,
       metalness: 0,
       envMapIntensity: 0.4,
