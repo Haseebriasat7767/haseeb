@@ -22,12 +22,10 @@ import {
   createRug,
   createShelving,
   createShower,
-  createSideTable,
   createSofa,
   createVanity,
   createWC,
   emptyParts,
-  turned,
 } from './Furniture';
 import {
   createArtwork,
@@ -40,6 +38,26 @@ import {
   createTray,
   createVessel,
 } from './InteriorDecor';
+import type { Form } from '../furniture/FormTypes';
+import {
+  createBed as buildBed,
+  createHeadboard as buildHeadboard,
+  createLoungeChair,
+  createLowTable,
+  createNightstand as buildNightstand,
+  createPedestalTable,
+  createSofa as buildSofa,
+  createTableLamp,
+} from '../furniture/Pieces';
+import {
+  createBoardedWall,
+  createDressedWindow,
+  createPileRug,
+  createPlanted,
+  createScreen,
+  createStandingLamp,
+  createStyling,
+} from '../furniture/Staging';
 import { createInteriorPlan, FLOOR_BUILD_UP, type Room } from './InteriorPlan';
 import type { InteriorConfig, InteriorLayout, InteriorLight } from './InteriorTypes';
 
@@ -133,6 +151,10 @@ export function createInteriorLayout(
   const clear = config.wallClearance;
 
   const parts = emptyParts();
+  // Soft, turned and folded geometry, kept alongside the box specs rather
+  // than replacing them: the building fabric is still prisms, correctly, and
+  // only the things that are not buildings move onto this list.
+  const forms: Form[] = [];
   const floorsStone: BoxSpec[] = [];
   const floorsTimber: BoxSpec[] = [];
   const ceilings: BoxSpec[] = [];
@@ -319,38 +341,74 @@ export function createInteriorLayout(
   // ── Ground floor: living ──────────────────────────────────────────────
   const living = rooms.living;
   const livingRearZ = living.z[0];
-  createRug(parts, 'living-rug', mid(living.x), mid(living.z) + 0.7, living.floorY, 5.2, 4.2);
-  createSofa(
-    parts,
+  createPileRug(
+    forms,
+    'living-rug',
+    [mid(living.x), mid(living.z) + 0.7],
+    living.floorY,
+    5.2,
+    4.2,
+    91,
+  );
+
+  // ── The living room's hero furniture ───────────────────────────────────
+  // Everything here comes from `furniture/Pieces.ts` rather than from the
+  // box builders the other rooms still use. That split is deliberate and
+  // matches where the cameras actually are: this room and the master suite
+  // carry two of the five money shots, and they are the two where a
+  // rectangular prism with its corners knocked off stops being an
+  // acceptable description of a sofa.
+  const livingCx = mid(living.x);
+  buildSofa(
+    forms,
     'living-sofa',
-    mid(living.x),
-    living.z[0] + 1.6,
-    living.floorY,
-    3.4,
-    1.05,
-    'south',
+    { at: [livingCx, living.z[0] + 1.75], floorY: living.floorY, facing: 'south', seed: 11 },
+    { width: 3.0, depth: 1.08 },
   );
-  createCoffeeTable(
-    parts,
+  createLowTable(
+    forms,
     'living-table',
-    mid(living.x),
-    mid(living.z) + 0.9,
-    living.floorY,
-    1.7,
-    0.9,
+    { at: [livingCx, mid(living.z) + 0.9], floorY: living.floorY, facing: 'south', seed: 12 },
+    { width: 1.5, depth: 0.82, height: 0.38 },
   );
-  // The pair of chairs facing the seating group, each turned in toward it.
-  // Square-on they read as waiting-room furniture; a few degrees of toe-in
-  // is what an arrangement someone actually sits in looks like.
-  const chairAx = living.x[0] + 1.5;
-  const chairBx = living.x[0] + 3.4;
-  const chairZ = living.z[1] - 1.1;
-  turned(parts, -0.19, chairAx, chairZ, () => {
-    createArmchair(parts, 'living-chair-a', chairAx, chairZ, living.floorY, 'north');
-  });
-  turned(parts, 0.14, chairBx, chairZ, () => {
-    createArmchair(parts, 'living-chair-b', chairBx, chairZ, living.floorY, 'north');
-  });
+  // The pair of chairs facing the seating group, each toed in toward it.
+  // Square-on they read as waiting-room furniture; a few degrees of turn is
+  // what an arrangement someone actually sits in looks like.
+  createLoungeChair(
+    forms,
+    'living-chair-a',
+    {
+      at: [living.x[0] + 1.6, living.z[1] - 1.2],
+      floorY: living.floorY,
+      facing: 'north',
+      seed: 13,
+    },
+    { dark: true },
+  );
+  createLoungeChair(
+    forms,
+    'living-chair-b',
+    {
+      at: [living.x[0] + 3.5, living.z[1] - 1.2],
+      floorY: living.floorY,
+      facing: 'north',
+      seed: 14,
+    },
+    { dark: true },
+  );
+  forms[forms.length - 1]!.rotationY = (forms[forms.length - 1]!.rotationY ?? 0) + 0.16;
+  createPedestalTable(
+    forms,
+    'living-side',
+    [living.x[0] + 2.55, living.z[1] - 1.5],
+    living.floorY,
+    {
+      height: 0.5,
+      radius: 0.22,
+      seed: 15,
+    },
+  );
+
   // The chimney breast projects from the back wall, so the panelling above
   // stops beside it instead of running flush across.
   const fireplaceX: Range = [living.x[1] - 3.4, living.x[1] - 0.6];
@@ -375,10 +433,11 @@ export function createInteriorLayout(
   // because they are the largest soft mass and the one that gives the
   // double-height glazing a sense of scale.
   if (tier.decor) {
-    createCurtains(parts, 'living-curtain-front', {
+    createDressedWindow(forms, 'living-curtain', {
       across: inset(living.x, 0.25),
-      at: [living.z[1] - 0.34, living.z[1] - 0.16],
+      at: living.z[1] - 0.26,
       y: [living.floorY, living.ceilingY - 0.06],
+      seed: 41,
     });
 
     createArtwork(
@@ -391,15 +450,12 @@ export function createInteriorLayout(
       41,
     );
 
-    createPlant(
-      parts,
-      'living-plant',
-      living.x[1] - 0.85,
-      living.z[1] - 1.5,
-      living.floorY,
-      2.1,
-      17,
-    );
+    createPlanted(forms, parts.foliageClusters, 'living-plant', {
+      at: [living.x[1] - 0.9, living.z[1] - 1.6],
+      floorY: living.floorY,
+      height: 2.0,
+      seed: 17,
+    });
 
     // The coffee table, styled. A tray, a low stack of books beside it, and
     // one vessel — the composition every interior photograph uses, because
@@ -421,8 +477,12 @@ export function createInteriorLayout(
     living.ceilingY - config.ceilingDepth,
   );
   if (tier.accessories) {
-    createFloorLamp(parts, 'living-lamp', living.x[0] + 0.7, living.z[1] - 1.4, living.floorY);
-    createSideTable(parts, 'living-side', living.x[1] - 0.9, living.z[0] + 1.9, living.floorY);
+    createStandingLamp(
+      forms,
+      'living-lamp',
+      [living.x[0] + 0.75, living.z[1] - 2.4],
+      living.floorY,
+    );
   }
 
   // ── Ground floor: dining ──────────────────────────────────────────────
@@ -671,114 +731,109 @@ export function createInteriorLayout(
   createCoffeeTable(parts, 'media-table', mid(media.x), mid(media.z) + 0.2, media.floorY, 1.0, 0.7);
 
   // ── Upper floor: master suite ─────────────────────────────────────────
+  // The highest-priority room in the residence. Every piece here is soft or
+  // turned geometry; nothing in this room is a prism except the building
+  // around it.
   const master = rooms.masterBedroom;
-  const masterBedCz = master.z[0] + clear + 1.05;
-  // The dressed bed replaces the plain slab `createBed` produced. It is the
-  // anchor of the room and the first thing the camera reads.
-  const masterBedX: Range = [mid(master.x) - 0.975, mid(master.x) + 0.975];
-  const masterBedZ: Range = [masterBedCz - 1.05, masterBedCz + 1.05];
-  createHeadboard(parts, 'master-headboard', masterBedX, masterBedZ[0], -1, master.floorY, 1.25);
-  createBedding(parts, 'master-bed', {
-    x: masterBedX,
-    z: masterBedZ,
-    floorY: master.floorY,
-    headAt: 'north',
-    seed: 61,
-  });
-  createNightstand(
-    parts,
-    'master-night-a',
-    mid(master.x) - 1.42,
-    master.z[0] + 0.5,
-    master.floorY,
-    true,
+  const masterCx = mid(master.x);
+  const masterBedCz = master.z[0] + clear + 1.35;
+
+  buildHeadboard(
+    forms,
+    'master-headboard',
+    {
+      at: [masterCx, master.z[0] + clear + 0.16],
+      floorY: master.floorY,
+      facing: 'south',
+      seed: 61,
+    },
+    { width: 2.5, height: 1.2 },
   );
-  createNightstand(
-    parts,
-    'master-night-b',
-    mid(master.x) + 1.42,
-    master.z[0] + 0.5,
-    master.floorY,
-    true,
+  buildBed(
+    forms,
+    'master-bed',
+    { at: [masterCx, masterBedCz], floorY: master.floorY, facing: 'south', seed: 62 },
+    { width: 1.98, length: 2.14 },
   );
-  createRug(parts, 'master-rug', mid(master.x), masterBedCz + 0.3, master.floorY, 4.4, 3.6);
-  // The two chairs in the window bay, turned toward each other across the
-  // side table between them.
-  const masterChairZ = master.z[1] - 0.9;
-  const masterChairAx = mid(master.x) - 1.1;
-  const masterChairBx = mid(master.x) + 1.1;
-  turned(parts, 0.28, masterChairAx, masterChairZ, () => {
-    createArmchair(parts, 'master-chair-a', masterChairAx, masterChairZ, master.floorY, 'north');
+
+  for (const side of [-1, 1] as const) {
+    const nx = masterCx + side * 1.62;
+    const nz = master.z[0] + clear + 0.62;
+    buildNightstand(forms, `master-night-${side}`, [nx, nz], master.floorY, 70 + side, 'south');
+    createTableLamp(forms, `master-lamp-${side}`, [nx, nz], master.floorY + 0.52, {
+      height: 0.5,
+      shadeRadius: 0.15,
+    });
+  }
+
+  createPileRug(forms, 'master-rug', [masterCx, masterBedCz + 0.5], master.floorY, 4.6, 3.8, 92);
+
+  // A pair of chairs in the window bay with a pedestal table between them,
+  // turned toward each other rather than squared to the room.
+  const masterChairZ = master.z[1] - 1.05;
+  createLoungeChair(
+    forms,
+    'master-chair-a',
+    { at: [masterCx - 1.15, masterChairZ], floorY: master.floorY, facing: 'north', seed: 63 },
+    { dark: true },
+  );
+  createLoungeChair(
+    forms,
+    'master-chair-b',
+    { at: [masterCx + 1.15, masterChairZ], floorY: master.floorY, facing: 'north', seed: 64 },
+    { dark: true },
+  );
+  createPedestalTable(forms, 'master-side', [masterCx, masterChairZ - 0.1], master.floorY, {
+    height: 0.48,
+    radius: 0.21,
+    seed: 65,
   });
-  turned(parts, -0.28, masterChairBx, masterChairZ, () => {
-    createArmchair(parts, 'master-chair-b', masterChairBx, masterChairZ, master.floorY, 'north');
-  });
-  createSideTable(parts, 'master-side', mid(master.x), master.z[1] - 0.9, master.floorY);
 
   if (tier.decor) {
-    createCurtains(parts, 'master-curtain', {
+    createDressedWindow(forms, 'master-curtain', {
       across: inset(master.x, 0.3),
-      at: [master.z[1] - 0.34, master.z[1] - 0.16],
+      at: master.z[1] - 0.24,
       y: [master.floorY, master.ceilingY - 0.06],
+      seed: 66,
     });
-    createArtwork(
-      parts,
-      'master-art',
-      [mid(master.z) - 0.75, mid(master.z) + 0.75],
-      [master.floorY + 1.35, master.floorY + 2.45],
-      [master.x[0] + 0.1, master.x[0] + 0.16],
-      'x',
-      67,
-    );
-    createPlant(
-      parts,
-      'master-plant',
-      master.x[0] + 0.8,
-      master.z[1] - 1.2,
-      master.floorY,
-      1.5,
-      29,
-    );
+
+    // The screen on the wall opposite the bed, held off the plaster on a
+    // bracket so a shadow runs behind it.
+    createScreen(forms, 'master-screen', {
+      across: [master.z[0] + 1.6, master.z[0] + 3.2],
+      y: [master.floorY + 1.05, master.floorY + 1.98],
+      at: master.x[0] + 0.08,
+      axis: 'x',
+      towards: 1,
+    });
+
+    createPlanted(forms, parts.foliageClusters, 'master-plant', {
+      at: [master.x[0] + 0.85, master.z[1] - 1.4],
+      floorY: master.floorY,
+      height: 1.6,
+      seed: 29,
+    });
+
     // One object on each nightstand, and deliberately not the same object.
-    createVessel(
-      parts,
-      'master-night-vase',
-      mid(master.x) - 1.42,
-      master.z[0] + 0.5,
-      master.floorY + 0.56,
-      0.18,
-      0.055,
-    );
-    createBooks(
-      parts,
-      'master-night-books',
-      mid(master.x) + 1.42,
-      master.z[0] + 0.5,
-      master.floorY + 0.56,
-      2,
+    createStyling(
+      forms,
+      'master-styling',
+      [masterCx + 1.62, master.z[0] + clear + 0.62],
+      master.floorY + 0.52,
       71,
     );
   }
-  // The timber lining behind the bed.
-  //
-  // It used to start four hundred millimetres above the floor and stop well
-  // short of the ceiling, inset over a metre from each side wall — which
-  // meant a large slab of dark timber with daylight visible all the way
-  // around it. Nothing holds a panel like that up, and the frames read it
-  // exactly as what it was: a rectangle hanging in the air behind the bed.
-  //
-  // A lining is built into the room. This one lands on the floor, runs up
-  // to the ceiling's shadow gap, and stops close enough to each side wall
-  // to read as the wall's own finish rather than as furniture standing
-  // against it.
-  createBuiltIn(
-    parts,
-    'master-panel',
-    inset(master.x, 0.32),
-    band(master.z, 'start', 0.1),
-    [master.floorY, master.ceilingY - config.ceilingDepth - 0.035],
-    1.3,
-  );
+
+  // The timber lining behind the bed, built as real boards on a shadow gap.
+  createBoardedWall(forms, 'master-panel', {
+    across: inset(master.x, 0.32),
+    at: master.z[0] + 0.06,
+    y: [master.floorY, master.ceilingY - config.ceilingDepth - 0.035],
+    axis: 'x',
+    depth: 0.06,
+    boardHeight: 0.34,
+  });
+
   createCove(
     parts,
     'master-cove',
@@ -1156,6 +1211,7 @@ export function createInteriorLayout(
 
   return {
     rooms: roomList,
+    forms,
     floorsStone,
     floorsTimber,
     ceilings,

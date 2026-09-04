@@ -350,6 +350,17 @@ export function createLandscapeLayout(
   const treePositions: Vector3Tuple[] = [
     [ctx.approachX[0] - 13.4, 0, approachMidZ + 3.6],
     [ctx.approachX[1] + 2.4, 0, ctx.approachZ[1] + 8.5],
+    // Two specimens in the south-east foreground.
+    //
+    // The hero camera now stands at eye height on that side rather than
+    // looking down from thirty metres, and at eye height the whole near
+    // half of the frame was an empty lawn running to the plinth. A
+    // photograph of a property is built in depth — something close, the
+    // building beyond it, landscape behind that — and without a foreground
+    // there is no depth to read. These two stand off the corner of the
+    // approach, well clear of the elevation they frame.
+    [30.5, 0, 33.5],
+    [39, 0, 15],
   ];
   const ringCount = Math.max(0, treeCount - treePositions.length);
   for (let i = 0; i < ringCount; i += 1) {

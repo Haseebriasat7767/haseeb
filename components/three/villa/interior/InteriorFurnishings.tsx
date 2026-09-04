@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { getMaterials } from '@/lib/three/materials';
+import { FormRenderer } from '../furniture/FormRenderer';
 import { FoliageCards } from '../landscape/FoliageCards';
 import { createFoliageCards } from '../landscape/FoliageGeometry';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../VillaPrimitives';
@@ -31,7 +32,7 @@ export function InteriorFurnishings({
   const plantCards = useMemo(
     () =>
       createFoliageCards(parts.foliageClusters, detail, {
-        sizeScale: 0.42,
+        sizeScale: 0.62,
         cells: [0, 1, 2, 3],
       }),
     [parts.foliageClusters, detail],
@@ -39,6 +40,11 @@ export function InteriorFurnishings({
 
   return (
     <group name="InteriorFurnishings">
+      {/* The soft and turned pieces — sofas, beds, cushions, lamps, curtains,
+          planting. One merged mesh per material, exactly like the box specs
+          below, so replacing prisms with rounded geometry did not cost a
+          single extra draw call. */}
+      <FormRenderer name="furniture-forms" forms={layout.forms} />
       <MergedBoxes name="furniture-joinery" specs={parts.joinery} material={materials.joinery} />
       {/* Seats, backs, arms and mattresses take a far softer edge than the
           building does — a cushion breaks over a couple of centimetres. */}

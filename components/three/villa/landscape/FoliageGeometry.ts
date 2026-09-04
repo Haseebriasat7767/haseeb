@@ -27,8 +27,8 @@ const CARD_DETAIL: Record<DetailTier, { perCluster: number; shrubCards: number }
   // Enough cards that no viewing angle finds a gap between them. Four left
   // holes the inner mass showed through, and a crown with a hole in it
   // reads as broken geometry rather than as a tree.
-  medium: { perCluster: 5, shrubCards: 2 },
-  high: { perCluster: 7, shrubCards: 3 },
+  medium: { perCluster: 5, shrubCards: 4 },
+  high: { perCluster: 7, shrubCards: 5 },
 };
 
 const between = (rng: () => number, lo: number, hi: number) => lo + rng() * (hi - lo);

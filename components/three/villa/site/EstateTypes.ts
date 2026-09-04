@@ -1,3 +1,4 @@
+import type { Form } from '../furniture/FormTypes';
 import type { BoxSpec, ColumnSpec, DetailTier, Range } from '../VillaTypes';
 
 /** A rectangle of ground, in plan. Used to keep the lawn off hard paving. */
@@ -49,6 +50,13 @@ export type OutdoorConfig = {
  * merged mesh — the same discipline the villa and its interior follow.
  */
 export type EstateLayout = {
+  /**
+   * Outdoor soft and turned geometry — loungers, sofas, dining chairs and
+   * planters. Kept separate from the box lists below for the same reason
+   * the interior keeps its own: paving, kerbs and lantern bodies really are
+   * prisms, and furniture is not.
+   */
+  forms: Form[];
   /** Large-format paving of the drive and the court. */
   paving: BoxSpec[];
   /** The upstand that stops the paving reading as a decal on the grass. */

@@ -9,16 +9,23 @@ export const CAMERA_VIEWS: readonly CameraView[] = [
   {
     id: 'approach',
     label: 'Approach',
-    position: [36, 13, 44],
-    target: [0, 4, 0],
-    fov: 30,
+    // A standing architectural camera rather than an aerial one. See the
+    // note on the journey's arrival framing: at thirteen metres the roof
+    // was a quarter of the frame and the site read as a map.
+    position: [28, 5.5, 36],
+    target: [-2, 4, 2],
+    fov: 40,
   },
   {
     id: 'front',
-    label: 'Front',
-    position: [0, 9, 58],
-    target: [0, 4.5, 0],
-    fov: 28,
+    label: 'Entrance',
+    // The arrival, from the court rather than from the middle of the lawn.
+    // A distant square-on elevation is a drawing; the shot that sells a
+    // private residence is the one taken standing on its own paving,
+    // looking at its front door.
+    position: [-9, 1.8, 34],
+    target: [-6.5, 3, 15],
+    fov: 44,
   },
   {
     id: 'elevation',

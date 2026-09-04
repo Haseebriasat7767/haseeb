@@ -75,7 +75,7 @@ export const SPACES: readonly Space[] = [
     description:
       'The drive arrives obliquely, so the residence is never seen head-on until you are standing on it. Stepping slabs cross the grade to a recessed entrance held between two full-height blades.',
     feature: 'Two-storey entrance slot, roofed in glass',
-    view: view('arrival', 'Arrival', [40, 15, 50], [1, 4.5, 2], 31),
+    view: view('arrival', 'Arrival', [28, 5.5, 36], [-2, 4, 2], 40),
     level: 'site',
     anchor: 'approach',
   },
@@ -184,7 +184,7 @@ export const SPACES: readonly Space[] = [
     description:
       'An infinity pool set below the terrace, its far wall dropped to a weir so the water runs to the edge rather than being held behind a parapet.',
     feature: 'Infinity edge with a submerged perimeter light',
-    view: view('pool', 'Pool', [9, 4.6, 30], [2.5, 1.2, 15], 44),
+    view: view('pool', 'Pool', [11.5, 2.1, 29], [0, 3.2, 11], 46),
     level: 'site',
     anchor: 'pool',
   },

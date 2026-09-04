@@ -1,5 +1,6 @@
 'use client';
 
+import { FormRenderer } from '../furniture/FormRenderer';
 import { useMemo } from 'react';
 import { getMaterials } from '@/lib/three/materials';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../VillaPrimitives';
@@ -21,6 +22,9 @@ export function EstateExterior({ layout }: { layout: EstateLayout }) {
 
   return (
     <group name="EstateExterior">
+      {/* Outdoor furniture — loungers, sofas, dining chairs. Rounded and
+          turned geometry, merged per material exactly like the paving. */}
+      <FormRenderer name="estate-forms" forms={layout.forms} />
       <MergedBoxes name="estate-paving" specs={layout.paving} material={materials.paving} />
       <MergedBoxes name="estate-kerbs" specs={layout.kerbs} material={materials.stone} />
       <MergedBoxes name="estate-timber" specs={layout.timber} material={materials.teak} />

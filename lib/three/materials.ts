@@ -755,7 +755,7 @@ function createMaterials() {
      * the height of the door rather than a blotchy stain.
      */
     wood: withMaps(
-      withVariation(standard({ color: '#3f3025', roughness: 0.52, metalness: 0.05 }), {
+      withVariation(standard({ color: '#4a382a', roughness: 0.74, metalness: 0.02 }), {
         scale: 5,
         colorVariation: 0.05,
         roughnessVariation: 0.06,
@@ -814,7 +814,7 @@ function createMaterials() {
      */
     poolWater: withWaterSurface(
       new MeshPhysicalMaterial({
-        color: '#2f7c85',
+        color: '#1d5a67',
         // Water is very nearly a mirror, and with a sky to reflect it can
         // finally behave like one — the reflected dome is what gives the
         // pool its colour, not the albedo underneath.
@@ -828,7 +828,7 @@ function createMaterials() {
         metalness: 0.02,
         reflectivity: 1,
         transparent: true,
-        opacity: 0.92,
+        opacity: 0.96,
       }),
     ),
     /**
@@ -851,7 +851,7 @@ function createMaterials() {
      */
     poolInterior: withVariation(
       standard({
-        color: '#8fa6a4',
+        color: '#63807e',
         roughness: 0.62,
         metalness: 0,
         emissive: '#9fc4c6',
@@ -1044,7 +1044,7 @@ function createMaterials() {
     ),
     /** Deep-pile wool rugs. Coarse noise reads as pile at close range. */
     rug: withMaps(
-      withVariation(standard({ color: '#5f574a', roughness: 1, metalness: 0 }), {
+      withVariation(standard({ color: '#9c9081', roughness: 1, metalness: 0 }), {
         scale: 9,
         colorVariation: 0.08,
         roughnessVariation: 0.03,
@@ -1071,7 +1071,16 @@ function createMaterials() {
      */
     drapery: withMaps(
       withVariation(
-        standard({ color: '#a89b87', roughness: 0.97, metalness: 0, envMapIntensity: 0.35 }),
+        // Double-sided, because a curtain is a single hanging sheet: the
+        // fold geometry has no back, and from inside the room half of every
+        // pleat faces away from the camera.
+        standard({
+          color: '#a89b87',
+          roughness: 0.97,
+          metalness: 0,
+          envMapIntensity: 0.35,
+          side: DoubleSide,
+        }),
         {
           scale: 1.1,
           colorVariation: 0.05,

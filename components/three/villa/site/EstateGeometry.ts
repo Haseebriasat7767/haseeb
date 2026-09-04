@@ -1,3 +1,11 @@
+import {
+  createDiningChair,
+  createLoungeChair,
+  createLounger,
+  createLowTable,
+  createOutdoorSofa,
+} from '../furniture/Pieces';
+import { createStyling } from '../furniture/Staging';
 import type { BoxSpec, ColumnSpec, DetailTier, Range, VillaPlan } from '../VillaTypes';
 import { box, mid } from '../SpecBuilders';
 import type { ArrivalConfig, EstateLayout, OutdoorConfig, PavingRect } from './EstateTypes';
@@ -44,7 +52,7 @@ export const OUTDOOR_CONFIG: OutdoorConfig = {
   deckY: 0.4,
   loungeCenter: [2.5, 9.4],
   diningCenter: [11.2, 9.2],
-  loungerX: 10,
+  loungerX: 8.9,
   loungerZ: [17.9, 20.4, 22.9],
 };
 
@@ -103,106 +111,6 @@ function kerb(key: string, x: Range, z: Range, y: Range, thickness: number): Box
   ];
 }
 
-/**
- * A deep outdoor sofa: a timber plinth, a continuous seat, a low back and
- * two arms. Deliberately the same anatomy as the interior sofa so the two
- * read as one family of furniture, at outdoor proportions — lower, deeper,
- * and with the cushions sitting proud of the frame rather than inside it.
- */
-function outdoorSofa(
-  out: EstateLayout,
-  key: string,
-  cx: number,
-  cz: number,
-  y: number,
-  width: number,
-  depth: number,
-): void {
-  const half = width / 2;
-  const front = cz - depth / 2;
-  const back = cz + depth / 2;
-
-  out.timber.push(box(`${key}-plinth`, [-half + cx, half + cx], [y, y + 0.16], [front, back]));
-  out.timber.push(
-    box(`${key}-arm-w`, [cx - half, cx - half + 0.2], [y + 0.16, y + 0.58], [front, back]),
-  );
-  out.timber.push(
-    box(`${key}-arm-e`, [cx + half - 0.2, cx + half], [y + 0.16, y + 0.58], [front, back]),
-  );
-  out.timber.push(
-    box(`${key}-back`, [cx - half, cx + half], [y + 0.16, y + 0.66], [back - 0.18, back]),
-  );
-
-  // Seat cushions, split into modules the way a real bench cushion is.
-  const seats = Math.max(2, Math.round(width / 1.0));
-  const step = (width - 0.4) / seats;
-  for (let i = 0; i < seats; i += 1) {
-    const x0 = cx - half + 0.2 + step * i;
-    out.cushions.push(
-      box(
-        `${key}-seat-${i}`,
-        [x0 + 0.015, x0 + step - 0.015],
-        [y + 0.16, y + 0.34],
-        [front + 0.08, back - 0.2],
-      ),
-    );
-    out.cushions.push(
-      box(
-        `${key}-back-${i}`,
-        [x0 + 0.015, x0 + step - 0.015],
-        [y + 0.34, y + 0.62],
-        [back - 0.34, back - 0.19],
-      ),
-    );
-  }
-
-  // Two scatter cushions, off-centre. Symmetry is what makes furniture
-  // read as a product shot rather than as a room someone uses.
-  out.accents.push(
-    box(
-      `${key}-scatter-a`,
-      [cx - half + 0.34, cx - half + 0.74],
-      [y + 0.34, y + 0.62],
-      [back - 0.42, back - 0.3],
-    ),
-  );
-  out.accents.push(
-    box(
-      `${key}-scatter-b`,
-      [cx + half - 0.86, cx + half - 0.46],
-      [y + 0.34, y + 0.6],
-      [back - 0.4, back - 0.29],
-    ),
-  );
-}
-
-/** A single lounge chair, the sofa's anatomy at one seat. */
-function outdoorChair(
-  out: EstateLayout,
-  key: string,
-  cx: number,
-  cz: number,
-  y: number,
-  facing: 1 | -1,
-): void {
-  const half = 0.44;
-  const depth = 0.84;
-  const front = cz - (facing * depth) / 2;
-  const back = cz + (facing * depth) / 2;
-  const zr: Range = facing > 0 ? [front, back] : [back, front];
-  const backBand: Range = facing > 0 ? [back - 0.18, back] : [back, back + 0.18];
-
-  out.timber.push(box(`${key}-plinth`, [cx - half, cx + half], [y, y + 0.14], zr));
-  out.timber.push(box(`${key}-back`, [cx - half, cx + half], [y + 0.14, y + 0.68], backBand));
-  out.timber.push(box(`${key}-arm-w`, [cx - half, cx - half + 0.14], [y + 0.14, y + 0.56], zr));
-  out.timber.push(box(`${key}-arm-e`, [cx + half - 0.14, cx + half], [y + 0.14, y + 0.56], zr));
-
-  const inner: Range = facing > 0 ? [zr[0] + 0.08, zr[1] - 0.2] : [zr[0] + 0.2, zr[1] - 0.08];
-  out.cushions.push(
-    box(`${key}-seat`, [cx - half + 0.15, cx + half - 0.15], [y + 0.14, y + 0.32], inner),
-  );
-}
-
 /** A low table: a slab on a recessed base, so it reads as floating. */
 function lowTable(
   out: EstateLayout,
@@ -229,89 +137,6 @@ function lowTable(
   );
 }
 
-/** A sun lounger: raked back, flat pad, low frame, laid along Z. */
-function lounger(out: EstateLayout, key: string, cx: number, cz: number, y: number): void {
-  const hw = 0.39;
-  const length = 2.0;
-  const head = cz - length / 2;
-  const foot = cz + length / 2;
-
-  out.timber.push(box(`${key}-frame`, [cx - hw, cx + hw], [y + 0.26, y + 0.34], [head, foot]));
-  out.cushions.push(
-    box(
-      `${key}-pad`,
-      [cx - hw + 0.04, cx + hw - 0.04],
-      [y + 0.34, y + 0.42],
-      [head + 0.66, foot - 0.05],
-    ),
-  );
-
-  // The backrest. Specs carry no rotation, so a rake has to be approximated
-  // in steps — but the first attempt used three 12 cm risers over 45 cm and
-  // read unmistakably as a flight of stairs. Four shallow risers over a
-  // longer run reads as a raked head instead, which is all this needs to be
-  // at any distance a lounger is seen from.
-  const steps = 4;
-  const run = 0.62;
-  for (let i = 0; i < steps; i += 1) {
-    const z0 = head + 0.04 + (i * run) / steps;
-    const z1 = head + 0.04 + ((i + 1) * run) / steps + 0.02;
-    const top = y + 0.4 + 0.062 * (steps - i);
-    out.cushions.push(
-      box(`${key}-rest-${i}`, [cx - hw + 0.04, cx + hw - 0.04], [y + 0.34, top], [z0, z1]),
-    );
-  }
-
-  out.posts.push({
-    key: `${key}-leg-a`,
-    position: [cx - hw + 0.08, y + 0.13, head + 0.25],
-    scale: [0.03, 0.26, 0.03],
-  });
-  out.posts.push({
-    key: `${key}-leg-b`,
-    position: [cx + hw - 0.08, y + 0.13, head + 0.25],
-    scale: [0.03, 0.26, 0.03],
-  });
-  out.posts.push({
-    key: `${key}-leg-c`,
-    position: [cx - hw + 0.08, y + 0.13, foot - 0.25],
-    scale: [0.03, 0.26, 0.03],
-  });
-  out.posts.push({
-    key: `${key}-leg-d`,
-    position: [cx + hw - 0.08, y + 0.13, foot - 0.25],
-    scale: [0.03, 0.26, 0.03],
-  });
-}
-
-/** A dining chair: seat, raked back, four slim legs. */
-function diningChair(
-  out: EstateLayout,
-  key: string,
-  cx: number,
-  cz: number,
-  y: number,
-  facing: 1 | -1,
-): void {
-  const hw = 0.24;
-  const hd = 0.26;
-  out.timber.push(box(`${key}-seat`, [cx - hw, cx + hw], [y + 0.44, y + 0.5], [cz - hd, cz + hd]));
-  const backZ: Range = facing > 0 ? [cz + hd - 0.06, cz + hd] : [cz - hd, cz - hd + 0.06];
-  out.timber.push(box(`${key}-back`, [cx - hw, cx + hw], [y + 0.5, y + 0.94], backZ));
-  for (const [sx, sz] of [
-    [-1, -1],
-    [1, -1],
-    [-1, 1],
-    [1, 1],
-  ] as const) {
-    out.posts.push({
-      key: `${key}-leg-${sx}-${sz}`,
-      position: [cx + sx * (hw - 0.04), y + 0.22, cz + sz * (hd - 0.04)],
-      scale: [0.024, 0.44, 0.024],
-    });
-  }
-}
-
 /** A lantern: a slim stone body with one lit face. */
 function lantern(out: EstateLayout, key: string, cx: number, cz: number, y: number): void {
   out.stone.push(box(`${key}-body`, [cx - 0.09, cx + 0.09], [y, y + 0.92], [cz - 0.09, cz + 0.09]));
@@ -325,6 +150,7 @@ function lantern(out: EstateLayout, key: string, cx: number, cz: number, y: numb
 
 function emptyLayout(): EstateLayout {
   return {
+    forms: [],
     paving: [],
     kerbs: [],
     timber: [],
@@ -400,21 +226,33 @@ export function createEstateLayout(
   // ── Terrace lounge, facing the pool ────────────────────────────────────
   const [lx, lz] = outdoor.loungeCenter;
   if (tier.lounge) {
-    outdoorSofa(out, 'terrace-sofa', lx, lz - 1.35, outdoor.terraceY, 2.5, 0.95);
-    lowTable(out, 'terrace-table', lx, lz + 0.35, outdoor.terraceY, 1.25, 0.7, 0.34);
-    outdoorChair(out, 'terrace-chair-w', lx - 1.05, lz + 1.7, outdoor.terraceY, -1);
-    outdoorChair(out, 'terrace-chair-e', lx + 1.05, lz + 1.7, outdoor.terraceY, -1);
+    createOutdoorSofa(
+      out.forms,
+      'terrace-sofa',
+      { at: [lx, lz - 1.35], floorY: outdoor.terraceY, facing: 'south', seed: 201 },
+      2.5,
+    );
+    createLowTable(
+      out.forms,
+      'terrace-table',
+      { at: [lx, lz + 0.4], floorY: outdoor.terraceY, facing: 'south', seed: 202 },
+      { width: 1.25, depth: 0.72, height: 0.34 },
+    );
+    createLoungeChair(out.forms, 'terrace-chair-w', {
+      at: [lx - 1.15, lz + 1.75],
+      floorY: outdoor.terraceY,
+      facing: 'north',
+      seed: 203,
+    });
+    createLoungeChair(out.forms, 'terrace-chair-e', {
+      at: [lx + 1.15, lz + 1.75],
+      floorY: outdoor.terraceY,
+      facing: 'north',
+      seed: 204,
+    });
 
     if (tier.details) {
-      // A tray on the table. One object, off-centre.
-      out.metal.push(
-        box(
-          'terrace-tray',
-          [lx - 0.12, lx + 0.34],
-          [outdoor.terraceY + 0.34, outdoor.terraceY + 0.37],
-          [lz + 0.22, lz + 0.52],
-        ),
-      );
+      createStyling(out.forms, 'terrace-styling', [lx, lz + 0.4], outdoor.terraceY + 0.34, 205);
     }
   }
 
@@ -445,15 +283,40 @@ export function createEstateLayout(
     const perSide = Math.max(0, Math.round(tier.diningSeats / 2));
     for (let i = 0; i < perSide; i += 1) {
       const offset = (i - (perSide - 1) / 2) * 0.78;
-      diningChair(out, `dining-chair-n-${i}`, dx + offset, dz - 0.92, outdoor.terraceY, 1);
-      diningChair(out, `dining-chair-s-${i}`, dx + offset, dz + 0.92, outdoor.terraceY, -1);
+      // Tucked in on both sides, and each turned a couple of degrees — a
+      // dining set where every chair is exactly square reads as a diagram.
+      createDiningChair(
+        out.forms,
+        `dining-chair-n-${i}`,
+        { at: [dx + offset, dz - 0.92], floorY: outdoor.terraceY, facing: 'south', seed: 400 + i },
+        true,
+      );
+      out.forms[out.forms.length - 1]!.rotationY =
+        (out.forms[out.forms.length - 1]!.rotationY ?? 0) + (i % 2 ? 0.06 : -0.04);
+      createDiningChair(
+        out.forms,
+        `dining-chair-s-${i}`,
+        { at: [dx + offset, dz + 0.92], floorY: outdoor.terraceY, facing: 'north', seed: 420 + i },
+        true,
+      );
+      out.forms[out.forms.length - 1]!.rotationY =
+        (out.forms[out.forms.length - 1]!.rotationY ?? 0) + (i % 2 ? -0.05 : 0.07);
     }
   }
 
   // ── Poolside: loungers along the deck's east margin ────────────────────
   const loungerZs = outdoor.loungerZ.slice(0, tier.loungers);
   loungerZs.forEach((z, index) => {
-    lounger(out, `lounger-${index}`, outdoor.loungerX, z, outdoor.deckY);
+    createLounger(out.forms, `lounger-${index}`, {
+      at: [outdoor.loungerX, z],
+      floorY: outdoor.deckY,
+      // Turned a few degrees off the pool's axis, alternating, so a row of
+      // three does not read as a row of three identical objects.
+      facing: 'west',
+      seed: 300 + index,
+    });
+    out.forms[out.forms.length - 1]!.rotationY =
+      (out.forms[out.forms.length - 1]!.rotationY ?? 0) + (index % 2 === 0 ? 0.07 : -0.05);
   });
 
   if (loungerZs.length >= 2) {

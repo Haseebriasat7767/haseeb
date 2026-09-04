@@ -1,4 +1,5 @@
 import type { Vector3Tuple } from 'three';
+import type { Form } from '../furniture/FormTypes';
 import type { BoxSpec, DetailTier } from '../VillaTypes';
 import type { Parts } from './Furniture';
 import type { Room } from './InteriorPlan';
@@ -55,6 +56,13 @@ export type InteriorConfig = {
  */
 export type InteriorLayout = {
   rooms: readonly Room[];
+  /**
+   * Soft, turned and folded geometry — everything in the house that is not
+   * a building. Kept as one flat list rather than bucketed by material the
+   * way `Parts` is, because each form already names its own material and
+   * `FormRenderer` does the grouping at mount.
+   */
+  forms: Form[];
   /** Honed stone floor finish, by room. */
   floorsStone: BoxSpec[];
   /** Timber floor finish, by room. */
