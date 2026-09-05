@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { ResidenceExplorer } from '@/components/explorer/ResidenceExplorer';
-import { Container } from '@/components/ui/Container';
-import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata: Metadata = {
   title: 'Explore',
@@ -18,19 +16,19 @@ export const metadata: Metadata = {
 export default function ExperiencePage() {
   return (
     <>
-      <PageHeader
-        dense
-        eyebrow="Explore"
-        title="The residence, space by space"
-        lede="Every space below is a framing of the same live model. Select one to move the
-          camera to it — nothing reloads, and nothing is pre-rendered."
-      />
-
-      <Container className="pb-section">
-        <Suspense fallback={<div className="h-[68svh] w-full" aria-hidden="true" />}>
-          <ResidenceExplorer />
-        </Suspense>
-      </Container>
+      {/*
+        The view comes first, and it comes full bleed.
+        
+        A page header above the frame pushed the residence below the fold
+        and left a visitor's first screen as a heading and a paragraph. The
+        genre this page belongs to opens on the architecture and captions it
+        in place — the plate over the view already names the space, so the
+        heading has nothing to do until the visitor has looked. It now sits
+        underneath, introducing the rail rather than the image.
+      */}
+      <Suspense fallback={<div className="h-[86svh] w-full" aria-hidden="true" />}>
+        <ResidenceExplorer />
+      </Suspense>
     </>
   );
 }
