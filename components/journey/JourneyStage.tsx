@@ -66,7 +66,7 @@ export function JourneyStage() {
               Bottom-weighted, so the sky and the roofline stay clean. */}
           <div
             aria-hidden="true"
-            className="from-obsidian via-obsidian/75 lg:via-obsidian/35 pointer-events-none absolute inset-x-0 bottom-0 h-[78%] bg-gradient-to-t to-transparent lg:h-[58%]"
+            className="from-obsidian via-obsidian/55 lg:via-obsidian/35 pointer-events-none absolute inset-x-0 bottom-0 h-[56%] bg-gradient-to-t to-transparent lg:h-[58%]"
           />
           <div
             aria-hidden="true"
@@ -149,7 +149,7 @@ export function JourneyStage() {
             <Container>
               <div
                 className={cn(
-                  'ease-luxe max-w-[46ch] transition-[opacity,transform] duration-[900ms]',
+                  'ease-luxe max-w-[34ch] transition-[opacity,transform] duration-[900ms] sm:max-w-[46ch]',
                   isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-45',
                   // Only the opening chapter waits for the reveal; every
                   // chapter below it is already scrolled to on its own terms.
@@ -182,7 +182,7 @@ export function JourneyStage() {
                 <p className="text-lede text-mist mt-6">{chapter.body}</p>
 
                 {isFirst || isLast ? (
-                  <div className="mt-9 flex flex-wrap gap-3">
+                  <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 sm:mt-9">
                     <Button href="/experience" magnetic>
                       Explore residence
                     </Button>

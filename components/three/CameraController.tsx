@@ -27,14 +27,46 @@ function damp(current: number, target: number, smoothing: number, delta: number)
 
 /** The aspect every framing in the project was composed against. */
 const REFERENCE_ASPECT = 16 / 9;
-const MAX_FOV = 78;
 
 /**
- * Widens the focal length on narrower viewports. Three's field of view is
- * vertical, so a portrait phone would otherwise crop a composed elevation
- * down its sides — the building has to stay in frame on a phone without
- * every view needing a second set of numbers for it.
+ * How wide the focal length may be opened to keep a composed elevation in
+ * frame on a narrow viewport.
+ *
+ * Seventy-eight degrees was too generous, and generous is the wrong
+ * instinct here. Three's field of view is vertical, so opening it to hold
+ * the building's *width* on a phone also opens it vertically — and a
+ * portrait phone is nearly twice as tall as it is wide, so the extra
+ * vertical angle is spent almost entirely on empty sky above the roofline
+ * and empty ground below the plinth. The rendered phone frames showed
+ * exactly that: about forty-five percent sky, with the residence squeezed
+ * into the lower half behind the headline.
+ *
+ * Sixty-six is the balance found by rendering both ends: at seventy-eight
+ * the phone frame was half empty sky, and at fifty-eight the crop closed in
+ * so far that the hero showed a wall of glazing rather than a residence.
  */
+const MAX_FOV = 66;
+
+/**
+ * How much taller a frustum is rendered on a portrait viewport, and where
+ * the visible window sits inside it.
+ *
+ * Capping the focal length keeps the building a reasonable size but leaves
+ * it centred, which on a phone means it sits directly behind the copy. A
+ * photographer would not centre it: they would compose the subject in the
+ * upper part of the frame and leave the lower part for the type.
+ *
+ * `setViewOffset` does exactly that without touching the camera. Rendering
+ * a frustum a third taller and showing its *lower* slice puts the camera's
+ * own axis — and therefore the residence — near the top of what the phone
+ * actually displays, and gives the headline deliberate negative space to
+ * sit in rather than the architecture.
+ */
+const PORTRAIT_FRUSTUM = 1.26;
+const PORTRAIT_OFFSET = 0.22;
+/** Below this aspect a viewport is treated as a phone held upright. */
+const PORTRAIT_ASPECT = 0.8;
+
 function fovForAspect(fov: number, aspect: number): number {
   if (!Number.isFinite(aspect) || aspect <= 0 || aspect >= REFERENCE_ASPECT) return fov;
   const half = Math.tan(MathUtils.degToRad(fov) / 2) * (REFERENCE_ASPECT / aspect);
@@ -91,6 +123,36 @@ export function CameraController({
     camera.updateProjectionMatrix();
     invalidate();
   }, [mode, targetFov, invalidate]);
+
+  // Portrait recomposition. See `PORTRAIT_FRUSTUM`: on a phone the subject
+  // is lifted into the upper part of the frame so the copy below it sits in
+  // negative space rather than over the architecture.
+  useEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+
+    const portrait = size.width / size.height < PORTRAIT_ASPECT;
+    if (portrait) {
+      const full = size.height * PORTRAIT_FRUSTUM;
+      camera.setViewOffset(
+        size.width,
+        full,
+        0,
+        size.height * PORTRAIT_OFFSET,
+        size.width,
+        size.height,
+      );
+    } else {
+      camera.clearViewOffset();
+    }
+    camera.updateProjectionMatrix();
+    invalidate();
+
+    return () => {
+      camera.clearViewOffset();
+      camera.updateProjectionMatrix();
+    };
+  }, [size.width, size.height, invalidate]);
 
   useFrame((_state, delta) => {
     const camera = cameraRef.current;

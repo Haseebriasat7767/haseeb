@@ -35,7 +35,7 @@ export const JOURNEY: readonly JourneyChapter[] = [
     index: '01',
     eyebrow: 'Private Luxury Residence',
     title: 'Where architecture meets timeless living.',
-    body: 'A private house on a coastal ridge, composed from stone, cast concrete, and glass — and rendered here in real time, entirely from code.',
+    body: 'A private house on a coastal ridge, composed from stone, cast concrete, and glass.',
     view: chapterView('arrival'),
     space: 'arrival',
   },
