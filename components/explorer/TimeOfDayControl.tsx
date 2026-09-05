@@ -22,7 +22,25 @@ export function TimeOfDayControl({ value, onChange, className }: TimeOfDayContro
     // container below never engages and the control widens the page.
     <fieldset className={cn('flex min-w-0 flex-col gap-3', className)}>
       <legend className="text-eyebrow text-stone mb-3 uppercase">Hour</legend>
-      <div className="border-alabaster/10 bg-obsidian/60 flex gap-px overflow-x-auto border backdrop-blur-sm">
+      {/*
+        Wraps rather than scrolls on a phone.
+        
+        Five labels with `whitespace-nowrap` need about 424 pixels, and a
+        390-pixel viewport leaves roughly 350 after the gutters — so the
+        strip overflowed and the container scrolled it. Functionally the
+        fifth hour was still reachable; visually it was not there. The last
+        item still on screen ended flush against the container's right
+        border, which gives a viewer no reason to suspect the control
+        scrolls at all, so a phone visitor simply saw four hours and
+        concluded the residence had four. Night is the state this property
+        arguably shows best, and it was the one that fell off.
+        
+        Wrapping to a second row puts all five on screen with no hidden
+        affordance to discover. `overflow-x-auto` is kept as the safety net
+        it always was: once the rows wrap there is nothing left to scroll,
+        and it still catches any width narrower than a single button.
+      */}
+      <div className="border-alabaster/10 bg-obsidian/60 flex flex-wrap gap-px overflow-x-auto border backdrop-blur-sm sm:flex-nowrap">
         {TIME_OF_DAY_ORDER.map((id) => {
           const active = id === value;
 
@@ -34,7 +52,11 @@ export function TimeOfDayControl({ value, onChange, className }: TimeOfDayContro
               aria-pressed={active}
               data-cursor="link"
               className={cn(
-                'ease-luxe flex-1 px-3 py-2.5 font-sans text-[0.625rem] tracking-[0.2em] uppercase',
+                // A basis narrow enough that three fit on the first row and
+                // `flex-1` then grows them to fill it, so neither row ends
+                // with a dead cell. Cleared at `sm`, where all five fit.
+                'ease-luxe flex-1 basis-[5.5rem] px-3 py-2.5 sm:basis-auto',
+                'font-sans text-[0.625rem] tracking-[0.2em] uppercase',
                 'whitespace-nowrap transition-colors duration-300',
                 active ? 'bg-alabaster text-obsidian' : 'text-mist hover:text-alabaster',
               )}
