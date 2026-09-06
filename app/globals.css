@@ -124,6 +124,10 @@
     *::before,
     *::after {
       animation-duration: 0.001ms !important;
+      /* Without this a delayed entrance would still hold its element
+         invisible for the full delay before snapping in — the wait is the
+         part someone with this preference set is trying to avoid. */
+      animation-delay: 0ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
     }
@@ -139,4 +143,35 @@
 
 @utility text-balance-tight {
   text-wrap: balance;
+}
+
+/* ------------------------------------------------------------------
+   Entrances
+   ------------------------------------------------------------------ */
+
+@keyframes aurelia-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility rise {
+  /*
+    The opening frame's entrance.
+
+    This is a CSS animation rather than a timer flipping React state
+    because the first seconds after mount are exactly when the main thread
+    is busiest — building the residence, compiling shaders, warming the
+    environment map. A `setTimeout(reveal, 1600)` queues behind all of it,
+    and on a slow device the headline can be held back for as long as that
+    work takes; measured here under software rendering it arrived twenty
+    seconds late, on a page whose whole job is its first impression.
+    An animation runs on the compositor and cannot be starved.
+  */
+  animation: aurelia-rise 1000ms var(--ease-luxe) both;
 }

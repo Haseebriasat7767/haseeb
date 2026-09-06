@@ -22,7 +22,7 @@ export function CallToAction() {
             Request private viewing
           </Button>
           <Button href="/floor-plan" variant="outline" magnetic>
-            Contact residence
+            View floor plan
           </Button>
         </Reveal>
       </Container>
