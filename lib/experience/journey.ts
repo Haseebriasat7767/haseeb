@@ -33,7 +33,7 @@ export const JOURNEY: readonly JourneyChapter[] = [
   {
     id: 'exterior',
     index: '01',
-    eyebrow: 'Private Luxury Residence',
+    eyebrow: 'The Aurelia Residence',
     title: 'Where architecture meets timeless living.',
     body: 'A private house on a coastal ridge, composed from stone, cast concrete, and glass.',
     view: chapterView('arrival'),

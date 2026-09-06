@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
+import { AgentCard } from '@/components/contact/AgentCard';
 import { EnquiryForm } from '@/components/contact/EnquiryForm';
 import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { SITE } from '@/lib/constants/site';
 
 export const metadata: Metadata = {
   title: 'Contact',
@@ -13,12 +13,6 @@ export const metadata: Metadata = {
     description: 'Arrange a private viewing of the residence at Coastal Ridge.',
   },
 };
-
-const CHANNELS = [
-  { label: 'Enquiries', value: SITE.contact.email, href: `mailto:${SITE.contact.email}` },
-  { label: 'Telephone', value: SITE.contact.phone, href: `tel:${SITE.contact.phone}` },
-  { label: 'Location', value: SITE.contact.address },
-] as const;
 
 export default function ContactPage() {
   return (
@@ -36,25 +30,7 @@ export default function ContactPage() {
         </div>
 
         <div className="lg:col-span-5">
-          <dl className="border-alabaster/10 flex flex-col border-t">
-            {CHANNELS.map((channel) => (
-              <div
-                key={channel.label}
-                className="border-alabaster/10 flex flex-col gap-2 border-b py-6"
-              >
-                <dt className="text-eyebrow text-stone uppercase">{channel.label}</dt>
-                <dd className="font-display text-alabaster text-xl font-light">
-                  {'href' in channel && channel.href ? (
-                    <a href={channel.href} className="hover:text-gold transition-colors">
-                      {channel.value}
-                    </a>
-                  ) : (
-                    channel.value
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <AgentCard />
         </div>
       </Container>
     </>

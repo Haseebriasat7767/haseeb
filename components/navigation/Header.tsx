@@ -2,6 +2,7 @@
 
 import { Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils/cn';
 import { MobileMenu } from './MobileMenu';
 import { NavLinks } from './NavLinks';
@@ -33,9 +34,30 @@ export function Header() {
         <div className="max-w-wide px-gutter mx-auto flex h-20 items-center justify-between">
           <Wordmark />
 
-          <nav aria-label="Primary" className="hidden lg:block">
-            <NavLinks />
-          </nav>
+          <div className="hidden items-center gap-10 lg:flex">
+            <nav aria-label="Primary">
+              <NavLinks />
+            </nav>
+
+            {/*
+              The standing call to action.
+              
+              A buyer who has just spent two minutes moving through a
+              residence should never have to go looking for the way to ask
+              about it — at that moment the intent is at its highest it will
+              ever be, and a "Contact" item sitting fifth in a nav list is
+              not an answer to it. It is bordered rather than filled: the
+              one persistent affordance on the page, present without
+              competing with the architecture behind it.
+            */}
+            <Link
+              href="/contact"
+              data-cursor="link"
+              className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold border px-5 py-2.5 uppercase transition-colors duration-300"
+            >
+              Request viewing
+            </Link>
+          </div>
 
           <button
             type="button"

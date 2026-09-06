@@ -8,9 +8,13 @@
  */
 export const SITE = {
   name: 'AURELIA',
-  tagline: 'Architectural Experience',
+  // The product is a property experience, not a rendering technique. A
+  // buyer does not care that it is real-time, and a developer being pitched
+  // cares even less — what they are buying is a residence a client can walk
+  // through from anywhere. The technology stays out of the positioning.
+  tagline: 'Luxury Property Experience',
   description:
-    'AURELIA is a private architectural residence rendered as a cinematic, real-time experience. Explore the form, the light, and the landscape.',
+    'Explore The Aurelia Residence through an immersive digital property experience — every room, every hour of the day, from anywhere.',
   url: 'https://aurelia.example.com',
   locale: 'en_US',
   contact: {

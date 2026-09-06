@@ -187,7 +187,7 @@ export function JourneyStage() {
                       Explore residence
                     </Button>
                     <Button href={isFirst ? '/floor-plan' : '/contact'} variant="outline" magnetic>
-                      {isFirst ? 'View details' : 'Request private tour'}
+                      {isFirst ? 'View floor plan' : 'Request private viewing'}
                     </Button>
                   </div>
                 ) : chapter.space ? (

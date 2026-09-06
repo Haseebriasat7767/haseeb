@@ -19,7 +19,7 @@ export function CallToAction() {
 
         <Reveal delay={120} className="flex flex-wrap justify-center gap-3">
           <Button href="/contact" magnetic>
-            Request private tour
+            Request private viewing
           </Button>
           <Button href="/floor-plan" variant="outline" magnetic>
             Contact residence

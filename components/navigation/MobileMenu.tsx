@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -61,6 +62,19 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
       <nav aria-label="Mobile" className="px-gutter flex flex-1 flex-col justify-center pb-24">
         <NavLinks orientation="vertical" onNavigate={onClose} />
+
+        {/* The same standing call to action the desktop header carries. A
+            phone is where most of this will actually be viewed, and the
+            menu is the one place a buyer on a phone is definitely looking. */}
+        <Link
+          href="/contact"
+          onClick={onClose}
+          data-cursor="link"
+          className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold mt-10 inline-flex items-center justify-center border px-6 py-4 uppercase transition-colors duration-300"
+        >
+          Request private viewing
+        </Link>
+
         <div className="rule mt-12" />
         <a
           href={`mailto:${SITE.contact.email}`}

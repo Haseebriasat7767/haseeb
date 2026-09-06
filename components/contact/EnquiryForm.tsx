@@ -155,7 +155,7 @@ export function EnquiryForm() {
 
       <div className="flex items-center gap-5">
         <Button type="submit" disabled={status.kind === 'sending'} magnetic>
-          {status.kind === 'sending' ? 'Sending…' : 'Request private tour'}
+          {status.kind === 'sending' ? 'Sending…' : 'Request private viewing'}
         </Button>
         <p aria-live="polite" className="text-stone text-xs">
           {status.kind === 'sending' ? 'Submitting your enquiry…' : ''}
