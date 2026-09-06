@@ -38,19 +38,29 @@ export function validateEnquiry(enquiry: Enquiry): EnquiryErrors {
 export type EnquiryResult =
   | { status: 'sent' }
   /** No endpoint is configured, so the enquiry is handed to the mail client. */
-  | { status: 'unconfigured'; mailto: string };
+  | { status: 'unconfigured'; mailto: string }
+  /**
+   * Neither an endpoint nor an enquiry address is set, so there is nowhere
+   * to send to. The composed message is returned anyway: a visitor who has
+   * filled in a form should never be left holding nothing.
+   */
+  | { status: 'undeliverable'; body: string };
 
-function composeMailto(enquiry: Enquiry, to: string): string {
-  const lines = [
+function composeBody(enquiry: Enquiry): string {
+  return [
     `Name: ${enquiry.name}`,
     `Email: ${enquiry.email}`,
     enquiry.phone ? `Telephone: ${enquiry.phone}` : null,
     enquiry.preferredDate ? `Preferred viewing: ${enquiry.preferredDate}` : null,
     '',
     enquiry.message,
-  ].filter((line): line is string => line !== null);
+  ]
+    .filter((line): line is string => line !== null)
+    .join('\n');
+}
 
-  return `mailto:${to}?subject=${encodeURIComponent('Private viewing enquiry')}&body=${encodeURIComponent(lines.join('\n'))}`;
+function composeMailto(enquiry: Enquiry, to: string): string {
+  return `mailto:${to}?subject=${encodeURIComponent('Private viewing enquiry')}&body=${encodeURIComponent(composeBody(enquiry))}`;
 }
 
 /**
@@ -58,9 +68,14 @@ function composeMailto(enquiry: Enquiry, to: string): string {
  * POST; without one it returns the composed mail draft instead of
  * pretending a message was delivered.
  */
-export async function submitEnquiry(enquiry: Enquiry, fallbackTo: string): Promise<EnquiryResult> {
+export async function submitEnquiry(
+  enquiry: Enquiry,
+  fallbackTo: string | null,
+): Promise<EnquiryResult> {
   if (!ENDPOINT) {
-    return { status: 'unconfigured', mailto: composeMailto(enquiry, fallbackTo) };
+    return fallbackTo
+      ? { status: 'unconfigured', mailto: composeMailto(enquiry, fallbackTo) }
+      : { status: 'undeliverable', body: composeBody(enquiry) };
   }
 
   const response = await fetch(ENDPOINT, {

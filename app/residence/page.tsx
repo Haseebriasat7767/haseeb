@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { PROPERTY, SITE } from '@/lib/constants/site';
+import { PROPERTY } from '@/lib/constants/site';
 import { PALETTE } from '@/lib/experience/palette';
 
 export const metadata: Metadata = {
@@ -94,7 +94,7 @@ export default function ResidencePage() {
             <SectionHeading
               eyebrow="Accommodation"
               title={<span id="accommodation-heading">Room by room</span>}
-              lede="Areas are computed from the generated room plan, level by level."
+              lede="Areas are computed from the residence's room schedule, level by level."
             />
           </Reveal>
           <AccommodationSchedule />
@@ -104,7 +104,7 @@ export default function ResidencePage() {
           <SectionHeading
             eyebrow="Enquire"
             title="See it in person"
-            lede={`Viewings are held by appointment. Reach the team at ${SITE.contact.email}.`}
+            lede="Viewings are held by appointment. Share your details and the private client team will respond with a proposed time."
           />
           <div className="flex flex-wrap gap-3">
             <Button href="/contact" magnetic>

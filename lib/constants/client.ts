@@ -21,9 +21,22 @@
  * this file treats `null` as "do not render", so an unconfigured Aurelia
  * simply has no brochure button rather than a broken one.
  *
- * The residence, the studio, the agent and the address below are fictional,
- * and the contact details resolve to the reserved `example.com` domain by
- * design. Nothing here describes a real property or a real practice.
+ * ## What Aurelia is
+ *
+ * A conceptual residence: an architectural proposition presented as an
+ * experience, built to be adapted to a real listing. The residence, the
+ * studio and the client director named below are part of that proposition
+ * and describe no existing property, practice or person.
+ *
+ * ## Contact details are never invented
+ *
+ * `email` and `phone` come from the environment and are `null` until set.
+ * There is no placeholder address and no placeholder number anywhere in
+ * this file, because a visitor who dials `+1 (000) 000-0000` learns more
+ * about the state of the project than any amount of copy can undo. Set
+ * `NEXT_PUBLIC_ENQUIRY_EMAIL` and, if wanted, `NEXT_PUBLIC_ENQUIRY_PHONE`
+ * to switch those channels on; until then the product shows the enquiry
+ * form as the single way through, which is a complete answer on its own.
  */
 
 export type ClientConfig = {
@@ -49,9 +62,13 @@ export type ClientConfig = {
     name: string;
     title: string;
     agency: string;
-    email: string;
-    /** Display form. The dial string is derived below. */
-    phone: string;
+    /** From `NEXT_PUBLIC_ENQUIRY_EMAIL`. `null` hides every email channel. */
+    email: string | null;
+    /**
+     * Display form, from `NEXT_PUBLIC_ENQUIRY_PHONE`. `null` hides every
+     * call affordance. The dial string is derived below.
+     */
+    phone: string | null;
     /**
      * WhatsApp number in full international form, digits only, no plus and
      * no spaces — `wa.me` accepts nothing else. `null` hides every WhatsApp
@@ -82,8 +99,8 @@ export const CLIENT: ClientConfig = {
     name: 'Elena Marchetti',
     title: 'Private Client Director',
     agency: 'Aurelia Estates',
-    email: 'enquiries@aurelia.example.com',
-    phone: '+1 (000) 000-0000',
+    email: process.env.NEXT_PUBLIC_ENQUIRY_EMAIL ?? null,
+    phone: process.env.NEXT_PUBLIC_ENQUIRY_PHONE ?? null,
     // Unset by design — see the note on the type above. Replace with a real
     // number, digits only (for example '447700900123'), to switch on the
     // WhatsApp button everywhere it appears.
@@ -111,7 +128,18 @@ export function whatsappLink(message?: string): string | null {
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
 
-/** The phone number as a dial string, stripped of display formatting. */
-export function telLink(): string {
-  return `tel:${CLIENT.agent.phone.replace(/[^\d+]/g, '')}`;
+/** The phone number as a dial string, or `null` when none is configured. */
+export function telLink(): string | null {
+  const phone = CLIENT.agent.phone;
+  if (!phone) return null;
+  return `tel:${phone.replace(/[^\d+]/g, '')}`;
+}
+
+/** A pre-addressed enquiry, or `null` when no address is configured. */
+export function mailtoLink(subject?: string): string | null {
+  const email = CLIENT.agent.email;
+  if (!email) return null;
+
+  const line = subject ?? `Enquiry — ${CLIENT.property.name}`;
+  return `mailto:${email}?subject=${encodeURIComponent(line)}`;
 }

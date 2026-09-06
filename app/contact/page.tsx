@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 export const metadata: Metadata = {
   title: 'Contact',
   description:
-    'Arrange a private viewing of the residence at Coastal Ridge, or reach the team directly.',
+    'Arrange a private viewing of the residence at Coastal Ridge with the private client team.',
   openGraph: {
     title: 'Contact — AURELIA',
     description: 'Arrange a private viewing of the residence at Coastal Ridge.',
@@ -20,8 +20,9 @@ export default function ContactPage() {
       <PageHeader
         eyebrow="Contact"
         title="Arrange an introduction"
-        lede="Viewings are held by appointment only. Share your details below, or reach the
-          team directly through any of the channels listed."
+        lede="Viewings are held by appointment only. Share your details and the private
+          client team will respond with the full architectural dossier and a proposed
+          time."
       />
 
       <Container className="pb-section grid gap-16 lg:grid-cols-12 lg:gap-20">

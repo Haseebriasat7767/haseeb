@@ -143,7 +143,7 @@ export function FloorPlan() {
           </svg>
 
           <p className="text-stone mt-4 text-xs">
-            North is at the top. Plans are projected from the generated room schedule.
+            North is at the top. Plans are drawn to the residence&rsquo;s room schedule.
           </p>
         </div>
 

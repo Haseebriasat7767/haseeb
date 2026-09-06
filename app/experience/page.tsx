@@ -5,11 +5,10 @@ import { ResidenceExplorer } from '@/components/explorer/ResidenceExplorer';
 export const metadata: Metadata = {
   title: 'Explore',
   description:
-    'Move through the residence space by space in real time — foyer, living room, kitchen, stair hall, master suite, library, terrace, and pool — under any hour of the day.',
+    'Move through the residence space by space — foyer, living room, kitchen, stair hall, master suite, library, terrace, and pool — under any hour of the day.',
   openGraph: {
     title: 'Explore the residence — AURELIA',
-    description:
-      'Move through the residence space by space in real time, under any hour of the day.',
+    description: 'Move through the residence space by space, under any hour of the day.',
   },
 };
 

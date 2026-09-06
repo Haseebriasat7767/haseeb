@@ -6,10 +6,10 @@ import { PageHeader } from '@/components/ui/PageHeader';
 export const metadata: Metadata = {
   title: 'Architecture',
   description:
-    'Drawn plans of both levels of the residence, projected from the same room schedule that generates the real-time model.',
+    'Drawn plans of both levels of the residence, set to the same room schedule the residence itself is built to.',
   openGraph: {
     title: 'Architecture — AURELIA',
-    description: 'Drawn plans of both levels, projected from the generated room schedule.',
+    description: 'Drawn plans of both levels of the residence, level by level.',
   },
 };
 
@@ -20,9 +20,9 @@ export default function FloorPlanPage() {
         dense
         eyebrow="Architecture"
         title="Plans and levels"
-        lede="Two levels stepped onto the ridge. These outlines are projected from the same
-          room schedule the three-dimensional model is generated from — the drawing and
-          the building are the same description."
+        lede="Two levels stepped onto the ridge. The plans and the residence are drawn
+          to one schedule, so what you walk through and what you read here are the
+          same description."
       />
 
       <Container className="pb-section">

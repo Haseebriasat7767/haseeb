@@ -25,14 +25,27 @@ export function Footer() {
             ))}
           </nav>
 
+          {/* Only channels that actually reach someone. With no address or
+              number configured this is the enquiry route and the standing
+              terms — never a row of dashes where contact details should be. */}
           <address className="flex flex-col gap-3 not-italic">
-            <a
-              href={`mailto:${SITE.contact.email}`}
+            <Link
+              href="/contact"
               className="text-eyebrow text-mist hover:text-gold uppercase transition-colors"
             >
-              {SITE.contact.email}
-            </a>
-            <span className="text-eyebrow text-stone uppercase">{SITE.contact.phone}</span>
+              Private enquiries
+            </Link>
+            {SITE.contact.email ? (
+              <a
+                href={`mailto:${SITE.contact.email}`}
+                className="text-eyebrow text-mist hover:text-gold uppercase transition-colors"
+              >
+                {SITE.contact.email}
+              </a>
+            ) : null}
+            {SITE.contact.phone ? (
+              <span className="text-eyebrow text-stone uppercase">{SITE.contact.phone}</span>
+            ) : null}
             <span className="text-eyebrow text-stone uppercase">{SITE.contact.address}</span>
           </address>
         </div>
@@ -43,7 +56,7 @@ export function Footer() {
           <span>
             &copy; {PROPERTY.year} {SITE.name}. All rights reserved.
           </span>
-          <span>A fictional residence, generated entirely in code</span>
+          <span>Aurelia Private Residence — a conceptual residence experience</span>
         </div>
       </Container>
     </footer>

@@ -18,6 +18,7 @@ type Status =
   | { kind: 'sending' }
   | { kind: 'sent' }
   | { kind: 'unconfigured'; mailto: string }
+  | { kind: 'undeliverable'; body: string }
   | { kind: 'failed' };
 
 /**
@@ -51,7 +52,9 @@ export function EnquiryForm() {
       setStatus(
         result.status === 'sent'
           ? { kind: 'sent' }
-          : { kind: 'unconfigured', mailto: result.mailto },
+          : result.status === 'unconfigured'
+            ? { kind: 'unconfigured', mailto: result.mailto }
+            : { kind: 'undeliverable', body: result.body },
       );
     } catch {
       setStatus({ kind: 'failed' });
@@ -77,13 +80,40 @@ export function EnquiryForm() {
         <p className="text-eyebrow text-gold uppercase">Ready to send</p>
         <p className="font-display text-alabaster text-2xl font-light">Your enquiry is composed.</p>
         <p className="text-mist text-sm leading-relaxed">
-          This demonstration build has no enquiry endpoint configured, so nothing has been
-          transmitted. Open the message below to send it from your own mail client.
+          Nothing has been sent yet. Open the message to send it from your own mail client, and the
+          private client team will reply with a proposed viewing time.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button href={status.mailto} magnetic>
             Open the message
           </Button>
+          <Button variant="outline" onClick={() => setStatus({ kind: 'idle' })}>
+            Edit details
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.kind === 'undeliverable') {
+    // Neither an endpoint nor an enquiry address is configured. Saying so
+    // plainly and handing the visitor their own composed message is the
+    // only honest ending: a "thank you" here would be a message that was
+    // never going anywhere, which is the one failure a buyer never forgives.
+    return (
+      <div role="status" className="border-alabaster/10 flex flex-col gap-5 border p-8">
+        <p className="text-eyebrow text-gold uppercase">Enquiry ready</p>
+        <p className="font-display text-alabaster text-2xl font-light">
+          Your details are ready to send.
+        </p>
+        <p className="text-mist text-sm leading-relaxed">
+          A viewing address has not been published for this presentation, so nothing has been
+          transmitted. Your enquiry is below — send it to the contact you were given for Aurelia.
+        </p>
+        <pre className="border-alabaster/10 text-mist overflow-x-auto border p-5 font-sans text-xs leading-relaxed whitespace-pre-wrap">
+          {status.body}
+        </pre>
+        <div>
           <Button variant="outline" onClick={() => setStatus({ kind: 'idle' })}>
             Edit details
           </Button>
@@ -145,10 +175,15 @@ export function EnquiryForm() {
 
       {status.kind === 'failed' ? (
         <p role="alert" className="text-sm text-red-400">
-          The enquiry could not be sent. Please try again, or email{' '}
-          <a href={`mailto:${SITE.contact.email}`} className="text-gold underline">
-            {SITE.contact.email}
-          </a>
+          The enquiry could not be sent. Please try again
+          {SITE.contact.email ? (
+            <>
+              , or email{' '}
+              <a href={`mailto:${SITE.contact.email}`} className="text-gold underline">
+                {SITE.contact.email}
+              </a>
+            </>
+          ) : null}
           .
         </p>
       ) : null}

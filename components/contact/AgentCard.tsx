@@ -1,4 +1,4 @@
-import { CLIENT, telLink, whatsappLink } from '@/lib/constants/client';
+import { CLIENT, mailtoLink, telLink, whatsappLink } from '@/lib/constants/client';
 
 /**
  * Who the buyer is actually talking to, and every direct way to reach them.
@@ -21,6 +21,8 @@ import { CLIENT, telLink, whatsappLink } from '@/lib/constants/client';
  */
 export function AgentCard() {
   const whatsapp = whatsappLink();
+  const tel = telLink();
+  const mailto = mailtoLink();
   const { agent, property, brochurePath } = CLIENT;
 
   return (
@@ -52,31 +54,43 @@ export function AgentCard() {
           </li>
         ) : null}
 
-        <li>
-          <a
-            href={telLink()}
-            data-cursor="link"
-            className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
-          >
-            Call
-            <span aria-hidden="true" className="text-stone normal-case">
-              {agent.phone}
-            </span>
-          </a>
-        </li>
+        {tel ? (
+          <li>
+            <a
+              href={tel}
+              data-cursor="link"
+              className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
+            >
+              Call
+              <span aria-hidden="true" className="text-stone normal-case">
+                {agent.phone}
+              </span>
+            </a>
+          </li>
+        ) : null}
 
-        <li>
-          <a
-            href={`mailto:${agent.email}?subject=${encodeURIComponent(
-              `Enquiry — ${property.name}`,
-            )}`}
-            data-cursor="link"
-            className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
-          >
-            Email
-            <span aria-hidden="true">→</span>
-          </a>
-        </li>
+        {mailto ? (
+          <li>
+            <a
+              href={mailto}
+              data-cursor="link"
+              className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
+            >
+              Email
+              <span aria-hidden="true">→</span>
+            </a>
+          </li>
+        ) : null}
+
+        {/* With no direct channel configured this card would otherwise name
+            a person and offer no way to reach them. It says how instead —
+            a line of type, not a button back to the form this card is
+            already sitting beside. */}
+        {whatsapp || tel || mailto ? null : (
+          <li className="text-mist text-sm leading-relaxed">
+            Enquiries are taken through the form.
+          </li>
+        )}
 
         {brochurePath ? (
           <li>

@@ -5,8 +5,9 @@ import { PROPERTY } from '@/lib/constants/site';
 
 /**
  * The full specification, set as an architectural schedule rather than a
- * grid of cards. Entries counted from the generated room plan are marked as
- * such, so demonstration figures are never presented as surveyed fact.
+ * grid of cards. Entries read from the residence's own room schedule are
+ * marked as such, so nothing here is presented as a surveyed measurement of
+ * a building that stands.
  */
 export function PropertySpecs() {
   return (
@@ -16,9 +17,8 @@ export function PropertySpecs() {
           <SectionHeading
             eyebrow="Specification"
             title={<span id="specification-heading">The residence, in figures</span>}
-            lede="Counts marked below are read from the same room schedule the model is
-              generated from. Areas and elevations are demonstration figures for a
-              fictional property."
+            lede="Counts marked below are read from the residence's own room schedule.
+              Areas and elevations describe the residence as designed."
           />
         </Reveal>
 
@@ -30,8 +30,8 @@ export function PropertySpecs() {
                   {item.label}
                   {item.derived ? (
                     <span
-                      title="Counted from the generated room plan"
-                      aria-label="Counted from the generated room plan"
+                      title="Counted from the room schedule"
+                      aria-label="Counted from the room schedule"
                       className="bg-gold-dim inline-block h-1 w-1 rounded-full"
                     />
                   ) : null}
@@ -47,7 +47,7 @@ export function PropertySpecs() {
 
         <p className="text-stone flex items-center gap-2 text-xs">
           <span aria-hidden="true" className="bg-gold-dim inline-block h-1 w-1 rounded-full" />
-          Counted from the generated room plan.
+          Counted from the room schedule.
         </p>
       </Container>
     </section>

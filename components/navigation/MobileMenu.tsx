@@ -76,12 +76,16 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
         </Link>
 
         <div className="rule mt-12" />
-        <a
-          href={`mailto:${SITE.contact.email}`}
-          className="text-eyebrow text-stone hover:text-gold mt-8 uppercase transition-colors"
-        >
-          {SITE.contact.email}
-        </a>
+        {SITE.contact.email ? (
+          <a
+            href={`mailto:${SITE.contact.email}`}
+            className="text-eyebrow text-stone hover:text-gold mt-8 uppercase transition-colors"
+          >
+            {SITE.contact.email}
+          </a>
+        ) : (
+          <span className="text-eyebrow text-stone mt-8 uppercase">{SITE.contact.address}</span>
+        )}
       </nav>
     </div>
   );
