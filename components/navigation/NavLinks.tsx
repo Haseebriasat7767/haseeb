@@ -18,7 +18,7 @@ export function NavLinks({ orientation = 'horizontal', onNavigate, className }: 
     <ul
       className={cn(
         'flex',
-        orientation === 'horizontal' ? 'items-center gap-8 lg:gap-12' : 'flex-col gap-2',
+        orientation === 'horizontal' ? 'items-center gap-6 xl:gap-12' : 'flex-col gap-2',
         className,
       )}
     >

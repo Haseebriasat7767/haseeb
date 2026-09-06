@@ -34,7 +34,7 @@ export function Header() {
         <div className="max-w-wide px-gutter mx-auto flex h-20 items-center justify-between">
           <Wordmark />
 
-          <div className="hidden items-center gap-10 lg:flex">
+          <div className="hidden items-center gap-8 lg:flex xl:gap-10">
             <nav aria-label="Primary">
               <NavLinks />
             </nav>
@@ -53,9 +53,9 @@ export function Header() {
             <Link
               href="/contact"
               data-cursor="link"
-              className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold border px-5 py-2.5 uppercase transition-colors duration-300"
+              className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold border px-4 py-2.5 whitespace-nowrap uppercase transition-colors duration-300 xl:px-5"
             >
-              Request viewing
+              Request private viewing
             </Link>
           </div>
 
