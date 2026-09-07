@@ -1,12 +1,7 @@
 'use client';
 
 import { getMaterials } from '@/lib/three/materials';
-import {
-  MergedBoxes,
-  SOFT_RADIUS,
-  SOFT_SEGMENTS,
-  Supports,
-} from '../villa/VillaPrimitives';
+import { MergedBoxes, Supports } from '../villa/VillaPrimitives';
 import type { DetailTier } from '../villa/VillaTypes';
 import { Palms } from './Palms';
 import type { TowerLayout } from './TowerTypes';
@@ -23,7 +18,7 @@ import type { TowerLayout } from './TowerTypes';
  */
 export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail?: DetailTier }) {
   const materials = getMaterials();
-  const { podium, tower, balconies, crown, deck, columns, palms, residence } = layout;
+  const { podium, tower, balconies, crown, deck, columns, palms } = layout;
 
   return (
     <group name="Tower">
@@ -105,27 +100,6 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
         castShadow={false}
       />
       <MergedBoxes name="balcony-rails" specs={balconies.rails} material={materials.bronze} />
-
-      {/* ── The one furnished apartment ───────────────────────────────── */}
-      <MergedBoxes
-        name="residence-rug"
-        specs={residence.rug}
-        material={materials.rug}
-        castShadow={false}
-      />
-      <MergedBoxes
-        name="residence-soft"
-        specs={residence.soft}
-        material={materials.upholstery}
-        chamfer={SOFT_RADIUS}
-        chamferSegments={SOFT_SEGMENTS}
-      />
-      <MergedBoxes name="residence-stone" specs={residence.stone} material={materials.marble} />
-      <MergedBoxes
-        name="residence-joinery"
-        specs={residence.joinery}
-        material={materials.joinery}
-      />
 
       {/* ── Crown ─────────────────────────────────────────────────────── */}
       <MergedBoxes name="crown-parapet" specs={crown.parapets} material={materials.concrete} />

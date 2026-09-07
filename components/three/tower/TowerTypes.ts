@@ -104,6 +104,13 @@ export type TowerPlan = {
   /** The amenity deck's landward edge, at the face of the tower. */
   deckBackX: number;
   levelHeight: number;
+  /** The residential level the walkthrough enters, and so the fitted one. */
+  furnishedLevel: number;
+  /** Finished floor and ceiling of that level, which the fit-out builds to. */
+  furnishedFloorY: number;
+  furnishedCeilingY: number;
+  /** Bounds of the glazed floor plate, inside the service core. */
+  glazedX: Range;
   /** World Y of the floor slab for a given residential level, 0-indexed. */
   levelY: (level: number) => number;
 };
@@ -155,19 +162,6 @@ export type TowerLayout = {
     furniture: BoxSpec[];
   };
   palms: PalmSpec[];
-  /**
-   * A single furnished apartment, on the level the walkthrough enters.
-   *
-   * Deliberately one, not fifteen: an empty floor plate reads as a car park
-   * however good the glass is, and furnishing every level would cost
-   * fourteen apartments nobody ever stands in.
-   */
-  residence: {
-    rug: BoxSpec[];
-    soft: BoxSpec[];
-    stone: BoxSpec[];
-    joinery: BoxSpec[];
-  };
 };
 
 /** The beach, the boardwalk and the sea, as flat plates and planting. */

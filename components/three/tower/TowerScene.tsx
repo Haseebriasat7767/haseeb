@@ -8,6 +8,9 @@ import { disposeVillaGeometries } from '../villa/VillaPrimitiveCache';
 import type { BoxSpec, DetailTier } from '../villa/VillaTypes';
 import { Shoreline } from './Shoreline';
 import { Tower } from './Tower';
+import { Apartment } from './Apartment';
+import { createApartment } from './ApartmentGeometry';
+import { createSkyline } from './Skyline';
 import { createShorelineLayout, createTowerLayout, TOWER_CONFIG } from './TowerGeometry';
 import type { TowerConfig } from './TowerTypes';
 
@@ -38,6 +41,19 @@ export function TowerScene({
   );
 
   const shoreline = useMemo(() => createShorelineLayout(layout.plan), [layout.plan]);
+  const skyline = useMemo(() => createSkyline(), []);
+
+  // The one fitted apartment, built to the level the walkthrough enters.
+  const apartment = useMemo(
+    () =>
+      createApartment(
+        layout.plan.glazedX,
+        layout.plan.towerZ,
+        layout.plan.furnishedFloorY,
+        layout.plan.furnishedCeilingY,
+      ),
+    [layout.plan],
+  );
 
   const materials = getMaterials();
 
@@ -82,7 +98,37 @@ export function TowerScene({
 
         <MergedBoxes name="plaza" specs={plaza} material={materials.paving} castShadow={false} />
 
+        {/* The city across the water. Shadows off throughout: it is half a
+            kilometre away, inside the haze, and every one of its faces is
+            already lit by the sky rather than by the key. */}
+        <group name="Skyline">
+          <MergedBoxes
+            name="city-ground"
+            specs={skyline.ground}
+            material={materials.terrain}
+            castShadow={false}
+          />
+          <MergedBoxes
+            name="city-masses"
+            specs={skyline.masses}
+            material={materials.concrete}
+            castShadow={false}
+            receiveShadow={false}
+          />
+          {/* Takes the shopfront material, so the city comes up with the
+              retail podium as the hour turns — a skyline that stays dark at
+              night is the one thing nobody has ever photographed. */}
+          <MergedBoxes
+            name="city-glass"
+            specs={skyline.glass}
+            material={materials.shopfront}
+            castShadow={false}
+            receiveShadow={false}
+          />
+        </group>
+
         <Tower layout={layout} detail={detail} />
+        <Apartment layout={apartment} detail={detail} />
         <Shoreline layout={shoreline} detail={detail} />
       </group>
     </ChamferProvider>

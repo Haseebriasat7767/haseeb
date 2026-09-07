@@ -251,6 +251,11 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     seaFrontX: podiumX[1],
     deckBackX: towerX[1],
     levelHeight: towerLevelHeight,
+    furnishedLevel,
+    furnishedFloorY: towerBaseY + furnishedLevel * towerLevelHeight + slabThickness,
+    // The plaster soffit under the plate above, not the plate itself.
+    furnishedCeilingY: towerBaseY + (furnishedLevel + 1) * towerLevelHeight - 0.09,
+    glazedX: [towerX[0] + coreWidth, towerX[1]],
     levelY: (level: number) => towerBaseY + level * towerLevelHeight,
   };
 
@@ -669,47 +674,6 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     palms.push(palm(`deck-palm-${i}`, x, z, deckTop, 900 + i * 31));
   }
 
-  // ── One furnished apartment ───────────────────────────────────────────
-  // Laid out against the ocean glazing on the entered level, so the room a
-  // visitor stands in is a room rather than an empty plate.
-
-  const rug: BoxSpec[] = [];
-  const soft: BoxSpec[] = [];
-  const softStone: BoxSpec[] = [];
-  const softJoinery: BoxSpec[] = [];
-
-  {
-    const f = plan.levelY(furnishedLevel) + slabThickness;
-    const glassLine = towerX[1];
-    // The lounge sits in the bay nearest the glass, off-centre on Z so the
-    // camera looking out has furniture in the frame rather than behind it.
-    const cz = -1.5;
-
-    rug.push(box('res-rug', [glassLine - 8.6, glassLine - 1.4], [f, f + 0.02], [cz - 3.1, cz + 3.1]));
-
-    // A long sofa facing the water, its back to the room.
-    const sofaX: Range = [glassLine - 8.2, glassLine - 7.2];
-    softJoinery.push(box('res-sofa-base', [sofaX[0], sofaX[1] + 1.9], [f, f + 0.32], [cz - 2.5, cz + 2.5]));
-    soft.push(box('res-sofa-seat', [sofaX[0] + 0.35, sofaX[1] + 1.9], [f + 0.32, f + 0.46], [cz - 2.4, cz + 2.4]));
-    soft.push(box('res-sofa-back', sofaX, [f + 0.32, f + 0.86], [cz - 2.5, cz + 2.5]));
-    soft.push(box('res-sofa-arm-n', [sofaX[0], sofaX[1] + 1.9], [f + 0.32, f + 0.68], [cz - 2.5, cz - 2.2]));
-    soft.push(box('res-sofa-arm-s', [sofaX[0], sofaX[1] + 1.9], [f + 0.32, f + 0.68], [cz + 2.2, cz + 2.5]));
-
-    // Two chairs turned toward the glass, and a low table between.
-    for (let i = 0; i < 2; i += 1) {
-      const z = cz + (i === 0 ? -2.0 : 2.0);
-      softJoinery.push(box(`res-chair-${i}-base`, [glassLine - 3.5, glassLine - 2.5], [f, f + 0.3], [z - 0.45, z + 0.45]));
-      soft.push(box(`res-chair-${i}-seat`, [glassLine - 3.5, glassLine - 2.5], [f + 0.3, f + 0.46], [z - 0.45, z + 0.45]));
-      soft.push(box(`res-chair-${i}-back`, [glassLine - 3.5, glassLine - 3.2], [f + 0.46, f + 0.92], [z - 0.45, z + 0.45]));
-    }
-
-    softStone.push(box('res-table', [glassLine - 5.6, glassLine - 4.0], [f + 0.28, f + 0.36], [cz - 0.7, cz + 0.7]));
-    softStone.push(box('res-table-leg', [glassLine - 5.1, glassLine - 4.5], [f, f + 0.28], [cz - 0.35, cz + 0.35]));
-
-    // A run of low joinery against the core end, giving the room a back.
-    softJoinery.push(box('res-credenza', [glazedX[0] + 0.4, glazedX[0] + 0.95], [f, f + 0.72], [cz - 2.2, cz + 2.2]));
-  }
-
   return {
     plan,
     podium: {
@@ -739,7 +703,6 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
       furniture,
     },
     palms,
-    residence: { rug, soft, stone: softStone, joinery: softJoinery },
   };
 }
 

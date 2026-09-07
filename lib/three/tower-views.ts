@@ -71,14 +71,28 @@ export const TOWER_VIEWS: readonly CameraView[] = [
   },
   {
     id: 'residence',
-    label: 'Residence',
-    // Twelfth residential floor, inside the glass, looking out over the
-    // balcony to the sea.
-    // Aimed a shade above the horizon, not below it. Pitched down, a room
-    // with a thirty-metre floor plate and a wall of glass at the end of it
-    // shows almost nothing but its own floor.
-    position: [-9, 64.6, -4.5],
-    target: [6, 64.9, -1],
+    label: 'Living room',
+    // Turned to face the room, not the window.
+    //
+    // The first cut of this looked straight out at the sea, which sounds
+    // right for an oceanfront apartment and photographs badly: you get the
+    // back of the sofa, a lot of empty floor, and a blown-out rectangle.
+    // Every interior photograph of a room like this is taken from the
+    // corner looking *into* it, with the glass running away down one side —
+    // the view is what lights the room and frames the furniture, not the
+    // subject.
+    position: [2.2, 64.25, -5.4],
+    target: [-8.4, 63.85, 0.9],
+    fov: 62,
+    exposure: INTERIOR_EXPOSURE,
+  },
+  {
+    id: 'bedroom',
+    label: 'Master bedroom',
+    // Behind the lounge, against the northern glazing, so the bed has a
+    // window on one side and a fluted wall behind it.
+    position: [-16.4, 64.3, -3.9],
+    target: [-23.6, 63.7, -7.2],
     fov: 60,
     exposure: INTERIOR_EXPOSURE,
   },
@@ -121,7 +135,9 @@ export const TOWER_VIEW_NOTES: Record<string, string> = {
     'Third retail level. Frameless glass at the balustrade with a bronze capping rail — the same detail the apartment balconies use, because it is the same condition.',
   deck: 'The amenity deck occupies the whole ocean half of the podium roof, twenty-five metres up, with the pool set back from the edge so a swimmer faces the water.',
   residence:
-    'A residence on the twelfth floor. Floor-to-ceiling glazing the full width of the ocean elevation, with the balcony beyond it.',
+    'Twelfth floor. A millwork wall of open shelving either side of a fluted media panel, a dropped soffit with a cove above the seating, and the ocean glazing running away to the right.',
+  bedroom:
+    'The master, behind the lounge. A fluted headboard wall, and the northern glazing running down the right-hand side.',
   balcony:
     'Two and a half metres of balcony, frameless glass, and the sun going down over the water. This is the view the upper floors are sold on.',
   elevation:
