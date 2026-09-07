@@ -1158,54 +1158,115 @@ export function createInteriorLayout(
   // between them decide how far down this list the renderer gets. Lighting
   // policy is not a geometry decision, so none of it is made here.
   const lights: InteriorLight[] = [
+    // The three rooms a buyer actually stands in get a downlight with a
+    // shadow. Everything below them is fill.
     {
       key: 'light-living',
-      position: [mid(living.x), living.ceilingY - 0.85, mid(living.z)],
+      kind: 'spot',
+      position: [mid(living.x), living.ceilingY - 0.2, mid(living.z)],
+      target: [mid(living.x), living.floorY, mid(living.z) + 0.6],
+      // Wide enough to fill the room and still reach the glazing — the
+      // exterior framings are lit by what spills out of these windows, and
+      // a tight cone aimed at the rug took the house's night glow with it.
+      // The floor contrast comes from the shadow and the cone's falloff,
+      // not from starving the light of range.
+      angle: 1.16,
+      penumbra: 0.9,
       intensity: 1,
       distance: 16,
       color: '#ffe6c4',
+      shadow: true,
+    },
+    {
+      key: 'light-master',
+      kind: 'spot',
+      position: [mid(master.x), master.ceilingY - 0.2, mid(master.z)],
+      target: [mid(master.x), master.floorY, mid(master.z)],
+      angle: 1.1,
+      penumbra: 0.9,
+      intensity: 0.85,
+      distance: 14,
+      color: '#ffe0bb',
+      shadow: true,
     },
     {
       key: 'light-kitchen',
-      position: [mid(islandX), kitchen.ceilingY - 0.85, mid(islandZ)],
-      intensity: 0.85,
+      kind: 'spot',
+      position: [mid(islandX), kitchen.ceilingY - 0.2, mid(islandZ)],
+      target: [mid(islandX), kitchen.floorY, mid(islandZ)],
+      angle: 1.08,
+      penumbra: 0.88,
+      intensity: 0.9,
       distance: 15,
       color: '#ffeed6',
     },
     {
-      key: 'light-foyer',
-      position: [mid(foyer.x), levels.groundFloorTopY - 0.4, mid(foyer.z)],
+      key: 'light-library',
+      kind: 'spot',
+      position: [mid(library.x), library.ceilingY - 0.2, mid(library.z) - 1.2],
+      target: [mid(library.x), library.floorY, mid(library.z) - 1.2],
+      angle: 1.1,
+      penumbra: 0.9,
       intensity: 0.9,
-      distance: 16,
+      distance: 15,
+      color: '#ffe6c4',
+    },
+    {
+      key: 'light-foyer',
+      position: [mid(foyer.x), levels.groundFloorTopY - 0.6, mid(foyer.z)],
+      intensity: 0.85,
+      distance: 14,
       color: '#ffe8cb',
     },
     {
-      key: 'light-library',
-      position: [mid(library.x), library.ceilingY - 0.85, mid(library.z) - 1.5],
-      intensity: 0.9,
-      distance: 16,
-      color: '#ffe6c4',
-    },
-    {
       key: 'light-lounge',
-      position: [mid(lounge.x) + 1.5, lounge.ceilingY - 0.85, mid(lounge.z)],
-      intensity: 0.85,
-      distance: 16,
+      position: [mid(lounge.x) + 1.5, lounge.ceilingY - 0.9, mid(lounge.z)],
+      intensity: 0.8,
+      distance: 14,
       color: '#ffe6c4',
-    },
-    {
-      key: 'light-master',
-      position: [mid(master.x), master.ceilingY - 0.85, mid(master.z)],
-      intensity: 0.75,
-      distance: 13,
-      color: '#ffe0bb',
     },
     {
       key: 'light-stair',
       position: [mid(hall.x), levels.groundFloorTopY + 0.6, mid(stairwellZ)],
       intensity: 0.55,
-      distance: 13,
+      distance: 12,
       color: '#ffe8cb',
+    },
+
+    // ── Fill ───────────────────────────────────────────────────────────
+    // Wide, weak, shadowless, and hung lower than the keys so they wash the
+    // walls and the ceiling rather than the floor. These are what a viewer
+    // outside the house actually sees: the whole night read of the building
+    // is light spilling through its glazing, and a downlight aimed at a rug
+    // does not produce it. Ranked last, so a device that can only afford
+    // four practicals still spends them on the keys.
+    {
+      key: 'fill-living',
+      position: [mid(living.x), living.ceilingY - 1.2, mid(living.z)],
+      intensity: 0.2,
+      distance: 20,
+      color: '#ffdfba',
+    },
+    {
+      key: 'fill-master',
+      position: [mid(master.x), master.ceilingY - 1.2, mid(master.z)],
+      intensity: 0.18,
+      distance: 18,
+      color: '#ffdcb4',
+    },
+    {
+      key: 'fill-library',
+      position: [mid(library.x), library.ceilingY - 1.2, mid(library.z)],
+      intensity: 0.18,
+      distance: 18,
+      color: '#ffdfba',
+    },
+    {
+      key: 'fill-kitchen',
+      position: [mid(islandX), kitchen.ceilingY - 1.2, mid(islandZ)],
+      intensity: 0.17,
+      distance: 18,
+      color: '#ffe6c8',
     },
   ];
 

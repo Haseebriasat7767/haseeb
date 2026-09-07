@@ -261,7 +261,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       fogFar: 315,
       exposure: 0.56,
     },
-    interior: { intensity: 34, activeLights: 7 },
+    interior: { intensity: 34, activeLights: 9 },
     exterior: { intensity: 22, activeLights: 1 },
     surfaces: { glazingOpacity: 0.55, poolGlow: 0.07, fixtureEmissive: 0.5 },
   },
@@ -295,7 +295,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       fogFar: 250,
       exposure: 1.0,
     },
-    interior: { intensity: 46, activeLights: 7 },
+    interior: { intensity: 46, activeLights: 11 },
     exterior: { intensity: 42, activeLights: 3 },
     surfaces: { glazingOpacity: 0.46, poolGlow: 0.17, fixtureEmissive: 2.0 },
   },
@@ -332,7 +332,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
       fogFar: 205,
       exposure: 1.1,
     },
-    interior: { intensity: 52, activeLights: 7 },
+    interior: { intensity: 52, activeLights: 11 },
     exterior: { intensity: 50, activeLights: 3 },
     surfaces: { glazingOpacity: 0.4, poolGlow: 0.24, fixtureEmissive: 2.4 },
   },
@@ -370,8 +370,15 @@ type LightingTier = {
 
 const LIGHTING_TIERS: Record<QualityTier, LightingTier> = {
   low: { interiorLights: 0, exteriorLights: 0, shadowExtentScale: 0.8 },
-  medium: { interiorLights: 3, exteriorLights: 1, shadowExtentScale: 0.9 },
-  high: { interiorLights: 7, exteriorLights: 3, shadowExtentScale: 1 },
+  medium: { interiorLights: 4, exteriorLights: 1, shadowExtentScale: 0.9 },
+  // Eleven, not seven, because the principal rooms are now lit with a key
+  // and a fill rather than one bulb. The keys are aimed downlights that
+  // give a floor its pool of light and its shadow; the fills are wide, weak
+  // and shadowless, and they are what actually reaches the glazing — the
+  // whole night read of the house from outside is light spilling out of its
+  // windows, and a cone pointed at the rug does not produce it. Four extra
+  // shadowless point lights is a cheap way to have both.
+  high: { interiorLights: 11, exteriorLights: 3, shadowExtentScale: 1 },
 };
 
 const RADIANS = Math.PI / 180;

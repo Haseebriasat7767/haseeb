@@ -20,6 +20,29 @@ export type InteriorLight = {
   /** Falloff radius in metres, so one room's light never washes the next. */
   distance: number;
   color: string;
+  /**
+   * A downlight rather than a bare bulb.
+   *
+   * This distinction is the whole reason an interior can afford a cast
+   * shadow at all. A point light's shadow is a cube — six renders of the
+   * scene, every frame — and seven of those is not a thing a browser is
+   * going to do. A spot light's shadow is a single 2D map, and an
+   * architectural downlight *is* a spot: it is a fitting in a ceiling
+   * aiming at the floor, not a glowing sphere in mid-air. Modelling it as
+   * what it is costs a sixth as much and looks more like the building.
+   */
+  kind?: 'point' | 'spot';
+  /** Cone half-angle in radians. Spots only. */
+  angle?: number;
+  /** Softness of the cone edge, 0-1. Spots only. */
+  penumbra?: number;
+  /** Where the cone aims. Spots only; normally straight down. */
+  target?: Vector3Tuple;
+  /**
+   * Whether this light is worth a shadow map. Ranked and capped by tier —
+   * only the first couple of spots in a scene ever get one.
+   */
+  shadow?: boolean;
 };
 
 /**
