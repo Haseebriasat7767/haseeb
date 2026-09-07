@@ -113,6 +113,14 @@ export function InteriorFurnishings({
         castShadow={false}
         receiveShadow={false}
       />
+      {/* The recesses the light lines sit in. Black and matte: a channel is
+          a void with a light in it, not a surface to be seen. */}
+      <MergedBoxes
+        name="furniture-channels"
+        specs={parts.channel}
+        material={materials.lightChannel}
+        castShadow={false}
+      />
       {/* Architectural light lines. Matte, so a ceiling run reads as light
           rather than as a strip of chrome mirroring the room back. */}
       <MergedBoxes

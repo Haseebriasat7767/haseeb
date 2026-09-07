@@ -1276,7 +1276,22 @@ function createMaterials() {
     glazing: withGlassFresnel(
       new MeshPhysicalMaterial({
         color: '#1b2b36',
-        roughness: 0.035,
+        // Raised from 0.035, which was a mirror.
+        //
+        // Specular response from a point light goes up sharply as a surface
+        // smooths, and a curtain wall at 0.035 with seven practicals inside
+        // it and three lanterns outside was returning a handful of tiny,
+        // enormously intense highlights — which the bloom pass then spread
+        // into white discs floating on the glazing. From inside the upper
+        // lounge at dusk there were two of them sitting over the sea.
+        //
+        // Real coated architectural glass is not a perfect mirror anyway:
+        // it has a measurable haze, and 0.075 is inside that range. It
+        // costs almost nothing in the environment reflection that makes the
+        // facade read as glass from outside — at this roughness the sky is
+        // still sharp — and it spreads each point-light highlight over
+        // enough pixels that it stops being a blown disc.
+        roughness: 0.075,
         metalness: 0.05,
         reflectivity: 1,
         // The environment map is doing the work here: the sky reflected off
@@ -1689,6 +1704,28 @@ function createMaterials() {
      * left is the emissive term, which is the only thing a light line
      * should be contributing.
      */
+    /**
+     * The recess a light line sits in — the ceiling channel and the wall
+     * washer's housing.
+     *
+     * This was drawn in `joinery` on the first attempt, and joinery is
+     * sawn timber: roughness 0.46, a little metalness, and the environment
+     * map at full strength. Three of those running the length of a ceiling
+     * caught a specular sheen along every one and mirrored the room back —
+     * so the runs read as polished trim rather than as slots cut into the
+     * plaster, and the upper lounge in particular had bright bands sliding
+     * across its ceiling as the camera moved.
+     *
+     * A real channel is not a surface anybody is meant to see. It is a dark
+     * void with a light in it, and the only correct rendering of one is
+     * black, matte, and reflecting nothing at all.
+     */
+    lightChannel: standard({
+      color: '#14100c',
+      roughness: 1,
+      metalness: 0,
+      envMapIntensity: 0,
+    }),
     lightStrip: standard({
       color: '#0f0b07',
       roughness: 1,

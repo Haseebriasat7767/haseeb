@@ -42,6 +42,8 @@ export type Parts = {
    * material that does not reflect the room — see `lightStrip`.
    */
   strip: BoxSpec[];
+  /** The dark recess each light line sits in. Matte, and reflects nothing. */
+  channel: BoxSpec[];
   /** Plaster reveals, niches, and feature-wall panels. */
   plaster: BoxSpec[];
   /** Turned elements — pendant stems, lamp columns, rails. */
@@ -81,6 +83,7 @@ export function emptyParts(): Parts {
     rugs: [],
     glow: [],
     strip: [],
+    channel: [],
     plaster: [],
     posts: [],
     drapery: [],
@@ -129,6 +132,7 @@ export function turned(
     'rugs',
     'glow',
     'strip',
+    'channel',
     'plaster',
     'drapery',
     'sheer',
@@ -1004,10 +1008,10 @@ export function createCeilingRuns(
     // The channel the strip sits in, so the line has a shadowed edge
     // instead of floating on the plaster.
     if (axis === 'x') {
-      parts.joinery.push(box(`${key}-channel-${i}`, long, channelY, wide));
+      parts.channel.push(box(`${key}-channel-${i}`, long, channelY, wide));
       parts.strip.push(box(`${key}-run-${i}`, run, stripY, lit));
     } else {
-      parts.joinery.push(box(`${key}-channel-${i}`, wide, channelY, long));
+      parts.channel.push(box(`${key}-channel-${i}`, wide, channelY, long));
       parts.strip.push(box(`${key}-run-${i}`, lit, stripY, run));
     }
   }
@@ -1038,10 +1042,10 @@ export function createWallWasher(
   if (inner[1] - inner[0] < 0.3) return;
 
   if (axis === 'x') {
-    parts.joinery.push(box(`${key}-housing`, along, housing, [at[0], at[1] + 0.008]));
+    parts.channel.push(box(`${key}-housing`, along, housing, [at[0], at[1] + 0.008]));
     parts.strip.push(box(`${key}-line`, inner, line, [at[1], at[1] + 0.022]));
   } else {
-    parts.joinery.push(box(`${key}-housing`, [at[0], at[1] + 0.008], housing, along));
+    parts.channel.push(box(`${key}-housing`, [at[0], at[1] + 0.008], housing, along));
     parts.strip.push(box(`${key}-line`, [at[1], at[1] + 0.022], line, inner));
   }
 }
