@@ -37,7 +37,7 @@ export type TimeOfDay = 'morning' | 'day' | 'goldenHour' | 'blueHour' | 'night';
 export type CameraMode = 'orbit' | 'cinematic' | 'fixed' | 'journey';
 
 /** Which building the Canvas renders. */
-export type SceneContent = 'villa' | 'placeholder';
+export type SceneContent = 'villa' | 'tower' | 'placeholder';
 
 /** Rendering tier resolved from device capability, not user agent alone. */
 export type QualityTier = 'low' | 'medium' | 'high';

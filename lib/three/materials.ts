@@ -985,6 +985,86 @@ vec3 aureliaWaterNormal(vec2 p) {
 }
 
 /**
+ * Open water, at the scale of an ocean rather than a basin.
+ *
+ * `withWaterSurface` above is tuned for a swimming pool: its four crossing
+ * swells have wavelengths of a couple of metres, which is right for water
+ * you could swim across and completely wrong for water that runs to the
+ * horizon. Reused at that scale the sea reads as hammered foil — thousands
+ * of identical ripples per screen pixel, aliasing into a shimmering mess
+ * the moment the camera moves.
+ *
+ * So this is the same technique at ocean wavelengths: a long primary swell
+ * of roughly eighty metres, two shorter crossing systems on top, and a
+ * fine chop that only survives close to the camera. Distance damping is the
+ * part that matters — swell detail is faded out with range so the far water
+ * resolves to a flat, mirror-like plane that takes its colour from the sky,
+ * which is exactly what the sea does when you photograph it.
+ */
+function withOceanSurface<T extends MeshPhysicalMaterial>(material: T): T {
+  material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\nvarying vec3 vAureliaSeaPos;`)
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>\n  vAureliaSeaPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vAureliaSeaPos;
+
+// Analytic swell, as in the pool: the gradient is the sum of the same
+// cosines, so no differencing and no derivative artefacts.
+vec3 aureliaSeaNormal(vec2 p, float detail) {
+  vec2 d1 = vec2(0.97, 0.24);
+  vec2 d2 = vec2(-0.31, 0.95);
+  vec2 d3 = vec2(0.66, -0.75);
+  vec2 d4 = vec2(0.21, 0.98);
+  vec2 g = vec2(0.0);
+  // Primary swell — long, and never damped out: it is what gives the sea
+  // its form at every distance.
+  g += d1 * (0.085 * cos(dot(p, d1) * 0.078 + 0.4));
+  g += d2 * (0.055 * cos(dot(p, d2) * 0.135 + 2.1));
+  // Crossing systems and chop, faded with range.
+  g += d3 * (0.030 * cos(dot(p, d3) * 0.42 + 3.7) * detail);
+  g += d4 * (0.018 * cos(dot(p, d4) * 1.15 + 5.2) * detail);
+  return normalize(vec3(-g.x, 1.0, -g.y));
+}`,
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+  float aureliaSeaRange = length(vViewPosition);
+  // Chop is gone by roughly a hundred and forty metres out; beyond that
+  // only the long swell survives, which is what stops the horizon boiling.
+  float aureliaSeaDetail = 1.0 - smoothstep(30.0, 140.0, aureliaSeaRange);
+  {
+    vec3 swellWorld = aureliaSeaNormal(vAureliaSeaPos.xz, aureliaSeaDetail);
+    vec3 swellView = normalize(mat3(viewMatrix) * swellWorld);
+    normal = normalize(mix(normal, swellView, 0.9));
+  }
+  float aureliaSeaFacing = clamp(abs(dot(normalize(vViewPosition), normal)), 0.0, 1.0);
+  float aureliaSeaFresnel = pow(1.0 - aureliaSeaFacing, 5.0);`,
+      )
+      .replace(
+        '#include <lights_physical_fragment>',
+        `#include <lights_physical_fragment>
+  // Grazing water is a mirror and water underfoot is not. Lifting the
+  // specular response toward the horizon is what puts the sun's path on
+  // the sea instead of a single hot dot.
+  material.specularColor *= mix(1.0, 3.4, aureliaSeaFresnel);
+  material.roughness = mix(material.roughness, 0.02, aureliaSeaFresnel);`,
+      );
+  };
+
+  material.customProgramCacheKey = () => 'aurelia-ocean-surface';
+  return material;
+}
+
+/**
  * Attaches a family's albedo, roughness and normal maps to a material.
  *
  * Deliberately additive. The material keeps its own colour, its own base
@@ -1380,6 +1460,94 @@ function createMaterials() {
         normalScale: 2.6,
       },
     ),
+    /**
+     * The sea.
+     *
+     * Deliberately not the pool colour. A pool is a shallow tank over pale
+     * plaster and reads blue-green from the basin light coming back up; open
+     * water past the sandbar has nothing coming back at all, so almost
+     * everything you see in it is reflected sky. Hence the very dark, very
+     * slightly green albedo and the near-mirror roughness: the colour of the
+     * sea in any given frame is the colour of the sky above it, which is what
+     * ties it to the hour without a single extra uniform.
+     */
+    ocean: withOceanSurface(
+      new MeshPhysicalMaterial({
+        color: '#0d3a48',
+        roughness: 0.06,
+        envMapIntensity: 2.6,
+        metalness: 0.02,
+        reflectivity: 1,
+        transparent: false,
+        opacity: 1,
+      }),
+    ),
+    /**
+     * The shallows, laid over the sea between the sand and the drop-off.
+     *
+     * The turquoise band every photograph of this coast has, and it is not
+     * a stylistic choice: it is a real effect of white carbonate sand a few
+     * feet down bouncing light back through clear water. Same surface
+     * treatment as the open sea so the swell runs continuously across the
+     * join; only the albedo and the transparency change.
+     */
+    shallows: withOceanSurface(
+      new MeshPhysicalMaterial({
+        color: '#2f9fa8',
+        roughness: 0.08,
+        envMapIntensity: 2.0,
+        metalness: 0.02,
+        reflectivity: 1,
+        transparent: true,
+        opacity: 0.82,
+      }),
+    ),
+    /**
+     * Beach sand — pale, warm, and rough enough to hold the sun.
+     *
+     * The variation is doing real work here: an unbroken plane at this
+     * albedo is the fastest way to make a beach read as a car park. The
+     * anisotropy stretches the noise along the shore, the way wind and tide
+     * actually comb a beach.
+     */
+    sand: withVariation(standard({ color: '#d9cbae', roughness: 0.94, metalness: 0 }), {
+      scale: 3.2,
+      colorVariation: 0.05,
+      roughnessVariation: 0.04,
+      seed: 61,
+      anisotropy: [1, 1, 2.6],
+      normalStrength: 0.05,
+      normalScale: 22,
+    }),
+    /**
+     * Palm fronds. Thin, translucent-looking, and much lighter than the
+     * villa's broadleaf canopy — a palm photographs almost yellow-green
+     * against the sky where an olive or a fig goes nearly black.
+     */
+    frond: withVariation(standard({ color: '#6f7f42', roughness: 0.82, metalness: 0 }), {
+      scale: 1.5,
+      colorVariation: 0.09,
+      roughnessVariation: 0.05,
+      seed: 73,
+      anisotropy: [3.4, 1, 1],
+    }),
+    /**
+     * Shopfront glazing at the podium.
+     *
+     * Retail glass is not residential glass: it is cleaner, flatter, and
+     * lit from behind by the units themselves, so it carries far less
+     * reflection and reads as a lit opening rather than as a mirror. The
+     * emissive comes up after dark with the rest of the practicals.
+     */
+    shopfront: standard({
+      color: '#1b2229',
+      roughness: 0.09,
+      metalness: 0.05,
+      emissive: '#ffdcae',
+      emissiveIntensity: 0,
+      transparent: true,
+      opacity: 0.72,
+    }),
     /** Tree trunks and major branches — vertical grain, like the entrance wood. */
     bark: withVariation(standard({ color: '#453a2f', roughness: 0.9, metalness: 0 }), {
       scale: 2.4,

@@ -18,6 +18,18 @@ type CameraControllerProps = {
    */
   parallax?: number;
   reducedMotion?: boolean;
+  /**
+   * Camera clipping planes, in metres.
+   *
+   * The defaults are sized for the residence, whose entire site fits inside
+   * a couple of hundred metres — and a tight far plane is worth having,
+   * because depth precision is a ratio and every metre of range is paid for
+   * somewhere. A building on a coastline is a different problem: the sea
+   * runs to the horizon, and at the villa's far plane it is simply culled,
+   * leaving a flat band where the water should be.
+   */
+  near?: number;
+  far?: number;
 };
 
 /** Seconds-independent critical damping: the fraction remaining after `dt`. */
@@ -92,6 +104,8 @@ export function CameraController({
   driftSpeed = 0.05,
   parallax = 0,
   reducedMotion = false,
+  near = 0.1,
+  far = 260,
 }: CameraControllerProps) {
   const cameraRef = useRef<ThreePerspectiveCamera>(null);
   const pointer = useThree((state) => state.pointer);
@@ -198,6 +212,25 @@ export function CameraController({
       camera.fov = damp(camera.fov, targetFov, smoothing, step);
       camera.updateProjectionMatrix();
     }
+
+    // Keep the clock running while the move is still resolving.
+    //
+    // `fixed` mode renders on demand, which is the right default — a held
+    // framing should cost nothing. But a damped transition needs a frame to
+    // advance and only advances when a frame is drawn, so the single
+    // invalidation that fires when the view changes buys one or two frames
+    // and then the camera simply stops, stranded part-way between two
+    // framings. It is invisible at sixty frames a second, where a couple of
+    // frames is most of the move; it is glaring anywhere slow, and it means
+    // the framing a visitor lands on is not the framing that was composed.
+    //
+    // So: ask for another frame until there is nothing left to resolve.
+    const settled =
+      framed.current.distanceToSquared(camera.position) < 1e-6 &&
+      current.current.distanceToSquared(target.current) < 1e-6 &&
+      Math.abs(camera.fov - targetFov) <= 0.01;
+
+    if (!settled) invalidate();
   });
 
   return (
@@ -206,8 +239,8 @@ export function CameraController({
         ref={cameraRef}
         makeDefault
         fov={targetFov}
-        near={0.1}
-        far={260}
+        near={near}
+        far={far}
         position={view.position}
       />
       {mode === 'orbit' ? (

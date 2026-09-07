@@ -19,6 +19,7 @@ import { PlaceholderMassing } from './PlaceholderMassing';
 import { PathTracer } from './post/PathTracer';
 import { PostProcessing } from './post/PostProcessing';
 import { Terrain } from './Terrain';
+import { TowerScene } from './tower/TowerScene';
 import { ProceduralVilla } from './villa/ProceduralVilla';
 
 type SceneProps = {
@@ -84,10 +85,27 @@ export function Scene({
   // One resolved rig for the whole scene: the environment reads it, and so
   // do the interior practicals and the exterior fixtures, so nothing can
   // drift out of step with the hour.
-  const lighting = useMemo(
-    () => resolveLighting(timeOfDay, quality.tier),
-    [timeOfDay, quality.tier],
-  );
+  const lighting = useMemo(() => {
+    const base = resolveLighting(timeOfDay, quality.tier);
+    if (content !== 'tower') return base;
+
+    // The hours are composed for the residence, whose whole site fits
+    // inside fifty metres. A twenty-storey building on a beach is a
+    // different scale of scene entirely: the cameras that frame it stand a
+    // hundred and thirty metres back and the sea runs to the horizon, so at
+    // the villa's fog distances the tower washes out to nothing before it
+    // is even in frame. Same air, more of it — and a shadow frustum wide
+    // enough for an eighty-metre building to cast across its own plaza.
+    return {
+      ...base,
+      atmosphere: {
+        ...base.atmosphere,
+        fogNear: base.atmosphere.fogNear * 3.2,
+        fogFar: base.atmosphere.fogFar * 4.4,
+      },
+      shadowExtent: base.shadowExtent * 2.6,
+    };
+  }, [timeOfDay, quality.tier, content]);
 
   // The finishing chain reads the same hour the rig does, so a grade can
   // never describe a different time of day than the light it is grading.
@@ -127,7 +145,16 @@ export function Scene({
     >
       <color attach="background" args={[lighting.atmosphere.background]} />
 
-      <CameraController view={view} mode={mode} parallax={parallax} reducedMotion={reducedMotion} />
+      <CameraController
+        view={view}
+        mode={mode}
+        parallax={parallax}
+        reducedMotion={reducedMotion}
+        // The tower stands on an ocean that runs to the horizon. Near is
+        // lifted with far to keep the depth ratio sane — nothing in this
+        // scene is ever within a quarter metre of the eye.
+        {...(content === 'tower' ? { near: 0.25, far: 3000 } : {})}
+      />
       <SceneEnvironment
         lighting={lighting}
         shadows={quality.shadows}
@@ -149,10 +176,15 @@ export function Scene({
       ) : null}
 
       <Suspense fallback={null}>
-        <Terrain />
+        {/* The villa's rolling terrain is the villa's site. The tower brings
+            its own ground — a plaza, a beach and an ocean — and laying the
+            estate landform under it would push hills through the sand. */}
+        {content === 'tower' ? null : <Terrain />}
         {children ??
           (content === 'placeholder' ? (
             <PlaceholderMassing />
+          ) : content === 'tower' ? (
+            <TowerScene detail={quality.tier} />
           ) : (
             <ProceduralVilla detail={quality.tier} lighting={lighting} />
           ))}

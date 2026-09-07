@@ -1,0 +1,163 @@
+'use client';
+
+import { getMaterials } from '@/lib/three/materials';
+import {
+  MergedBoxes,
+  SOFT_RADIUS,
+  SOFT_SEGMENTS,
+  Supports,
+} from '../villa/VillaPrimitives';
+import type { DetailTier } from '../villa/VillaTypes';
+import { Palms } from './Palms';
+import type { TowerLayout } from './TowerTypes';
+
+/**
+ * The mixed-use tower: five retail levels, fifteen residential, and the
+ * amenity deck on the roof between them.
+ *
+ * Every group here is one merged mesh. That matters more than it does on
+ * the villa — fifteen floors of balconies, four glazed elevations and five
+ * levels of shopfront come to several thousand volumes, and drawn
+ * individually the building would not hold a frame rate on anything.
+ * Sorted by material, the whole twenty storeys is about twenty draw calls.
+ */
+export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail?: DetailTier }) {
+  const materials = getMaterials();
+  const { podium, tower, balconies, crown, deck, columns, palms, residence } = layout;
+
+  return (
+    <group name="Tower">
+      {/* ── Retail podium ─────────────────────────────────────────────── */}
+      <MergedBoxes name="podium-shell" specs={podium.mass} material={materials.stone} />
+      {/* The retail floor plates. Polished stone, because the atrium floor
+          is the surface every one of those lit coves is reflecting in. */}
+      <MergedBoxes name="podium-floors" specs={podium.floors} material={materials.marble} />
+      <MergedBoxes name="podium-bands" specs={podium.bands} material={materials.concrete} />
+      {/* Shopfronts do not cast: a lit opening that throws a shadow reads as
+          a solid panel, which is the opposite of what glass is doing here. */}
+      <MergedBoxes
+        name="podium-glazing"
+        specs={podium.glazing}
+        material={materials.shopfront}
+        castShadow={false}
+      />
+      <MergedBoxes name="podium-mullions" specs={podium.mullions} material={materials.darkMetal} />
+      <MergedBoxes name="podium-soffit" specs={podium.soffits} material={materials.concrete} />
+      {/* The lit reveal under each retail band. */}
+      <MergedBoxes
+        name="podium-signage"
+        specs={podium.signage}
+        material={materials.lightStrip}
+        castShadow={false}
+        receiveShadow={false}
+      />
+      <Supports specs={columns} material={materials.stone} />
+      {/* Atrium balustrades, their capping rails, the coves that light the
+          void, and the roof light over the whole five storeys. */}
+      <MergedBoxes
+        name="atrium-balustrades"
+        specs={podium.balustrades}
+        material={materials.glazing}
+        castShadow={false}
+      />
+      <MergedBoxes name="atrium-rails" specs={podium.rails} material={materials.bronze} />
+      <MergedBoxes
+        name="atrium-coves"
+        specs={podium.coves}
+        material={materials.lightStrip}
+        castShadow={false}
+        receiveShadow={false}
+      />
+      <MergedBoxes
+        name="atrium-skylight"
+        specs={podium.skylight}
+        material={materials.glazing}
+        castShadow={false}
+      />
+
+      {/* ── Residential tower ─────────────────────────────────────────── */}
+      <MergedBoxes name="tower-core" specs={tower.core} material={materials.stone} />
+      <MergedBoxes name="tower-slabs" specs={tower.slabs} material={materials.concrete} />
+      {/* The apartment floors. Stone rather than concrete: this is the one
+          surface of the tower a resident stands on. */}
+      <MergedBoxes name="tower-plates" specs={tower.plates} material={materials.marble} />
+      <MergedBoxes
+        name="tower-glazing"
+        specs={tower.glazing}
+        material={materials.glazing}
+        castShadow={false}
+      />
+      <MergedBoxes
+        name="tower-ceilings"
+        specs={tower.ceilings}
+        material={materials.plaster}
+        castShadow={false}
+      />
+      <MergedBoxes name="tower-fins" specs={tower.fins} material={materials.bronze} />
+      <MergedBoxes name="tower-spandrels" specs={tower.spandrels} material={materials.concrete} />
+
+      {/* ── Balconies ─────────────────────────────────────────────────── */}
+      <MergedBoxes name="balcony-slabs" specs={balconies.slabs} material={materials.concrete} />
+      <MergedBoxes
+        name="balcony-glass"
+        specs={balconies.glass}
+        material={materials.glazing}
+        castShadow={false}
+      />
+      <MergedBoxes name="balcony-rails" specs={balconies.rails} material={materials.bronze} />
+
+      {/* ── The one furnished apartment ───────────────────────────────── */}
+      <MergedBoxes
+        name="residence-rug"
+        specs={residence.rug}
+        material={materials.rug}
+        castShadow={false}
+      />
+      <MergedBoxes
+        name="residence-soft"
+        specs={residence.soft}
+        material={materials.upholstery}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
+      />
+      <MergedBoxes name="residence-stone" specs={residence.stone} material={materials.marble} />
+      <MergedBoxes
+        name="residence-joinery"
+        specs={residence.joinery}
+        material={materials.joinery}
+      />
+
+      {/* ── Crown ─────────────────────────────────────────────────────── */}
+      <MergedBoxes name="crown-parapet" specs={crown.parapets} material={materials.concrete} />
+      <MergedBoxes
+        name="crown-glow"
+        specs={crown.glow}
+        material={materials.lightStrip}
+        castShadow={false}
+        receiveShadow={false}
+      />
+
+      {/* ── Amenity deck ──────────────────────────────────────────────── */}
+      <MergedBoxes name="deck-paving" specs={deck.paving} material={materials.paving} />
+      <MergedBoxes name="deck-upstand" specs={deck.parapet} material={materials.stone} />
+      <MergedBoxes
+        name="deck-balustrade"
+        specs={deck.glass}
+        material={materials.glazing}
+        castShadow={false}
+      />
+      <MergedBoxes name="deck-planters" specs={deck.planters} material={materials.stone} />
+      <MergedBoxes name="deck-pool-shell" specs={deck.poolShell} material={materials.poolInterior} />
+      <MergedBoxes
+        name="deck-pool-water"
+        specs={deck.water}
+        material={materials.poolWater}
+        castShadow={false}
+      />
+      <MergedBoxes name="deck-furniture" specs={deck.furniture} material={materials.teak} />
+      <Palms specs={palms} detail={detail} name="deck-palms" />
+    </group>
+  );
+}
+
+export default Tower;

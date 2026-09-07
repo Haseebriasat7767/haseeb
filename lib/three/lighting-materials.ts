@@ -21,4 +21,10 @@ export function applyLightingToMaterials(state: LightingState): void {
   materials.glazing.opacity = state.surfaces.glazingOpacity;
   materials.poolWater.emissiveIntensity = state.surfaces.poolGlow;
   materials.poolInterior.emissiveIntensity = state.surfaces.poolGlow * 0.4;
+  // Retail glazing is lit from behind by the units themselves, so it comes
+  // up harder than any architectural fitting and stays up after the tower
+  // above it has gone to a handful of windows. A shopping podium at dusk is
+  // the brightest thing on a street, which is the whole reason it works as
+  // a base for something dark and vertical.
+  materials.shopfront.emissiveIntensity = state.surfaces.fixtureEmissive * 1.35;
 }
