@@ -45,6 +45,21 @@ export const TOWER_CONFIG: TowerConfig = {
   // Twelfth residential floor: high enough that the view is the point,
   // low enough that the beach below still reads as a beach.
   furnishedLevel: 11,
+  // The banded towers on this coast are rounded rectangles in plan, and
+  // they step as they rise. Both are silhouette, which is the half of a
+  // facade you read from a distance.
+  cornerRadius: 4.2,
+  // Both steps sit ABOVE the fitted level.
+  //
+  // Set lower, they shrink the floor plate out from under the apartment —
+  // its furniture, its walls and every interior camera are laid out against
+  // the full plate, so the camera ends up standing outside the building
+  // looking into a solid mass. The stepped silhouette is worth having; it
+  // is not worth breaking six framings for.
+  setbacks: [
+    { level: 12, inset: 1.7 },
+    { level: 14, inset: 1.9 },
+  ],
   crownHeight: 4,
 
   columnRadius: 0.42,
@@ -90,6 +105,88 @@ function ring(
   out.push(box(`${key}-s`, x, y, [z[1] - thickness, z[1]]));
   out.push(box(`${key}-w`, [x[0], x[0] + thickness], y, innerZ));
   out.push(box(`${key}-e`, [x[1] - thickness, x[1]], y, innerZ));
+}
+
+/**
+ * Boxes stepped along a quarter-circle, each turned to the local tangent.
+ *
+ * A rounded corner is the whole signature of the banded towers this facade
+ * is drawn from, and it cannot be faked with a chamfer: the band has to
+ * carry continuously round, holding its own depth, or the building reads as
+ * four flat elevations with the corners knocked off.
+ *
+ * Rotation is `-(t + pi/2)`: a box's local +X maps to `(cos t, -sin t)` in
+ * world XZ, and the tangent at angle `t` is `(-sin t, cos t)`, which those
+ * two together only satisfy at that angle. Getting it wrong leaves the
+ * segments fanned out like a broken zip, which is exactly how it looked
+ * the first time.
+ */
+function arcRun(
+  out: BoxSpec[],
+  key: string,
+  centreX: number,
+  centreZ: number,
+  radius: number,
+  startAngle: number,
+  y: Range,
+  thickness: number,
+  steps: number,
+): void {
+  const quarter = Math.PI / 2;
+  const mid = radius - thickness / 2;
+  // Overlapped a little so no seam opens between segments.
+  const len = ((quarter / steps) * mid) * 1.35;
+
+  for (let i = 0; i < steps; i += 1) {
+    const t = startAngle + (quarter * (i + 0.5)) / steps;
+    out.push({
+      key: `${key}-${i}`,
+      position: [centreX + Math.cos(t) * mid, (y[0] + y[1]) / 2, centreZ + Math.sin(t) * mid],
+      scale: [len, y[1] - y[0], thickness],
+      rotationY: -(t + quarter),
+    });
+  }
+}
+
+/**
+ * A band ringing a rounded-rectangle plan.
+ *
+ * The straight runs are held back by the corner radius and the four
+ * quarters are stepped round, so the band is continuous the whole way and
+ * every segment keeps the same depth.
+ */
+function roundedRing(
+  out: BoxSpec[],
+  key: string,
+  x: Range,
+  y: Range,
+  z: Range,
+  thickness: number,
+  cornerR: number,
+  steps = 5,
+): void {
+  const r = Math.max(
+    0,
+    Math.min(cornerR, (x[1] - x[0]) / 2 - 0.01, (z[1] - z[0]) / 2 - 0.01),
+  );
+
+  if (r <= thickness) {
+    ring(out, key, x, y, z, thickness);
+    return;
+  }
+
+  const innerX: Range = [x[0] + r, x[1] - r];
+  const innerZ: Range = [z[0] + r, z[1] - r];
+
+  out.push(box(`${key}-n`, innerX, y, [z[0], z[0] + thickness]));
+  out.push(box(`${key}-s`, innerX, y, [z[1] - thickness, z[1]]));
+  out.push(box(`${key}-w`, [x[0], x[0] + thickness], y, innerZ));
+  out.push(box(`${key}-e`, [x[1] - thickness, x[1]], y, innerZ));
+
+  arcRun(out, `${key}-cnw`, x[0] + r, z[0] + r, r, Math.PI, y, thickness, steps);
+  arcRun(out, `${key}-cne`, x[1] - r, z[0] + r, r, -Math.PI / 2, y, thickness, steps);
+  arcRun(out, `${key}-cse`, x[1] - r, z[1] - r, r, 0, y, thickness, steps);
+  arcRun(out, `${key}-csw`, x[0] + r, z[1] - r, r, Math.PI / 2, y, thickness, steps);
 }
 
 /**
@@ -220,6 +317,8 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     finDepth,
     coreWidth,
     furnishedLevel,
+    cornerRadius,
+    setbacks,
     crownHeight,
     columnRadius,
     columnCount,
@@ -412,43 +511,78 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
 
   // The service blade. Solid, full height, and deliberately reading as a
   // different material from the glass it braces.
-  core.push(box('tower-core', coreX, [towerBaseY, crownTopY], towerZ));
+  core.push(box('tower-core', coreX, [towerBaseY, crownTopY], [towerZ[0] + 0.6, towerZ[1] - 0.6]));
 
   const slabX: Range = [towerX[0] - slabProjection, towerX[1] + slabProjection];
   const slabZ: Range = [towerZ[0] - slabProjection, towerZ[1] + slabProjection];
+
+  /** How far the tower has stepped in by a given level. */
+  const insetAt = (level: number) =>
+    setbacks.reduce((sum, s) => (level >= s.level ? sum + s.inset : sum), 0);
 
   for (let level = 0; level < towerLevels; level += 1) {
     const y = plan.levelY(level);
     const nextY = plan.levelY(level + 1);
 
-    // The floor plate, expressed all the way round. Wrapping the corners is
-    // the whole streamline: stop the band at the corner and the tower reads
-    // as four separate elevations bolted together.
-    ring(slabs, `tower-slab-${level}`, slabX, [y, y + slabThickness], slabZ, 1.1);
+    const inset = insetAt(level);
+    const lx: Range = [towerX[0] + inset, towerX[1] - inset];
+    const lz: Range = [towerZ[0] + inset, towerZ[1] - inset];
+    const lSlabX: Range = [lx[0] - slabProjection, lx[1] + slabProjection];
+    const lSlabZ: Range = [lz[0] - slabProjection, lz[1] + slabProjection];
+    const lGlazedX: Range = [Math.max(glazedX[0], lx[0]), lx[1]];
+
+    // The floor plate, expressed all the way round a rounded plan. Stop the
+    // band at a corner and the tower reads as four flat elevations bolted
+    // together; carry it round and the whole thing becomes one object.
+    roundedRing(
+      slabs,
+      `tower-slab-${level}`,
+      lSlabX,
+      [y, y + slabThickness],
+      lSlabZ,
+      1.1,
+      cornerRadius + slabProjection,
+    );
+
+    // Glazing wrapping the same corners, so the ribbon is continuous.
+    const glazeY: Range = [y + slabThickness, nextY];
+    for (const [ck, cx, cz, a0] of [
+      ['nw', lx[0] + cornerRadius, lz[0] + cornerRadius, Math.PI],
+      ['ne', lx[1] - cornerRadius, lz[0] + cornerRadius, -Math.PI / 2],
+      ['se', lx[1] - cornerRadius, lz[1] - cornerRadius, 0],
+      ['sw', lx[0] + cornerRadius, lz[1] - cornerRadius, Math.PI / 2],
+    ] as const) {
+      arcRun(towerGlass, `tower-cglass-${level}-${ck}`, cx, cz, cornerRadius, a0, glazeY, 0.09, 5);
+    }
 
     // The plate itself, spanning the apartment. The band above is only the
     // expressed edge of it; without this the residential floors are a glass
     // shell with nothing to stand on, which is exactly what the interior
     // camera on level twelve would have looked down into.
-    plates.push(box(`tower-plate-${level}`, glazedX, [y, y + slabThickness], towerZ));
+    plates.push(box(`tower-plate-${level}`, lGlazedX, [y, y + slabThickness], lz));
     // The plaster soffit under the plate above. Without it the apartment
     // ceiling is the polished underside of a stone floor, which is why the
     // first interior render came back as a marble slot.
     if (level > 0) {
       ceilings.push(
-        box(`tower-ceiling-${level}`, glazedX, [y - 0.09, y], towerZ),
+        box(`tower-ceiling-${level}`, lGlazedX, [y - 0.09, y], lz),
       );
     }
 
-    const glassY: Range = [y + slabThickness, nextY];
+    const glassY: Range = glazeY;
+    const straightZ: Range = [lz[0] + cornerRadius, lz[1] - cornerRadius];
+    const straightX: Range = [
+      Math.max(lGlazedX[0], lx[0] + cornerRadius),
+      lx[1] - cornerRadius,
+    ];
 
     glazedWall(
       towerGlass,
       fins,
       `tower-e-${level}`,
       'z',
-      towerZ,
-      towerX[1],
+      straightZ,
+      lx[1],
       glassY,
       0.09,
       bayCount,
@@ -460,8 +594,8 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
       fins,
       `tower-s-${level}`,
       'x',
-      glazedX,
-      towerZ[1],
+      straightX,
+      lz[1],
       glassY,
       0.09,
       6,
@@ -473,8 +607,8 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
       fins,
       `tower-n-${level}`,
       'x',
-      glazedX,
-      towerZ[0],
+      straightX,
+      lz[0],
       glassY,
       0.09,
       6,
@@ -487,22 +621,28 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     spandrels.push(
       box(
         `tower-spandrel-${level}`,
-        [towerX[1] - 0.12, towerX[1] + 0.06],
+        [lx[1] - 0.12, lx[1] + 0.06],
         [y + slabThickness, y + slabThickness + 0.45],
-        towerZ,
+        straightZ,
       ),
     );
 
     // ── Balconies ───────────────────────────────────────────────────────
-    // Every level, across the whole ocean elevation, returning around both
-    // ends. A tower on this coast is bought for the outside space.
-    const balconyOuterX = towerX[1] + balconyDepth;
-    const balconyZ: Range = [towerZ[0] - balconyDepth * 0.35, towerZ[1] + balconyDepth * 0.35];
+    // The ocean elevation only, and held inside the corner radius.
+    //
+    // They used to wrap all four sides and return round both ends, which is
+    // a fine tower and not this one: the banded reference has no projecting
+    // balconies at all, and a balcony crossing a rounded corner destroys
+    // the one line the whole facade is built on. Keeping them on the view
+    // elevation keeps the outside space a resident is actually buying while
+    // leaving the other three sides as continuous ribbon.
+    const balconyOuterX = lx[1] + balconyDepth;
+    const balconyZ: Range = straightZ;
 
     balconySlabs.push(
       box(
         `balcony-slab-${level}`,
-        [towerX[1], balconyOuterX],
+        [lx[1], balconyOuterX],
         [y, y + slabThickness],
         balconyZ,
       ),
@@ -516,7 +656,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     balconyGlass.push(
       box(
         `balcony-glass-n-${level}`,
-        [towerX[1], balconyOuterX],
+        [lx[1], balconyOuterX],
         railY,
         [balconyZ[0], balconyZ[0] + 0.04],
       ),
@@ -524,7 +664,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     balconyGlass.push(
       box(
         `balcony-glass-s-${level}`,
-        [towerX[1], balconyOuterX],
+        [lx[1], balconyOuterX],
         railY,
         [balconyZ[1] - 0.04, balconyZ[1]],
       ),
@@ -533,7 +673,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     // The capping rail, which is what stops frameless glass reading as a
     // sheet of blue plastic stuck to the slab.
     const capY: Range = [railY[1], railY[1] + 0.07];
-    ring(balconyRails, `balcony-rail-${level}`, [towerX[1], balconyOuterX], capY, balconyZ, 0.09);
+    ring(balconyRails, `balcony-rail-${level}`, [lx[1], balconyOuterX], capY, balconyZ, 0.09);
   }
 
   // ── Crown ─────────────────────────────────────────────────────────────
@@ -541,8 +681,22 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   const parapets: BoxSpec[] = [];
   const crownGlow: BoxSpec[] = [];
 
-  plates.push(box('tower-plate-roof', glazedX, [towerTopY, towerTopY + slabThickness], towerZ));
-  ring(parapets, 'crown-parapet', slabX, [towerTopY, crownTopY], slabZ, 1.0);
+  const topInset = insetAt(towerLevels - 1);
+  const topX: Range = [towerX[0] + topInset, towerX[1] - topInset];
+  const topZ: Range = [towerZ[0] + topInset, towerZ[1] - topInset];
+  plates.push(
+    box('tower-plate-roof', [Math.max(glazedX[0], topX[0]), topX[1]],
+        [towerTopY, towerTopY + slabThickness], topZ),
+  );
+  roundedRing(
+    parapets,
+    'crown-parapet',
+    [topX[0] - slabProjection, topX[1] + slabProjection],
+    [towerTopY, crownTopY],
+    [topZ[0] - slabProjection, topZ[1] + slabProjection],
+    1.0,
+    cornerRadius + slabProjection,
+  );
   // Recessed, so the light source itself is never in frame — only the wash
   // it throws on the parapet return.
   ring(

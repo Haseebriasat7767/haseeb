@@ -51,6 +51,10 @@ export type TowerConfig = {
   coreWidth: number;
   /** Which residential level the walkthrough enters, and so the one dressed. */
   furnishedLevel: number;
+  /** Plan radius at the tower's corners. Zero gives a square building. */
+  cornerRadius: number;
+  /** Levels at which the tower steps in, and by how much on each side. */
+  setbacks: readonly { level: number; inset: number }[];
   /** Height of the parapet and lit band above the top floor. */
   crownHeight: number;
 
