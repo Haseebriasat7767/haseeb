@@ -43,6 +43,7 @@ import {
 import type { Form } from '../furniture/FormTypes';
 import {
   createBed as buildBed,
+  createBowl,
   createFloorVessel,
   createHungConsole,
   createHeadboard as buildHeadboard,
@@ -440,6 +441,25 @@ export function createInteriorLayout(
     { width: 2.1, depth: 0.44 },
   );
 
+  // Styled, because a two-metre stone top with nothing on it reads as a
+  // shelf awaiting delivery. Three objects of different heights: the
+  // composition every interior photograph uses, since four starts to read
+  // as clutter.
+  if (tier.decor) {
+    const consoleTop = living.floorY + 0.42 + 0.34 + 0.036;
+    const consoleCx = livingWest + 1.7;
+    const consoleCz = livingRearZ + 0.34;
+    createFloorVessel(forms, 'living-console-vase', [consoleCx - 0.58, consoleCz], consoleTop, {
+      height: 0.38,
+      radius: 0.11,
+    });
+    createBowl(forms, 'living-console-bowl', [consoleCx + 0.12, consoleCz], consoleTop, {
+      radius: 0.17,
+      height: 0.1,
+    });
+    createBooks(parts, 'living-console-books', consoleCx + 0.75, consoleCz, consoleTop, 4, 57);
+  }
+
   // The ottoman: mass between the sofa and the chairs, and no third back.
   createOttoman(
     forms,
@@ -494,7 +514,12 @@ export function createInteriorLayout(
     forms,
     'living-stool',
     {
-      at: [livingWest + 3.3, mid(living.z) + 2.35],
+      // Between the long sofa and the table, which is the one patch of rug
+      // inside the group that nothing else occupies. The first position put
+      // it straight through the second chair; an overlap audit across all
+      // 155 furniture forms found it, and it was the only real one in the
+      // house.
+      at: [livingWest + 2.9, mid(living.z) - 0.55],
       floorY: living.floorY,
       facing: 'north',
       seed: 26,
@@ -609,6 +634,28 @@ export function createInteriorLayout(
       dining.floorY + 0.75,
       0.36,
       0.09,
+    );
+    // A bowl either side of the centrepiece, so the table has a run of
+    // objects down it rather than one thing in the middle.
+    createBowl(
+      forms,
+      'dining-bowl-w',
+      [diningCx - 0.78, mid(dining.z) + 0.4],
+      dining.floorY + 0.75,
+      {
+        radius: 0.16,
+        height: 0.09,
+      },
+    );
+    createBowl(
+      forms,
+      'dining-bowl-e',
+      [diningCx + 0.78, mid(dining.z) + 0.4],
+      dining.floorY + 0.75,
+      {
+        radius: 0.13,
+        height: 0.075,
+      },
     );
     createCurtains(parts, 'dining-curtain', {
       across: inset(dining.x, 0.3),
@@ -1134,34 +1181,54 @@ export function createInteriorLayout(
   );
 
   const lounge = rooms.upperLounge;
-  createSofa(
-    parts,
+  const loungeCx = mid(lounge.x);
+
+  // The upper lounge is furnished from the soft-geometry catalogue, like
+  // the living room and the master.
+  //
+  // It was the last principal room still built from the box builders, and
+  // that had stopped being defensible: it is glazed the full width to the
+  // sea, it is the best-lit interior in the house at any hour, and it is
+  // the room a visitor reaches immediately after the stair. A boxed sofa
+  // and a boxed armchair in the one frame most likely to be looked at
+  // hardest is the wrong place to be saving polygons.
+  createPileRug(forms, 'lounge-rug', [loungeCx, mid(lounge.z) + 0.4], lounge.floorY, 4.4, 3.7, 77);
+
+  buildSofa(
+    forms,
     'lounge-sofa',
-    mid(lounge.x),
-    lounge.z[0] + 1.5,
-    lounge.floorY,
-    2.8,
-    1.0,
-    'south',
+    { at: [loungeCx, lounge.z[0] + 1.6], floorY: lounge.floorY, facing: 'south', seed: 71 },
+    { width: 2.7, depth: 1.02 },
   );
-  createCoffeeTable(
-    parts,
+  createLowTable(
+    forms,
     'lounge-table',
-    mid(lounge.x),
-    mid(lounge.z) + 0.6,
-    lounge.floorY,
-    1.4,
-    0.8,
+    { at: [loungeCx, mid(lounge.z) + 0.6], floorY: lounge.floorY, facing: 'south', seed: 72 },
+    { width: 1.35, depth: 0.78, height: 0.37 },
   );
-  createRug(parts, 'lounge-rug', mid(lounge.x), mid(lounge.z) + 0.4, lounge.floorY, 4.2, 3.6);
-  createArmchair(
-    parts,
-    'lounge-chair',
-    lounge.x[1] - 1.0,
-    lounge.z[1] - 1.3,
-    lounge.floorY,
-    'west',
+  createLoungeChair(
+    forms,
+    'lounge-chair-a',
+    { at: [loungeCx + 2.5, mid(lounge.z) + 0.9], floorY: lounge.floorY, facing: 'west', seed: 73 },
+    { dark: true },
   );
+  createLoungeChair(
+    forms,
+    'lounge-chair-b',
+    { at: [loungeCx - 2.5, mid(lounge.z) + 0.9], floorY: lounge.floorY, facing: 'east', seed: 74 },
+    { dark: true },
+  );
+  createOttoman(
+    forms,
+    'lounge-ottoman',
+    { at: [loungeCx, mid(lounge.z) + 2.2], floorY: lounge.floorY, facing: 'north', seed: 75 },
+    { width: 1.05, depth: 0.68 },
+  );
+  createPedestalTable(forms, 'lounge-side', [loungeCx + 1.55, lounge.z[0] + 1.4], lounge.floorY, {
+    height: 0.48,
+    radius: 0.21,
+    seed: 76,
+  });
 
   const library = rooms.library;
   // The library's north edge is open to the hall rather than walled, so the

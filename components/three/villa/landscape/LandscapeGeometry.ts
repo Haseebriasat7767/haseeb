@@ -19,7 +19,14 @@ import type {
 export const LANDSCAPE_CONFIG: LandscapeConfig = {
   style: 'mediterranean',
   featureTree: {
-    count: 7,
+    // Twelve, not seven.
+    //
+    // A tree costs eighteen small blobs and a handful of alpha cards, which
+    // is nothing next to the building — and the grounds were reading as a
+    // mown field with a few specimens standing about in it rather than as
+    // planted landscape. The number of plants in a frame is most of what
+    // separates an estate from a site.
+    count: 12,
     trunkHeight: 4.6,
     trunkRadius: 0.24,
     branchCount: 5,
@@ -28,22 +35,22 @@ export const LANDSCAPE_CONFIG: LandscapeConfig = {
     canopySpread: 2.6,
   },
   shrub: {
-    poolsideCount: 6,
-    entranceCount: 8,
-    loungeCount: 6,
-    edgeCount: 8,
+    poolsideCount: 10,
+    entranceCount: 14,
+    loungeCount: 10,
+    edgeCount: 14,
     radius: 0.55,
     blobsPerShrub: 2,
   },
   grass: {
-    clusterCount: 14,
+    clusterCount: 32,
     bladesPerCluster: 10,
     bladeHeight: 0.45,
     bladeWidth: 0.035,
     clusterRadius: 0.5,
   },
   hedge: { height: 0.55, width: 0.4, offset: 0.9 },
-  rock: { count: 8, minRadius: 0.18, maxRadius: 0.4 },
+  rock: { count: 13, minRadius: 0.18, maxRadius: 0.4 },
   planterPlanting: { soilInset: 0.15, soilDepth: 0.08 },
   poolsideOffset: 0.9,
   entranceBedOffset: 0.7,
@@ -309,6 +316,7 @@ export function createLandscapeLayout(
   const rocks: BlobSpec[] = [];
   const hedges: BoxSpec[] = [];
   const planterSoil: BoxSpec[] = [];
+  const glass: BoxSpec[] = [];
 
   const addShrub = (key: string, position: Vector3Tuple, radius: number, blobs: number) => {
     const { mid, dark } = makeShrub(key, position, radius, blobs, shrubDetail, rng, nextSeed);
@@ -506,6 +514,101 @@ export function createLandscapeLayout(
     scaleCount(8, tier.grass),
   );
 
+  // ── The garden ────────────────────────────────────────────────────────
+  //
+  // Two hedge-bordered beds flanking the pool, planted inside.
+  //
+  // Scattered specimens on mown grass is landscaping; a garden is a place
+  // where the planting has an edge somebody drew. A clipped border is the
+  // cheapest way to say that — it turns loose shrubs into a bed, gives the
+  // lawn a shape to be the ground of, and reads from the air as well as
+  // from the terrace, which matters because the approach camera sees the
+  // whole west flank at once.
+  //
+  // Set out from the pool rather than authored against the ground, so the
+  // garden moves if the pool does.
+  const bedDepth = 3.4;
+  const bedGap = 2.6;
+  const bedZ: [number, number] = [ctx.poolZ[0] + 0.6, ctx.poolZ[1] - 0.6];
+  const border = config.hedge.width * 0.8;
+
+  (
+    [
+      ['west', ctx.poolX[0] - bedGap - bedDepth, ctx.poolX[0] - bedGap],
+      ['east', ctx.poolX[1] + bedGap, ctx.poolX[1] + bedGap + bedDepth],
+    ] as const
+  ).forEach(([side, x0, x1]) => {
+    const bedX: [number, number] = [x0, x1];
+
+    // The clipped border: four low runs enclosing the bed.
+    hedges.push(
+      box(`garden-${side}-n`, bedX, [0, config.hedge.height], [bedZ[0], bedZ[0] + border]),
+      box(`garden-${side}-s`, bedX, [0, config.hedge.height], [bedZ[1] - border, bedZ[1]]),
+      box(`garden-${side}-w`, [x0, x0 + border], [0, config.hedge.height], bedZ),
+      box(`garden-${side}-e`, [x1 - border, x1], [0, config.hedge.height], bedZ),
+    );
+
+    // Planted inside it, in two staggered rows, so the bed has depth
+    // rather than a single line of dots down its middle.
+    const stations = 5;
+    for (let i = 0; i < stations; i += 1) {
+      const z = bedZ[0] + (span(bedZ) * (i + 0.5)) / stations;
+      const near = x0 + bedDepth * 0.32;
+      const far = x0 + bedDepth * 0.68;
+      addShrub(
+        `garden-${side}-shrub-a-${i}`,
+        [near, ctx.deckY, z],
+        config.shrub.radius * 0.9,
+        config.shrub.blobsPerShrub,
+      );
+      if (i % 2 === 0) {
+        addShrub(
+          `garden-${side}-shrub-b-${i}`,
+          [far, ctx.deckY, z + span(bedZ) / (stations * 2)],
+          config.shrub.radius * 0.72,
+          config.shrub.blobsPerShrub,
+        );
+      }
+      addGrass(
+        `garden-${side}-grass-${i}`,
+        [far, ctx.deckY, z - 0.4],
+        config.grass.clusterRadius * 0.85,
+        scaleCount(7, tier.grass),
+      );
+    }
+  });
+
+  // ── The pool deck's glass balustrade ──────────────────────────────────
+  //
+  // Frameless panels in a shoe channel along the deck's seaward edge, with
+  // a hand's width between them the way structural glass is actually set.
+  // The guard is a requirement of standing a terrace on a ledge; drawing it
+  // in glass is what keeps the view the terrace exists for.
+  {
+    const edgeZ = ctx.deckZ[1] - 0.12;
+    const panels = 9;
+    const runX: [number, number] = [ctx.deckX[0] + 1.2, ctx.deckX[1] - 1.2];
+    const panelSpan = span(runX) / panels;
+    const joint = 0.05;
+
+    for (let i = 0; i < panels; i += 1) {
+      const a = runX[0] + panelSpan * i + joint / 2;
+      const b = a + panelSpan - joint;
+      glass.push(
+        box(`deck-glass-${i}`, [a, b], [ctx.deckY, ctx.deckY + 1.06], [edgeZ, edgeZ + 0.02]),
+      );
+    }
+    // The channel the panels stand in.
+    planterSoil.push(
+      box(
+        'deck-glass-shoe',
+        runX,
+        [ctx.deckY - 0.02, ctx.deckY + 0.08],
+        [edgeZ - 0.05, edgeZ + 0.07],
+      ),
+    );
+  }
+
   // ── Villa edge planting: a soft strip along the plinth's east and west ──
   const edgeShrubs = scaleCount(config.shrub.edgeCount, tier.shrubs);
   const edgeStations = Math.max(2, Math.round(edgeShrubs / 2));
@@ -598,5 +701,6 @@ export function createLandscapeLayout(
     hedges,
     rocks,
     planterSoil,
+    glass,
   };
 }

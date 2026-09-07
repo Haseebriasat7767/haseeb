@@ -1,5 +1,5 @@
 import type { Vector3Tuple } from 'three';
-import type { Form } from './FormTypes';
+import type { Form, FormMaterial } from './FormTypes';
 
 /**
  * The furniture catalogue, built from soft and turned forms.
@@ -612,8 +612,9 @@ export function createFloorVessel(
   forms: Form[],
   key: string,
   at: readonly [number, number],
-  floorY: number,
-  options: { height?: number; radius?: number } = {},
+  /** The surface it stands on — a floor, a console top, a table. */
+  baseY: number,
+  options: { height?: number; radius?: number; material?: FormMaterial } = {},
 ): void {
   const height = options.height ?? 0.78;
   const radius = options.radius ?? 0.23;
@@ -621,8 +622,8 @@ export function createFloorVessel(
   forms.push({
     kind: 'turned',
     key: `${key}-vessel`,
-    material: 'ceramic',
-    position: [at[0], floorY, at[1]],
+    material: options.material ?? 'ceramic',
+    position: [at[0], baseY, at[1]],
     profile: [
       [radius * 0.42, 0],
       [radius * 0.5, 0.02],
@@ -632,6 +633,43 @@ export function createFloorVessel(
       [radius * 0.48, height * 0.92],
       [radius * 0.44, height],
       [radius * 0.37, height - 0.015],
+    ],
+    segments: 26,
+  });
+}
+
+/**
+ * A shallow bowl, turned.
+ *
+ * The other half of a styled surface. A vase gives height; a bowl gives the
+ * low, wide note beside it, and the pair is what an interior stylist puts
+ * on a console before anything else. Both are lathes rather than stacked
+ * boxes, because at the distance a console is actually photographed from,
+ * two cubes on top of each other is precisely what they look like.
+ */
+export function createBowl(
+  forms: Form[],
+  key: string,
+  at: readonly [number, number],
+  baseY: number,
+  options: { radius?: number; height?: number; material?: FormMaterial } = {},
+): void {
+  const radius = options.radius ?? 0.17;
+  const height = options.height ?? 0.1;
+
+  forms.push({
+    kind: 'turned',
+    key: `${key}-bowl`,
+    material: options.material ?? 'ceramic',
+    position: [at[0], baseY, at[1]],
+    profile: [
+      [radius * 0.34, 0],
+      [radius * 0.4, 0.008],
+      [radius * 0.78, height * 0.45],
+      [radius, height * 0.92],
+      [radius, height],
+      [radius * 0.9, height - 0.012],
+      [radius * 0.62, height * 0.4],
     ],
     segments: 26,
   });

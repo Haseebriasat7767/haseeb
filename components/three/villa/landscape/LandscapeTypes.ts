@@ -123,6 +123,17 @@ export type LandscapeLayout = {
   hedges: BoxSpec[];
   rocks: BlobSpec[];
   planterSoil: BoxSpec[];
+  /**
+   * Frameless glass: the balustrade along the outer edge of the pool deck.
+   *
+   * A terrace on a ledge needs a guard, and the only guard a house like
+   * this one accepts is one you cannot see — which is exactly why it is
+   * worth rendering. A structural glass panel standing in a shoe channel
+   * catches the sky along its top edge and disappears everywhere else, and
+   * that single lit line is one of the most recognisable details in the
+   * genre.
+   */
+  glass: BoxSpec[];
 };
 
 /** Inputs the landscape needs from the villa and site — never eyeballed. */
