@@ -9,6 +9,7 @@ import {
   createCoffeeTable,
   createConsole,
   createCounterRun,
+  createCeilingRuns,
   createCove,
   createDesk,
   createDiningSet,
@@ -17,6 +18,7 @@ import {
   createIsland,
   createMediaUnit,
   createNiche,
+  createWallWasher,
   createNightstand,
   createPendant,
   createRug,
@@ -41,8 +43,11 @@ import {
 import type { Form } from '../furniture/FormTypes';
 import {
   createBed as buildBed,
+  createFloorVessel,
+  createHungConsole,
   createHeadboard as buildHeadboard,
   createLoungeChair,
+  createOttoman,
   createLowTable,
   createNightstand as buildNightstand,
   createPedestalTable,
@@ -408,6 +413,100 @@ export function createInteriorLayout(
       seed: 15,
     },
   );
+
+  // ── Filling the room out ──────────────────────────────────────────────
+  //
+  // A sofa, a table and two chairs is a seating group, not a room. This is
+  // sixty-seven square metres and the frames showed most of it as empty
+  // floor either side of one arrangement — which is what makes a space read
+  // as a model of a room rather than as one that is lived in. What follows
+  // is what an interior designer would put in the gaps: something with mass
+  // against the rear wall, a piece without a back to sit between the sofa
+  // and the chairs, a chair turned to the fire, and one tall object on the
+  // floor that is neither a lamp nor a plant.
+  const livingWest = living.x[0];
+  const livingEast = living.x[1];
+
+  // A hung console under the niche, which was floating over bare wall.
+  createHungConsole(
+    forms,
+    'living-console',
+    {
+      at: [livingWest + 1.7, livingRearZ + 0.34],
+      floorY: living.floorY,
+      facing: 'south',
+      seed: 21,
+    },
+    { width: 2.1, depth: 0.44 },
+  );
+
+  // The ottoman: mass between the sofa and the chairs, and no third back.
+  createOttoman(
+    forms,
+    'living-ottoman',
+    {
+      at: [livingCx + 1.95, mid(living.z) + 0.75],
+      floorY: living.floorY,
+      facing: 'west',
+      seed: 22,
+    },
+    { width: 1.15, depth: 0.72 },
+  );
+
+  // One more chair, turned to the fire rather than to the group — which is
+  // what stops an arrangement reading as a showroom set.
+  createLoungeChair(
+    forms,
+    'living-chair-c',
+    { at: [livingEast - 1.35, living.z[0] + 2.3], floorY: living.floorY, facing: 'west', seed: 23 },
+    { dark: false },
+  );
+  createPedestalTable(
+    forms,
+    'living-side-b',
+    [livingEast - 1.5, living.z[0] + 3.5],
+    living.floorY,
+    { height: 0.46, radius: 0.2, seed: 24 },
+  );
+
+  // A second, shorter sofa closing the west side of the group.
+  //
+  // The arrangement was a sofa with two chairs opposite and nothing on
+  // either flank, which leaves the conversation open at both ends and — in
+  // the framing the camera actually stands in — leaves several square
+  // metres of bare rug in the middle of the shot. A third seat turned in
+  // from the west closes the U, and it is the piece that makes the group
+  // read as somewhere people sit rather than as a showroom set.
+  buildSofa(
+    forms,
+    'living-sofa-west',
+    {
+      at: [livingWest + 2.1, mid(living.z) + 0.25],
+      floorY: living.floorY,
+      facing: 'east',
+      seed: 25,
+    },
+    { width: 2.0, depth: 0.98 },
+  );
+
+  // A stool at the open corner, which is where one actually ends up.
+  createOttoman(
+    forms,
+    'living-stool',
+    {
+      at: [livingWest + 3.3, mid(living.z) + 2.35],
+      floorY: living.floorY,
+      facing: 'north',
+      seed: 26,
+    },
+    { width: 0.62, depth: 0.62, dark: true },
+  );
+
+  // Height on the floor that is neither a lamp nor a plant.
+  createFloorVessel(forms, 'living-vessel', [livingWest + 0.85, livingRearZ + 1.5], living.floorY, {
+    height: 0.82,
+    radius: 0.24,
+  });
 
   // The chimney breast projects from the back wall, so the panelling above
   // stops beside it instead of running flush across.
@@ -1150,6 +1249,68 @@ export function createInteriorLayout(
       inset(foyer.z, 0.5),
     ),
   );
+
+  // ── Architectural light lines ─────────────────────────────────────────
+  //
+  // Two things, applied to every room a visitor is actually taken into.
+  //
+  // Runs recessed into the ceiling, travelling down the room's long axis.
+  // Lighting at this level is not a grid of downlight cans; it is a few
+  // continuous channels cut into the slab, and the lines they draw are most
+  // of what gives a plain ceiling any geometry at all — without them the
+  // frames showed a flat pale rectangle overhead in every interior.
+  //
+  // And a warm washer set into the rear wall at head height, throwing light
+  // down the plaster below it. These walls are large, plain and pale, which
+  // is exactly the surface a grazing wash is for: it is what stops a
+  // five-metre run of plaster reading as a blank.
+  //
+  // Both are matte emissive geometry, not lights. They cost nothing per
+  // frame, they follow the hour through `fixtureEmissive` like every other
+  // lit surface, and on the low tier — where no practical runs at all —
+  // they are the only thing keeping a room from going black.
+  const lit = [
+    rooms.living,
+    rooms.dining,
+    rooms.kitchen,
+    rooms.study,
+    rooms.media,
+    rooms.guestBedroom,
+    rooms.masterBedroom,
+    rooms.library,
+    rooms.upperLounge,
+    rooms.bedroom2,
+    rooms.bedroom3,
+    rooms.foyer,
+  ];
+
+  for (const room of lit) {
+    const width = room.x[1] - room.x[0];
+    const depth = room.z[1] - room.z[0];
+    // Runs travel down the longer dimension and are spaced across the
+    // shorter one, which is how a channel is actually set out.
+    const runs = Math.max(2, Math.min(4, Math.round(Math.min(width, depth) / 2.4)));
+    const ceiling = room.ceilingY - config.ceilingDepth;
+
+    createCeilingRuns(
+      parts,
+      `${room.id}-runs`,
+      depth >= width ? 'z' : 'x',
+      room.x,
+      room.z,
+      ceiling,
+      runs,
+    );
+
+    createWallWasher(
+      parts,
+      `${room.id}-washer`,
+      'x',
+      inset(room.x, 0.45),
+      [room.z[0], room.z[0] + 0.02],
+      room.floorY + 2.15,
+    );
+  }
 
   // ── Interior fill lighting ────────────────────────────────────────────
   // Practical lighting, ranked by how much a room needs to read as

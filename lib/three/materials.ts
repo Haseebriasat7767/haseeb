@@ -1672,6 +1672,31 @@ function createMaterials() {
       emissive: '#ffd9a8',
       emissiveIntensity: 1.5,
     }),
+    /**
+     * Architectural light lines — the runs recessed into a ceiling and the
+     * washers set into a wall.
+     *
+     * Separate from `lightGlow`, and matte where that one is not. A lit
+     * strip is a diffusing lens: it emits and it does not mirror the room
+     * back at you. `lightGlow` sits at roughness 0.6 with the environment
+     * map at full strength, which is right for a bronze fitting and wrong
+     * for a metre of frosted acrylic — it picks up a hard specular streak
+     * along its length and reflects whatever is opposite it, and a ceiling
+     * full of those reads as chrome trim rather than as light.
+     *
+     * So: fully rough, no environment contribution at all, and a body
+     * colour dark enough that the strip disappears when it is off. What is
+     * left is the emissive term, which is the only thing a light line
+     * should be contributing.
+     */
+    lightStrip: standard({
+      color: '#0f0b07',
+      roughness: 1,
+      metalness: 0,
+      emissive: '#ffcf9c',
+      emissiveIntensity: 1.5,
+      envMapIntensity: 0,
+    }),
   };
 }
 

@@ -113,6 +113,15 @@ export function InteriorFurnishings({
         castShadow={false}
         receiveShadow={false}
       />
+      {/* Architectural light lines. Matte, so a ceiling run reads as light
+          rather than as a strip of chrome mirroring the room back. */}
+      <MergedBoxes
+        name="furniture-strips"
+        specs={parts.strip}
+        material={materials.lightStrip}
+        castShadow={false}
+        receiveShadow={false}
+      />
       <MergedSupports name="furniture-posts" specs={parts.posts} material={materials.bronze} />
     </group>
   );

@@ -104,7 +104,7 @@ export const SPACES: readonly Space[] = [
     // onto the terrace — was behind the lens. It now looks across the
     // seating toward the glass, which also gives the frame a real
     // foreground, midground and background.
-    view: view('living', 'Living room', [3.6, 2.4, -3.0], [9.6, 1.5, 3.6], 52, INSIDE),
+    view: view('living', 'Living room', [2.95, 2.6, -3.6], [9.6, 1.45, 3.6], 54, INSIDE),
     level: 'ground',
     room: 'living',
     anchor: 'livingGlass',

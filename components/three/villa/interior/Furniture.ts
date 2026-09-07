@@ -36,6 +36,12 @@ export type Parts = {
   rugs: BoxSpec[];
   /** Emissive fixture faces and integrated joinery lighting. */
   glow: BoxSpec[];
+  /**
+   * Architectural light lines: the runs recessed into a ceiling and the
+   * washers set into a wall. Separate from `glow` because they take a matte
+   * material that does not reflect the room — see `lightStrip`.
+   */
+  strip: BoxSpec[];
   /** Plaster reveals, niches, and feature-wall panels. */
   plaster: BoxSpec[];
   /** Turned elements — pendant stems, lamp columns, rails. */
@@ -74,6 +80,7 @@ export function emptyParts(): Parts {
     glass: [],
     rugs: [],
     glow: [],
+    strip: [],
     plaster: [],
     posts: [],
     drapery: [],
@@ -121,6 +128,7 @@ export function turned(
     'glass',
     'rugs',
     'glow',
+    'strip',
     'plaster',
     'drapery',
     'sheer',
@@ -946,6 +954,96 @@ export function createFloorLamp(
 /** A continuous cove strip washing a wall or ceiling junction. */
 export function createCove(parts: Parts, key: string, x: Range, z: Range, y: number): void {
   parts.glow.push(box(key, x, [y - 0.035, y], z));
+}
+
+/**
+ * Light lines recessed into a ceiling, running the length of a room.
+ *
+ * Real architectural lighting at this level is not a grid of downlight
+ * cans; it is a small number of continuous runs cut into the slab, and the
+ * lines they draw are most of what gives a plain ceiling any geometry at
+ * all. Rendered here as matte emissive strips: they read as light, they
+ * throw none, and they cost nothing beyond the merged mesh they join.
+ *
+ * `count` runs are spaced evenly across the room's other axis, each inset
+ * from the ends so the line stops short of the wall the way a real channel
+ * does.
+ */
+export function createCeilingRuns(
+  parts: Parts,
+  key: string,
+  /** The world axis each run travels down. */
+  axis: 'x' | 'z',
+  x: Range,
+  z: Range,
+  ceilingY: number,
+  count = 3,
+): void {
+  const half = 0.055;
+  // Spaced across the axis the runs do not travel down.
+  const across: Range = axis === 'x' ? z : x;
+  const along: Range = axis === 'x' ? x : z;
+
+  const span = across[1] - across[0];
+  const margin = Math.min(1.1, span * 0.16);
+  const usable = span - margin * 2;
+  if (usable <= 0 || count < 1) return;
+
+  const run: Range = [along[0] + 0.55, along[1] - 0.55];
+  if (run[1] - run[0] < 0.6) return;
+
+  for (let i = 0; i < count; i += 1) {
+    const t = count === 1 ? 0.5 : i / (count - 1);
+    const at = across[0] + margin + usable * t;
+    const wide: Range = [at - half, at + half];
+    const lit: Range = [at - half * 0.72, at + half * 0.72];
+    const channelY: Range = [ceilingY - 0.05, ceilingY];
+    const stripY: Range = [ceilingY - 0.052, ceilingY - 0.032];
+    const long: Range = [run[0] - 0.03, run[1] + 0.03];
+
+    // The channel the strip sits in, so the line has a shadowed edge
+    // instead of floating on the plaster.
+    if (axis === 'x') {
+      parts.joinery.push(box(`${key}-channel-${i}`, long, channelY, wide));
+      parts.strip.push(box(`${key}-run-${i}`, run, stripY, lit));
+    } else {
+      parts.joinery.push(box(`${key}-channel-${i}`, wide, channelY, long));
+      parts.strip.push(box(`${key}-run-${i}`, lit, stripY, run));
+    }
+  }
+}
+
+/**
+ * A warm wall washer: a slim line set into a wall at head height, throwing
+ * light down the plaster below it.
+ *
+ * The walls in this house are large, plain and pale, which is exactly the
+ * surface a grazing wash is for — it is what stops a five-metre run of
+ * plaster reading as a blank rectangle. `axis` is the wall's own direction;
+ * the strip is thin across it and long along it.
+ */
+export function createWallWasher(
+  parts: Parts,
+  key: string,
+  axis: 'x' | 'z',
+  /** The run of the wall. */
+  along: Range,
+  /** The wall's face — a thin range, a few centimetres deep. */
+  at: Range,
+  y: number,
+): void {
+  const line: Range = [y, y + 0.035];
+  const housing: Range = [y - 0.02, y + 0.055];
+  const inner: Range = [along[0] + 0.06, along[1] - 0.06];
+  if (inner[1] - inner[0] < 0.3) return;
+
+  if (axis === 'x') {
+    parts.joinery.push(box(`${key}-housing`, along, housing, [at[0], at[1] + 0.008]));
+    parts.strip.push(box(`${key}-line`, inner, line, [at[1], at[1] + 0.022]));
+  } else {
+    parts.joinery.push(box(`${key}-housing`, [at[0], at[1] + 0.008], housing, along));
+    parts.strip.push(box(`${key}-line`, [at[1], at[1] + 0.022], line, inner));
+  }
 }
 
 /**

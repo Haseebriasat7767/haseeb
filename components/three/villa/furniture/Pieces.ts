@@ -484,6 +484,159 @@ export function createPedestalTable(
   });
 }
 
+/**
+ * An ottoman: a soft legless block, generously radiused.
+ *
+ * The piece a modern seating group is short of more often than any other.
+ * It is what fills the space between a sofa and a chair without adding a
+ * third back to the composition, and because it has no back it reads as
+ * volume rather than as furniture — which is exactly what a room with one
+ * sofa and two chairs in it needs.
+ */
+export function createOttoman(
+  forms: Form[],
+  key: string,
+  placement: Placement,
+  options: { width?: number; depth?: number; dark?: boolean } = {},
+): void {
+  const { at, floorY, facing, seed } = placement;
+  const width = options.width ?? 1.1;
+  const depth = options.depth ?? 0.7;
+  const fabric = options.dark ? 'upholsteryDark' : 'upholstery';
+  const origin: Vector3Tuple = [at[0], floorY, at[1]];
+  const yaw = YAW[facing];
+  const put = (across: number, up: number, forward: number) =>
+    place(origin, facing, across, up, forward);
+
+  forms.push({
+    kind: 'soft',
+    key: `${key}-plinth`,
+    material: 'darkMetal',
+    position: put(0, 0.03, 0),
+    rotationY: yaw,
+    size: [width - 0.24, 0.06, depth - 0.24],
+    radius: 0.02,
+    detail: 1,
+    seed: seed + 1,
+  });
+
+  forms.push({
+    kind: 'soft',
+    key: `${key}-body`,
+    material: fabric,
+    position: put(0, 0.06 + 0.17, 0),
+    rotationY: yaw,
+    size: [width, 0.34, depth],
+    radius: 0.12,
+    detail: 3,
+    sag: 0.16,
+    crease: 0.008,
+    seed: seed + 2,
+  });
+}
+
+/**
+ * A wall-hung console: a timber carcase floating clear of the floor under a
+ * stone top.
+ *
+ * Hung rather than standing, because the shadow under a floating carcase is
+ * the whole point of the piece — it is what makes a two-metre box read as
+ * joinery rather than as a sideboard pushed against a wall. Two drawer
+ * lines are scored across the front so the face is not one blank panel.
+ */
+export function createHungConsole(
+  forms: Form[],
+  key: string,
+  placement: Placement,
+  options: { width?: number; depth?: number } = {},
+): void {
+  const { at, floorY, facing, seed } = placement;
+  const width = options.width ?? 2.2;
+  const depth = options.depth ?? 0.46;
+  const origin: Vector3Tuple = [at[0], floorY, at[1]];
+  const yaw = YAW[facing];
+  const put = (across: number, up: number, forward: number) =>
+    place(origin, facing, across, up, forward);
+
+  const hangY = 0.42;
+  const carcase = 0.34;
+
+  forms.push({
+    kind: 'soft',
+    key: `${key}-carcase`,
+    material: 'joinery',
+    position: put(0, hangY + carcase / 2, 0),
+    rotationY: yaw,
+    size: [width, carcase, depth],
+    radius: 0.012,
+    detail: 2,
+    seed: seed + 1,
+  });
+
+  // A shadow line down the middle of the face, which is where the drawers
+  // meet. One score reads as a pair; three reads as a filing cabinet.
+  forms.push({
+    kind: 'soft',
+    key: `${key}-score`,
+    material: 'darkMetal',
+    position: put(0, hangY + carcase / 2, depth / 2 - 0.004),
+    rotationY: yaw,
+    size: [width - 0.05, 0.012, 0.012],
+    radius: 0.004,
+    detail: 1,
+    seed: seed + 2,
+  });
+
+  forms.push({
+    kind: 'soft',
+    key: `${key}-top`,
+    material: 'marble',
+    position: put(0, hangY + carcase + 0.018, 0),
+    rotationY: yaw,
+    size: [width + 0.05, 0.036, depth + 0.04],
+    radius: 0.008,
+    detail: 2,
+    seed: seed + 3,
+  });
+}
+
+/**
+ * A floor vessel: a tall turned form, wide at the shoulder and drawn in at
+ * the neck.
+ *
+ * Rooms of this scale need something with height standing on the floor that
+ * is not a lamp and not a plant, or every vertical in the frame is either
+ * architecture or a person.
+ */
+export function createFloorVessel(
+  forms: Form[],
+  key: string,
+  at: readonly [number, number],
+  floorY: number,
+  options: { height?: number; radius?: number } = {},
+): void {
+  const height = options.height ?? 0.78;
+  const radius = options.radius ?? 0.23;
+
+  forms.push({
+    kind: 'turned',
+    key: `${key}-vessel`,
+    material: 'ceramic',
+    position: [at[0], floorY, at[1]],
+    profile: [
+      [radius * 0.42, 0],
+      [radius * 0.5, 0.02],
+      [radius * 0.88, height * 0.22],
+      [radius, height * 0.42],
+      [radius * 0.86, height * 0.68],
+      [radius * 0.48, height * 0.92],
+      [radius * 0.44, height],
+      [radius * 0.37, height - 0.015],
+    ],
+    segments: 26,
+  });
+}
+
 // ── Lighting ─────────────────────────────────────────────────────────────
 
 /**

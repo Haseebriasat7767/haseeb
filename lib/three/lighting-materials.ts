@@ -15,6 +15,9 @@ export function applyLightingToMaterials(state: LightingState): void {
   const materials = getMaterials();
 
   materials.lightGlow.emissiveIntensity = state.surfaces.fixtureEmissive;
+  // The architectural runs sit a little under the fittings: they are a
+  // wash, not a source you look at.
+  materials.lightStrip.emissiveIntensity = state.surfaces.fixtureEmissive * 0.8;
   materials.glazing.opacity = state.surfaces.glazingOpacity;
   materials.poolWater.emissiveIntensity = state.surfaces.poolGlow;
   materials.poolInterior.emissiveIntensity = state.surfaces.poolGlow * 0.4;
