@@ -231,11 +231,26 @@ export function createSofa(
 }
 
 /**
- * An upholstered lounge chair: a curved shell on splayed legs.
+ * A low lounge chair, in the language the rest of the house is furnished in.
  *
- * The previous chair was a seat box, a back box and four sticks, which read
- * as a waiting room. This one has a continuous shell — arms and back as one
- * swept form — a loose seat cushion inside it, and legs that are turned.
+ * The chair this replaces was a seat box and a back box carried on four
+ * turned bronze legs, and that silhouette has a date on it: a raised body
+ * on splayed spindles is mid-century, and next to a legless plinth-mounted
+ * sofa it read as furniture borrowed from a different decade — or, less
+ * kindly, from a waiting room.
+ *
+ * What a room like this one actually holds is a tub: low, wide, sitting on
+ * the floor rather than above it, with the back and arms running round in
+ * one unbroken sweep. So the legs are gone and a recessed dark plinth takes
+ * their place, which is what gives the piece its shadow line and makes it
+ * appear to rest rather than perch. The body is one soft form with a large
+ * radius; the back and the two arms are bolsters set to overlap it and each
+ * other, so at any viewing angle the eye reads a single curve round the
+ * seat instead of three separate cushions.
+ *
+ * Every dimension is lower and wider than before — seat at 360 rather than
+ * 400 millimetres, and a metre across — because that proportion is most of
+ * what separates a contemporary lounge chair from an armchair.
  */
 export function createLoungeChair(
   forms: Form[],
@@ -244,93 +259,111 @@ export function createLoungeChair(
   options: { dark?: boolean; width?: number } = {},
 ): void {
   const { at, floorY, facing, seed } = placement;
-  const width = options.width ?? 0.86;
-  const depth = 0.82;
+  const width = options.width ?? 1.0;
+  const depth = 0.92;
   const fabric = options.dark ? 'upholsteryDark' : 'upholstery';
   const origin: Vector3Tuple = [at[0], floorY, at[1]];
   const yaw = YAW[facing];
   const put = (across: number, up: number, forward: number) =>
     place(origin, facing, across, up, forward);
 
-  const legHeight = 0.2;
-  const seatY = legHeight + 0.2;
+  // The shadow gap. Inset on every side so the body appears to float a
+  // finger's width clear of the floor.
+  forms.push({
+    kind: 'soft',
+    key: `${key}-plinth`,
+    material: 'darkMetal',
+    position: put(0, 0.035, 0),
+    rotationY: yaw,
+    size: [width - 0.26, 0.07, depth - 0.26],
+    radius: 0.02,
+    detail: 1,
+    seed: seed + 1,
+  });
 
-  // The seat pad, carrying the weight and showing it.
+  // The body: one form, generously radiused, carrying the whole silhouette.
+  const bodyHeight = 0.29;
+  forms.push({
+    kind: 'soft',
+    key: `${key}-body`,
+    material: fabric,
+    position: put(0, 0.075 + bodyHeight / 2, 0),
+    rotationY: yaw,
+    size: [width, bodyHeight, depth],
+    radius: 0.13,
+    detail: 3,
+    crease: 0.004,
+    seed: seed + 2,
+  });
+
+  const seatY = 0.075 + bodyHeight;
+
+  // The seat cushion, loose on top and showing its own weight.
   forms.push({
     kind: 'soft',
     key: `${key}-seat`,
     material: fabric,
-    position: put(0, seatY, 0.02),
+    position: put(0, seatY + 0.07, 0.03),
     rotationY: yaw,
-    size: [width, 0.19, depth - 0.06],
+    size: [width - 0.06, 0.16, depth - 0.14],
     radius: 0.075,
     detail: 3,
-    sag: 0.28,
-    crease: 0.01,
-    seed: seed + 2,
+    sag: 0.3,
+    crease: 0.012,
+    seed: seed + 3,
   });
 
-  // The back, raked and slightly narrower at the top.
+  // The wrap. A back bolster and two arm bolsters, each overlapping its
+  // neighbour, so what reads is one curve round the seat rather than three
+  // cushions parked next to each other.
   forms.push({
     kind: 'soft',
     key: `${key}-back`,
     material: fabric,
-    position: put(0, seatY + 0.31, -depth / 2 + 0.13),
+    position: put(0, seatY + 0.26, -depth / 2 + 0.17),
     rotationY: yaw,
-    tiltX: -0.16,
-    size: [width, 0.58, 0.19],
-    radius: 0.09,
+    tiltX: -0.2,
+    size: [width, 0.44, 0.3],
+    radius: 0.17,
     detail: 3,
-    taper: 0.1,
-    sag: 0.12,
-    crease: 0.009,
-    seed: seed + 3,
+    taper: 0.06,
+    sag: 0.1,
+    crease: 0.008,
+    seed: seed + 4,
   });
 
-  // Two arms, lower than the back and swept round — the profile that reads
-  // as a chair from any angle without closing the seat in.
   for (const side of [-1, 1] as const) {
     forms.push({
       kind: 'soft',
       key: `${key}-arm-${side}`,
       material: fabric,
-      position: put(side * (width / 2 - 0.075), seatY + 0.16, -0.02),
-      rotationY: yaw,
-      size: [0.15, 0.24, depth - 0.14],
-      radius: 0.072,
+      // Turned a little inward, which is what closes the sweep between the
+      // arm and the back instead of leaving a corner.
+      rotationY: yaw + side * 0.12,
+      position: put(side * (width / 2 - 0.13), seatY + 0.16, -0.05),
+      size: [0.28, 0.32, depth - 0.16],
+      radius: 0.14,
       detail: 3,
       crease: 0.006,
       seed: seed + 10 + side,
     });
   }
 
-  // One scatter cushion, thrown into the corner of the seat.
+  // One cushion, thrown into the corner the way one actually lands.
   forms.push({
     kind: 'soft',
     key: `${key}-cushion`,
     material: options.dark ? 'upholstery' : 'upholsteryDark',
-    position: put(-0.06, seatY + 0.26, -depth / 2 + 0.28),
-    rotationY: yaw + 0.3,
-    tiltX: -0.42,
-    size: [0.34, 0.34, 0.11],
-    radius: 0.075,
+    position: put(-0.07, seatY + 0.25, -depth / 2 + 0.33),
+    rotationY: yaw + 0.34,
+    tiltX: -0.44,
+    size: [0.38, 0.38, 0.12],
+    radius: 0.08,
     detail: 3,
-    sag: 0.24,
+    sag: 0.26,
     crease: 0.016,
-    seed: seed + 4,
+    seed: seed + 5,
   });
-
-  for (const sx of [-1, 1] as const) {
-    for (const sz of [-1, 1] as const) {
-      leg(
-        forms,
-        `${key}-leg-${sx}-${sz}`,
-        put(sx * (width / 2 - 0.11), 0, sz * (depth / 2 - 0.11)),
-        legHeight,
-        0.022,
-      );
-    }
-  }
 }
 
 // ── Tables ───────────────────────────────────────────────────────────────
@@ -408,35 +441,46 @@ export function createPedestalTable(
   const height = options.height ?? 0.52;
   const radius = options.radius ?? 0.24;
 
+  // A solid waisted drum, not a stem.
+  //
+  // The profile here used to be a wide flared foot carrying a
+  // thirty-millimetre bronze stalk under a marble disc — which is a Tulip
+  // table, and a Tulip table has a date on it as surely as the splayed legs
+  // the lounge chair has just lost. What stands next to a legless sofa in a
+  // room like this is a solid piece of stone: a low drum, gently waisted so
+  // it is turned rather than extruded, reading as mass instead of as a
+  // pedestal holding something up.
   forms.push({
     kind: 'turned',
-    key: `${key}-pedestal`,
-    material: 'bronze',
+    key: `${key}-drum`,
+    material: 'stone',
     position: [at[0], floorY, at[1]],
     profile: [
-      [radius * 0.78, 0],
-      [radius * 0.8, 0.012],
-      [radius * 0.2, 0.05],
-      [radius * 0.12, height * 0.55],
-      [radius * 0.14, height - 0.03],
-      [radius * 0.36, height - 0.02],
+      [radius * 0.9, 0],
+      [radius * 0.94, 0.015],
+      [radius * 0.78, height * 0.3],
+      [radius * 0.74, height * 0.55],
+      [radius * 0.9, height - 0.06],
+      [radius * 0.98, height - 0.02],
     ],
-    segments: 20,
+    segments: 28,
   });
 
+  // The top, in marble, sitting a few millimetres proud so its edge catches
+  // a highlight all the way round.
   forms.push({
     kind: 'turned',
     key: `${key}-top`,
     material: 'marble',
     position: [at[0], floorY + height - 0.02, at[1]],
     profile: [
-      [radius * 0.9, 0],
-      [radius, 0.006],
-      [radius, 0.032],
-      [radius * 0.94, 0.038],
-      [0, 0.038],
+      [radius * 0.94, 0],
+      [radius, 0.007],
+      [radius, 0.03],
+      [radius * 0.95, 0.036],
+      [0, 0.036],
     ],
-    segments: 28,
+    segments: 32,
   });
 }
 

@@ -132,6 +132,28 @@ export const SPACES: readonly Space[] = [
     room: 'kitchen',
   },
   {
+    id: 'study',
+    name: 'Study',
+    eyebrow: 'Ground level',
+    description:
+      'The west end of the ground floor, running the full depth of the wing. Set apart from the arrival sequence, so it can be worked in while the house is in use.',
+    feature: 'The full depth of the west wing, to itself',
+    view: view('study', 'Study', [-13.6, 2.4, -2.4], [-9.4, 1.7, 4.2], 55, INSIDE),
+    level: 'ground',
+    room: 'study',
+  },
+  {
+    id: 'guest',
+    name: 'Guest suite',
+    eyebrow: 'Ground level',
+    description:
+      'Set into the rear service band with its own bathroom beside it, entered off the stair hall rather than through the principal rooms.',
+    feature: 'Self-contained, with its own bathroom',
+    view: view('guest', 'Guest suite', [-11.3, 2.4, -5.2], [-14.2, 1.6, -10.2], 58, INSIDE),
+    level: 'ground',
+    room: 'guestBedroom',
+  },
+  {
     id: 'stair',
     name: 'Stair hall',
     eyebrow: 'Circulation',
@@ -141,6 +163,17 @@ export const SPACES: readonly Space[] = [
     view: view('stair', 'Stair hall', [-6.0, 2.3, -1.4], [-6.4, 3.4, -8.4], 58, INSIDE),
     level: 'ground',
     room: 'stairHall',
+  },
+  {
+    id: 'upperLounge',
+    name: 'Upper lounge',
+    eyebrow: 'Upper level',
+    description:
+      'The landing widens into a sitting room at the front of the upper floor, between the bedrooms and the library.',
+    feature: 'Front-facing, between the bedrooms and the library',
+    view: view('upperLounge', 'Upper lounge', [-3.2, 6.65, -2.8], [2.4, 5.9, 3.3], 54, INSIDE),
+    level: 'upper',
+    room: 'upperLounge',
   },
   {
     id: 'master',
@@ -153,6 +186,46 @@ export const SPACES: readonly Space[] = [
     level: 'upper',
     room: 'masterBedroom',
     anchor: 'roofTerrace',
+  },
+  {
+    id: 'dressing',
+    name: 'Dressing room',
+    eyebrow: 'Upper level',
+    description:
+      'Between the master bedroom and its bathroom: a full-height run of timber joinery down one wall, with an island facing it.',
+    feature: 'A wall of joinery, and an island',
+    view: view('dressing', 'Dressing room', [-8.25, 6.8, -6.35], [-10.9, 5.9, -10.3], 66, INSIDE),
+    level: 'upper',
+    room: 'dressing',
+  },
+  {
+    id: 'masterBath',
+    name: 'Master bathroom',
+    eyebrow: 'Upper level',
+    description:
+      'The west corner of the upper floor, taken as one room: a freestanding bath, a double vanity, and a separate shower.',
+    feature: 'Freestanding bath in the west corner',
+    view: view(
+      'masterBath',
+      'Master bathroom',
+      [-11.9, 6.6, -6.5],
+      [-14.2, 5.85, -10.2],
+      60,
+      INSIDE,
+    ),
+    level: 'upper',
+    room: 'masterBath',
+  },
+  {
+    id: 'bedroom2',
+    name: 'Second bedroom',
+    eyebrow: 'Upper level',
+    description:
+      'The larger of the two bedrooms along the rear of the upper floor, with its own bathroom next door and a window to the sea.',
+    feature: 'Its own bathroom, and a sea window',
+    view: view('bedroom2', 'Second bedroom', [2.1, 6.55, -6.9], [-3.5, 5.8, -10.2], 56, INSIDE),
+    level: 'upper',
+    room: 'bedroom2',
   },
   {
     id: 'library',

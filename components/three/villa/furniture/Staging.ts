@@ -183,7 +183,12 @@ export function createPlanted(
   for (let i = 0; i < limbs; i += 1) {
     const angle = (i / limbs) * Math.PI * 2 + wobble(seed, i) * 1.4;
     const rise = height * (0.3 + wobble(seed, i + 3) * 0.12);
-    const reach = height * (0.13 + wobble(seed, i + 7) * 0.09);
+    // Wider than it was. A crown whose limbs reach a seventh of the plant's
+    // height is a ball on a stick however it is dressed, and a ball on a
+    // stick was exactly what the frames kept showing — the most artificial
+    // object in any interior. A specimen of this kind spreads about as wide
+    // as it stands tall.
+    const reach = height * (0.22 + wobble(seed, i + 7) * 0.12);
     const tipX = at[0] + Math.cos(angle) * reach;
     const tipZ = at[1] + Math.sin(angle) * reach;
     const span = Math.hypot(reach, rise);
@@ -204,10 +209,10 @@ export function createPlanted(
 
     // Four masses up each limb, growing toward the top and drifting off
     // its axis, so the crown is a loose vertical drift rather than a ball.
-    const masses = 5;
+    const masses = 6;
     for (let j = 0; j < masses; j += 1) {
       const t = (j + 0.6) / masses;
-      const drift = height * 0.13;
+      const drift = height * 0.2;
       clusters.push({
         key: `${key}-crown-${i}-${j}`,
         position: [
@@ -217,10 +222,10 @@ export function createPlanted(
         ],
         // Smaller and more numerous than the old tip-masses: a mass the
         // size of the whole crown can only ever be a ball.
-        radius: height * (0.115 + wobble(seed, i * 13 + j) * 0.055) * (0.75 + t * 0.55),
+        radius: height * (0.1 + wobble(seed, i * 13 + j) * 0.05) * (0.75 + t * 0.55),
         scale: [1, 0.82, 1],
         seed: seed + i * 131 + j * 17,
-        deform: 0.4,
+        deform: 0.55,
         detail: 0,
       });
     }
