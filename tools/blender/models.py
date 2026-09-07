@@ -56,17 +56,36 @@ def reset():
 # Colours track the project's own material library so a loaded model sits in
 # the same palette as the procedural geometry it stands next to.
 
+def srgb(r, g, b):
+    """
+    An sRGB colour as the linear value Blender and glTF actually store.
+
+    This is not pedantry. Base Color on a Principled BSDF is linear, and
+    glTF's baseColorFactor is linear, so a value picked by eye from a
+    swatch — which is always sRGB — arrives about a stop and a half too
+    bright. The first furniture batch was authored that way and every piece
+    rendered near-white against the procedural furniture beside it: a warm
+    beige at 0.72 sRGB is 0.48 linear, and 0.72 linear is very nearly paper.
+    """
+    def c(u):
+        return u / 12.92 if u <= 0.04045 else ((u + 0.055) / 1.055) ** 2.4
+
+    return (c(r), c(g), c(b), 1.0)
+
+
 PALETTE = {
-    "upholstery": ((0.72, 0.69, 0.63, 1), 0.86, 0.0),
-    "upholsteryDark": ((0.30, 0.29, 0.27, 1), 0.84, 0.0),
-    "joinery": ((0.30, 0.21, 0.14, 1), 0.44, 0.0),
-    "marble": ((0.90, 0.90, 0.88, 1), 0.22, 0.0),
-    "stone": ((0.62, 0.59, 0.54, 1), 0.58, 0.0),
-    "bronze": ((0.69, 0.55, 0.36, 1), 0.26, 0.95),
-    "darkMetal": ((0.16, 0.16, 0.18, 1), 0.33, 0.90),
-    "ceramic": ((0.93, 0.94, 0.93, 1), 0.14, 0.02),
-    "linen": ((0.86, 0.83, 0.77, 1), 0.90, 0.0),
-    "glow": ((1.0, 0.93, 0.80, 1), 0.5, 0.0),
+    "upholstery": (srgb(0.86, 0.83, 0.77), 0.88, 0.0),
+    "upholsteryDark": (srgb(0.36, 0.34, 0.31), 0.86, 0.0),
+    "joinery": (srgb(0.42, 0.31, 0.22), 0.46, 0.0),
+    "marble": (srgb(0.90, 0.89, 0.86), 0.22, 0.0),
+    "stone": (srgb(0.78, 0.73, 0.65), 0.62, 0.0),
+    "travertine": (srgb(0.82, 0.76, 0.66), 0.66, 0.0),
+    "bronze": (srgb(0.70, 0.56, 0.36), 0.28, 0.95),
+    "darkMetal": (srgb(0.22, 0.22, 0.24), 0.35, 0.90),
+    "ceramic": (srgb(0.95, 0.95, 0.94), 0.16, 0.02),
+    "linen": (srgb(0.93, 0.91, 0.87), 0.90, 0.0),
+    "paper": (srgb(0.80, 0.76, 0.70), 0.88, 0.0),
+    "glow": (srgb(1.0, 0.94, 0.82), 0.5, 0.0),
 }
 
 
@@ -242,6 +261,82 @@ def swept_arc(name, radius, arc_deg, section, height, verts=40, corner=0.05):
     obj.select_set(True)
     bpy.ops.object.shade_smooth()
     obj.select_set(False)
+    return obj
+
+
+def organic_slab(name, radius, height, lobes=3, wobble=0.22, verts=64,
+                 phase=0.0, squash=1.0, bevel=0.02):
+    """
+    A slab whose plan is a soft, lobed blob rather than a circle.
+
+    The kidney-shaped travertine tables the reference interiors cluster in
+    threes. The plan is a radius modulated by two sine terms at different
+    frequencies, which is what stops it reading as a rounded triangle: one
+    lobe count gives a regular clover, two beating against each other give
+    a shape that looks drawn rather than generated.
+    """
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+
+    bm = bmesh.new()
+    ring = []
+    for i in range(verts):
+        t = TAU * i / verts
+        r = radius * (
+            1.0
+            + wobble * math.sin(lobes * t + phase)
+            + wobble * 0.42 * math.sin((lobes + 2) * t - phase * 1.7)
+        )
+        ring.append(bm.verts.new((math.cos(t) * r, math.sin(t) * r * squash, 0.0)))
+    bm.verts.ensure_lookup_table()
+    face = bm.faces.new(ring)
+
+    up = bmesh.ops.extrude_face_region(bm, geom=[face])
+    moved = [v for v in up["geom"] if isinstance(v, bmesh.types.BMVert)]
+    bmesh.ops.translate(bm, verts=moved, vec=(0, 0, height))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+
+    b = obj.modifiers.new("bevel", "BEVEL")
+    b.width = bevel
+    b.segments = 3
+    b.limit_method = "ANGLE"
+    b.angle_limit = math.radians(30)
+    return obj
+
+
+def extruded_profile(name, outline, width, bevel=0.02, centred=True):
+    """
+    A closed 2-D outline in (y, z), extruded along X.
+
+    How a carved stone piece is actually drawn: the spa loungers in the
+    reference are one section swept across their width, and the whole
+    character of them is in that section — the dip of the seat, the rise of
+    the headrest, the thickness of the shell.
+    """
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+
+    x0 = -width / 2 if centred else 0.0
+    bm = bmesh.new()
+    ring = [bm.verts.new((x0, y, z)) for y, z in outline]
+    bm.verts.ensure_lookup_table()
+    face = bm.faces.new(ring)
+    out = bmesh.ops.extrude_face_region(bm, geom=[face])
+    moved = [v for v in out["geom"] if isinstance(v, bmesh.types.BMVert)]
+    bmesh.ops.translate(bm, verts=moved, vec=(width, 0, 0))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+
+    b = obj.modifiers.new("bevel", "BEVEL")
+    b.width = bevel
+    b.segments = 3
+    b.limit_method = "ANGLE"
+    b.angle_limit = math.radians(25)
     return obj
 
 
@@ -468,6 +563,155 @@ def p_bowl():
     return [assign(parts[0], "marble")]
 
 
+def p_organic_table_lg():
+    """The larger of the kidney travertine tables, on a chunky drum foot."""
+    parts = []
+    top = organic_slab("otable_lg_top", 0.62, 0.075, lobes=3, wobble=0.20,
+                       phase=0.4, squash=0.86, bevel=0.028)
+    top.location = (0, 0, 0.355)
+    parts.append(assign(top, "travertine"))
+
+    foot = organic_slab("otable_lg_foot", 0.27, 0.355, lobes=3, wobble=0.13,
+                        phase=1.1, squash=0.9, bevel=0.02)
+    parts.append(assign(foot, "travertine"))
+    return parts
+
+
+def p_organic_table_sm():
+    """The lower companion — always a different height, never a matching pair."""
+    parts = []
+    top = organic_slab("otable_sm_top", 0.42, 0.065, lobes=4, wobble=0.17,
+                       phase=2.2, squash=0.92, bevel=0.024)
+    top.location = (0, 0, 0.275)
+    parts.append(assign(top, "travertine"))
+
+    foot = organic_slab("otable_sm_foot", 0.20, 0.275, lobes=4, wobble=0.11,
+                        phase=0.6, bevel=0.018)
+    parts.append(assign(foot, "travertine"))
+    return parts
+
+
+def p_stone_lounger():
+    """
+    A carved chaise — the spa piece.
+
+    One section swept across the width, which is how the real thing is
+    made: the whole character sits in the dip of the seat and the rise of
+    the headrest, and both live in this outline.
+    """
+    outline = [
+        (-1.06, 0.26), (-0.68, 0.34), (-0.24, 0.30), (0.18, 0.31),
+        (0.54, 0.42), (0.82, 0.62), (0.97, 0.86), (1.04, 0.83),
+        (0.94, 0.56), (0.72, 0.32), (0.40, 0.18), (0.0, 0.13),
+        (-0.44, 0.12), (-0.86, 0.16), (-1.08, 0.21),
+    ]
+    body = extruded_profile("lounger_body", outline, 0.62, bevel=0.03)
+    parts = [assign(body, "travertine")]
+
+    plinth = rounded_box("lounger_plinth", (0.5, 0.9, 0.13), (0, -0.1, 0.065), bevel=0.02)
+    parts.append(assign(plinth, "travertine"))
+    return parts
+
+
+def p_wingback():
+    """A tall enveloping chair — the one beside the bed in the reference."""
+    parts = []
+    shell = lathe(
+        "wing_shell",
+        [(0.0, 0.0), (0.42, 0.0), (0.44, 0.1), (0.42, 0.36), (0.38, 0.42), (0.0, 0.42)],
+        verts=36,
+    )
+    parts.append(assign(shell, "upholstery"))
+
+    r = 0.42
+    back = swept_arc("wing_back", radius=r, arc_deg=232, section=0.16, height=0.86, verts=36)
+    back.location = (0, r, 0.85)
+    parts.append(assign(back, "upholstery"))
+
+    cushion = rounded_box("wing_cushion", (0.66, 0.6, 0.13), (0, 0.02, 0.48),
+                          bevel=0.055, segments=4, subsurf=1)
+    parts.append(assign(cushion, "upholstery"))
+    return parts
+
+
+def p_planter_cyl():
+    """The white cylinder every one of these rooms has a tree standing in."""
+    parts = [lathe(
+        "planter",
+        [(0.0, 0.0), (0.24, 0.0), (0.27, 0.05), (0.30, 0.34), (0.30, 0.40),
+         (0.275, 0.40), (0.275, 0.06), (0.24, 0.03), (0.0, 0.03)],
+        verts=40,
+    )]
+    return [assign(parts[0], "ceramic")]
+
+
+def p_tray():
+    parts = []
+    base = organic_slab("tray_base", 0.21, 0.014, lobes=2, wobble=0.14,
+                        phase=0.9, squash=0.62, bevel=0.008)
+    parts.append(assign(base, "joinery"))
+    rim = organic_slab("tray_rim", 0.215, 0.032, lobes=2, wobble=0.14,
+                       phase=0.9, squash=0.62, bevel=0.008)
+    rim.location = (0, 0, 0.008)
+    parts.append(assign(rim, "bronze"))
+    return parts
+
+
+def p_book_stack():
+    """Three books, none of them square to the others."""
+    parts = []
+    for i, (w, d, h, rot) in enumerate((
+        (0.26, 0.20, 0.032, 0.0),
+        (0.24, 0.185, 0.028, 0.16),
+        (0.215, 0.17, 0.024, -0.11),
+    )):
+        z = 0.016 + i * 0.03
+        b = rounded_box(f"book_{i}", (w, d, h), (0, 0, z), bevel=0.004)
+        b.rotation_euler = (0, 0, rot)
+        parts.append(assign(b, "paper" if i % 2 == 0 else "joinery"))
+    return parts
+
+
+def p_candle_cluster():
+    parts = []
+    for i, (x, y, r, h) in enumerate(((0, 0, 0.045, 0.13), (0.11, 0.04, 0.037, 0.09),
+                                      (0.05, -0.1, 0.032, 0.16))):
+        c = cylinder(f"candle_{i}", r, h, (x, y, h / 2), verts=18, bevel=0.004)
+        parts.append(assign(c, "ceramic"))
+        flame = cylinder(f"flame_{i}", r * 0.16, 0.02, (x, y, h + 0.012), verts=8, bevel=0)
+        parts.append(assign(flame, "glow"))
+    return parts
+
+
+def p_ceiling_soffit():
+    """
+    The dropped soffit, as a soft amoeba rather than a rectangle.
+
+    The single most recognisable thing about the reference living room and
+    the one piece of it that is architecture rather than furniture: a
+    curved plane floating below the slab with light washing out around its
+    whole edge. A rectangular drop reads as a bulkhead; this reads as a
+    ceiling somebody designed.
+
+    Authored upside down in the sense that its origin is the soffit's own
+    underside, so it is placed by the height you want to stand under.
+    """
+    parts = []
+    drop = 0.26
+
+    panel = organic_slab("soffit_panel", 3.5, drop, lobes=3, wobble=0.19,
+                         phase=0.8, squash=0.74, bevel=0.05)
+    parts.append(assign(panel, "linen"))
+
+    # The cove: a slightly larger blob sitting just above the panel's edge,
+    # so what the room sees is a lit rim, never the source.
+    cove = organic_slab("soffit_cove", 3.62, 0.05, lobes=3, wobble=0.19,
+                        phase=0.8, squash=0.74, bevel=0.02)
+    cove.location = (0, 0, drop - 0.005)
+    parts.append(assign(cove, "glow"))
+    return parts
+
+
 PIECES = {
     "sofa-3seat": (p_sofa_3seat, "MDL-01"),
     "lounge-chair": (p_lounge_chair, "MDL-02"),
@@ -481,6 +725,15 @@ PIECES = {
     "vessel-tall": (p_vessel_tall, "MDL-10"),
     "vessel-round": (p_vessel_round, "MDL-10"),
     "bowl": (p_bowl, "MDL-10"),
+    "organic-table-lg": (p_organic_table_lg, "MDL-03"),
+    "organic-table-sm": (p_organic_table_sm, "MDL-03"),
+    "stone-lounger": (p_stone_lounger, "MDL-12"),
+    "wingback": (p_wingback, "MDL-02"),
+    "planter-cyl": (p_planter_cyl, "MDL-10"),
+    "tray": (p_tray, "MDL-10"),
+    "book-stack": (p_book_stack, "MDL-10"),
+    "candle-cluster": (p_candle_cluster, "MDL-10"),
+    "ceiling-soffit": (p_ceiling_soffit, "MDL-09"),
 }
 
 

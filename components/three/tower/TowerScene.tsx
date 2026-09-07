@@ -6,10 +6,14 @@ import { disposeSurfaceMaps } from '../textures/SurfaceMaps';
 import { ARCHITECTURAL_CHAMFER, ChamferProvider, MergedBoxes } from '../villa/VillaPrimitives';
 import { disposeVillaGeometries } from '../villa/VillaPrimitiveCache';
 import type { BoxSpec, DetailTier } from '../villa/VillaTypes';
+import { FoliageCards } from '../villa/landscape/FoliageCards';
+import { createFoliageCards } from '../villa/landscape/FoliageGeometry';
+import { Palms } from './Palms';
 import { Shoreline } from './Shoreline';
 import { Tower } from './Tower';
 import { Apartment } from './Apartment';
 import { createApartment } from './ApartmentGeometry';
+import { createParkLayout } from './Park';
 import { createSkyline } from './Skyline';
 import { createShorelineLayout, createTowerLayout, TOWER_CONFIG } from './TowerGeometry';
 import type { TowerConfig } from './TowerTypes';
@@ -42,6 +46,31 @@ export function TowerScene({
 
   const shoreline = useMemo(() => createShorelineLayout(layout.plan), [layout.plan]);
   const skyline = useMemo(() => createSkyline(), []);
+
+  // The park behind the plaza, laid out from the building's own back line.
+  // Clear of the plaza, which already reaches fourteen metres past the
+  // podium: at the first setting the path ran straight through the
+  // building's own footprint.
+  const park = useMemo(() => createParkLayout(layout.plan.podiumX[0] - 52, 300), [layout.plan]);
+
+  // Broadleaf crowns reuse the villa's card technique — a tree's outline is
+  // decided by a texture with leaves and gaps in it, not by geometry.
+  const parkCanopy = useMemo(
+    () =>
+      createFoliageCards(
+        park.trees.canopy.map((c) => ({
+          key: c.key,
+          position: c.position,
+          radius: c.radius,
+          scale: [1, 0.82, 1] as [number, number, number],
+          seed: c.seed,
+          deform: 0.3,
+          detail: 1 as const,
+        })),
+        detail,
+      ),
+    [park.trees.canopy, detail],
+  );
 
   // The one fitted apartment, built to the level the walkthrough enters.
   const apartment = useMemo(
@@ -125,6 +154,18 @@ export function TowerScene({
             castShadow={false}
             receiveShadow={false}
           />
+        </group>
+
+        {/* ── The park ─────────────────────────────────────────────── */}
+        <group name="Park">
+          <MergedBoxes name="park-lawn" specs={park.lawn} material={materials.grass} castShadow={false} />
+          <MergedBoxes name="park-beds" specs={park.beds} material={materials.foliageMid} />
+          <MergedBoxes name="park-edging" specs={park.edging} material={materials.stone} />
+          <MergedBoxes name="park-path" specs={park.path} material={materials.paving} castShadow={false} />
+          <MergedBoxes name="park-benches" specs={park.benches} material={materials.teak} />
+          <MergedBoxes name="park-trunks" specs={park.trees.trunks} material={materials.bark} />
+          <FoliageCards name="park-canopy" cards={parkCanopy} castShadow={detail === 'high'} />
+          <Palms specs={park.palms} detail={detail} name="park-palms" />
         </group>
 
         <Tower layout={layout} detail={detail} />

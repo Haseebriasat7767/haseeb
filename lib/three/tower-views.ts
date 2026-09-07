@@ -34,6 +34,16 @@ export const TOWER_VIEWS: readonly CameraView[] = [
     fov: 52,
   },
   {
+    id: 'park',
+    label: 'The park',
+    // On the path itself, at walking eye height, with the tower ahead
+    // through the grove. The shot the reference photograph is: a paved
+    // walk, mown grass, palms throwing long shadows across both.
+    position: [-64.4, 1.7, 44],
+    target: [-30, 15, 6],
+    fov: 58,
+  },
+  {
     id: 'colonnade',
     label: 'Colonnade',
     // Under the soffit at the ocean entrance, with the sea behind you.
@@ -127,6 +137,8 @@ export const DEFAULT_TOWER_VIEW: CameraView = TOWER_VIEWS[0]!;
 export const TOWER_VIEW_NOTES: Record<string, string> = {
   arrival:
     'Twenty storeys on a five-storey retail base. The podium carries the horizontal banding; the tower above it is glass, bronze fins and a balcony on every floor.',
+  park:
+    'Mown lawn and a coconut grove between the road and the boardwalk, with a path winding through it and beds of low planting either side.',
   colonnade:
     'The ocean entrance, under a deep soffit carried on stone columns — the point where the beach hands you over to the building.',
   atrium:

@@ -228,29 +228,11 @@ export function createApartment(
   // A lowered plane over the seating with a cove around it. In a flat-slab
   // apartment this is the only ceiling modelling there is, and it is what
   // gives the room a centre.
-  const soffitX: Range = [-8.2, 2.4];
-  const soffitZ: Range = [-4.8, 4.8];
-  // A cove is a hidden source washing the slab above it, not a lit strip
-  // you look at. So: a thin dropped plane held well below the structural
-  // ceiling, and the light line sitting on top of its edge, inboard, where
-  // nothing at standing height can see it.
-  //
-  // The first attempt built the villa's detail instead — a matte black
-  // channel with the strip inside it, which works at the scale of a
-  // bedhead reveal and, stretched eleven metres across a ceiling and seen
-  // edge-on, reads as a black gash. There is no channel here at all.
-  const dropY: Range = [ceilingY - 0.4, ceilingY - 0.24];
-
-  soffit.push(box('apt-soffit', soffitX, dropY, soffitZ));
-
-  const coveY: Range = [dropY[1], dropY[1] + 0.045];
-  const inset = 0.07;
-  const cx: Range = [soffitX[0] + inset, soffitX[1] - inset];
-  const cz: Range = [soffitZ[0] + inset, soffitZ[1] - inset];
-  parts.strip.push(box('apt-cove-n', cx, coveY, [cz[0], cz[0] + 0.07]));
-  parts.strip.push(box('apt-cove-s', cx, coveY, [cz[1] - 0.07, cz[1]]));
-  parts.strip.push(box('apt-cove-w', [cx[0], cx[0] + 0.07], coveY, cz));
-  parts.strip.push(box('apt-cove-e', [cx[1] - 0.07, cx[1]], coveY, cz));
+  // The dropped soffit is a model — an amoeba plan with a lit rim around
+  // its whole edge, which is the reference room's most recognisable
+  // feature and not a shape worth expressing as boxes. Placed by the
+  // height a person stands under it.
+  put('apt-soffit', 'ceiling-soffit', -3.4, 0.4, ceilingY - 0.42, 'north');
 
   // ── Lounge: the furniture ─────────────────────────────────────────────
   // Turned toward the media wall, backs to the glass, which is how a room
@@ -270,12 +252,18 @@ export function createApartment(
   put('apt-chair-b', 'lounge-chair', -4.4, 3.4, floorY, 'east');
   put('apt-ottoman', 'ottoman', -1.6, 3.7, floorY, 'north');
 
-  // A cluster at three heights rather than one table — the reference for
-  // this room is organic drums, not a rectangle.
-  put('apt-table', 'low-table', -2.4, 0.1, floorY, 'west');
-  put('apt-drum-a', 'side-drum', -3.5, -1.4, floorY, 'north');
-  put('apt-drum-b', 'side-drum', -1.4, 1.5, floorY, 'north');
-  put('apt-bowl', 'bowl', -2.4, 0.1, floorY + 0.42, 'north');
+  // A cluster of kidney tables at three heights, overlapping in plan —
+  // never a matching pair, and never one rectangle in the middle of a rug.
+  put('apt-table-a', 'organic-table-lg', -2.5, 0.2, floorY, 'north');
+  put('apt-table-b', 'organic-table-sm', -1.45, -0.85, floorY, 'east');
+  put('apt-table-c', 'side-drum', -3.55, 1.35, floorY, 'north');
+
+  // Dressed. An undressed table is the tell that a room was arranged by
+  // somebody who does not live in it.
+  put('apt-bowl', 'bowl', -2.75, 0.55, floorY + 0.43, 'north');
+  put('apt-books', 'book-stack', -1.5, -0.9, floorY + 0.34, 'south');
+  put('apt-candles', 'candle-cluster', -2.15, -0.15, floorY + 0.43, 'north');
+  put('apt-tray', 'tray', -3.55, 1.35, floorY + 0.53, 'east');
 
   put('apt-lamp', 'floor-lamp', -6.6, 5.1, floorY, 'north');
   put('apt-urn', 'vessel-tall', -7.4, -5.2, floorY, 'north');
@@ -285,12 +273,10 @@ export function createApartment(
   // the reference interiors has one there, and it is not decoration: a tall
   // plant is what breaks the vertical line of a corner mullion.
   const plant = (key: string, px: number, pz: number, height: number, seed: number) => {
-    // The pot, then the canopy as blob clusters the card renderer draws.
-    createFloorVessel(forms, `${key}-pot`, [px, pz], floorY, {
-      height: height * 0.26,
-      radius: height * 0.15,
-      material: 'ceramic',
-    });
+    // A real planter, then the canopy as blob clusters the card renderer
+    // draws — geometry for the pot, cards for the leaves, which is the
+    // right division of labour for both.
+    put(`${key}-pot`, 'planter-cyl', px, pz, floorY, 'north');
     // A slender trunk.
     forms.push({
       kind: 'turned',
@@ -355,7 +341,7 @@ export function createApartment(
   put('apt-lamp-a', 'table-lamp', bedX + 0.85, bedCentreZ - 1.5, floorY + 0.44, 'east');
   put('apt-lamp-b', 'table-lamp', bedX + 0.85, bedCentreZ + 1.5, floorY + 0.44, 'east');
 
-  put('apt-bed-chair', 'lounge-chair', bedX + 6.4, bedroomZ[0] + 2.2, floorY, 'south');
+  put('apt-bed-chair', 'wingback', bedX + 6.4, bedroomZ[0] + 2.2, floorY, 'south');
   put('apt-bed-table', 'side-drum', bedX + 6.4, bedroomZ[0] + 3.6, floorY, 'north');
 
   plant('apt-bed-tree', bedX + 5.6, bedroomZ[0] + 1.0, 2.3, 839);

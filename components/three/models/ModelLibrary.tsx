@@ -48,7 +48,16 @@ export type ModelName =
   | 'floor-lamp'
   | 'vessel-tall'
   | 'vessel-round'
-  | 'bowl';
+  | 'bowl'
+  | 'organic-table-lg'
+  | 'organic-table-sm'
+  | 'stone-lounger'
+  | 'wingback'
+  | 'planter-cyl'
+  | 'tray'
+  | 'book-stack'
+  | 'candle-cluster'
+  | 'ceiling-soffit';
 
 export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
@@ -63,6 +72,15 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'vessel-tall',
   'vessel-round',
   'bowl',
+  'organic-table-lg',
+  'organic-table-sm',
+  'stone-lounger',
+  'wingback',
+  'planter-cyl',
+  'tray',
+  'book-stack',
+  'candle-cluster',
+  'ceiling-soffit',
 ];
 
 function url(name: ModelName): string {
