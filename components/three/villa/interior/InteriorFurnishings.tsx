@@ -9,6 +9,9 @@ import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../Vill
 import type { DetailTier } from '../VillaTypes';
 import type { InteriorLayout } from './InteriorTypes';
 
+/** Shared empty list, so hiding a group allocates nothing. */
+const EMPTY: never[] = [];
+
 /**
  * Every piece of furniture in the residence, drawn as one merged mesh per
  * material. Sorting by material rather than by room is what keeps a fully
@@ -18,12 +21,39 @@ import type { InteriorLayout } from './InteriorTypes';
 export function InteriorFurnishings({
   layout,
   detail = 'high',
+  curtains = true,
 }: {
   layout: InteriorLayout;
   detail?: DetailTier;
+  /**
+   * Whether the window treatments are hung.
+   *
+   * They come down at night. A voile and a pair of gathered panels are the
+   * palest, softest, most light-catching surfaces in any of these rooms, so
+   * once the practicals are the only light source they stop being fabric at
+   * the edge of a window and become the brightest objects in the frame —
+   * two lit slabs bracketing a wall of glass, veiling the one thing the
+   * room is oriented around. A house on a private ledge with no neighbour
+   * within sight has no reason to be dressing its windows after dark
+   * anyway.
+   *
+   * Only the fabric goes. The pelmet and the cove above it are joinery and
+   * lighting, not curtains, and both stay.
+   */
+  curtains?: boolean;
 }) {
   const materials = getMaterials();
   const parts = layout.furniture;
+
+  // The soft curtain geometry lives in the same merged form list as every
+  // sofa and lamp, so it is filtered out here rather than rebuilt.
+  const forms = useMemo(
+    () =>
+      curtains
+        ? layout.forms
+        : layout.forms.filter((form) => form.material !== 'drapery' && form.material !== 'sheer'),
+    [layout.forms, curtains],
+  );
 
   // Houseplants share the trees' card technique. Sized down hard: an
   // outdoor cluster's cards run three to five times its radius because a
@@ -44,7 +74,7 @@ export function InteriorFurnishings({
           planting. One merged mesh per material, exactly like the box specs
           below, so replacing prisms with rounded geometry did not cost a
           single extra draw call. */}
-      <FormRenderer name="furniture-forms" forms={layout.forms} />
+      <FormRenderer name="furniture-forms" forms={forms} />
       <MergedBoxes name="furniture-joinery" specs={parts.joinery} material={materials.joinery} />
       {/* Seats, backs, arms and mattresses take a far softer edge than the
           building does — a cushion breaks over a couple of centimetres. */}
@@ -85,14 +115,14 @@ export function InteriorFurnishings({
           folds has no arris at all. */}
       <MergedBoxes
         name="furniture-drapery"
-        specs={parts.drapery}
+        specs={curtains ? parts.drapery : EMPTY}
         material={materials.drapery}
         chamfer={SOFT_RADIUS}
         chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes
         name="furniture-sheer"
-        specs={parts.sheer}
+        specs={curtains ? parts.sheer : EMPTY}
         material={materials.sheer}
         castShadow={false}
       />
