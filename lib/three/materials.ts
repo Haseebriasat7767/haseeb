@@ -1631,11 +1631,20 @@ function createMaterials() {
       roughness: 0.95,
       metalness: 0,
       transparent: true,
-      // Low: a voile is barely there, and at 0.3 it muted the view through
-      // the glazing it is meant to soften rather than hide.
-      opacity: 0.16,
+      // Lower still.
+      //
+      // At 0.16 the voile was a screen, not a veil. It spans the entire
+      // opening, it is double-sided, and the room behind it is lit by seven
+      // practicals — so from inside at night the whole glazed wall rendered
+      // as a uniform milky panel and the view through it was simply gone.
+      // The render at the darkest hour showed no landscape at all, which is
+      // the opposite of what a house on a ridge is for. A real voile is a
+      // softening, and what is behind it stays legible.
+      opacity: 0.06,
       side: DoubleSide,
-      envMapIntensity: 0.5,
+      // It should not be gathering the room's light either. A sheer lit
+      // from the front is a lampshade.
+      envMapIntensity: 0.2,
     }),
     /** Book blocks and canvas edges. */
     paper: withVariation(standard({ color: '#cfc6b6', roughness: 0.88, metalness: 0 }), {

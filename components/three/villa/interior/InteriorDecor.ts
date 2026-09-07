@@ -65,6 +65,24 @@ export function createCurtains(parts: Parts, key: string, options: CurtainOption
   // A pelmet, which is also what hides the head of every panel.
   parts.joinery.push(box(`${key}-track`, across, [y[1] - 0.12, y[1]], [at[0], at[1]]));
 
+  // The cove.
+  //
+  // A continuous lit reveal along the head of the opening, tucked behind
+  // the pelmet's room edge so it washes down the curtain rather than
+  // showing as a strip light. It is the piece of lighting design a room of
+  // this kind is never without, and its absence is why the interiors read
+  // as evenly filled rather than as lit: seven ceiling practicals with no
+  // shadows between them light everything to the same value, and the eye
+  // has nothing to measure depth against. A grazing wash down a vertical
+  // surface gives it that, and costs one emissive box.
+  //
+  // It follows the hour through `fixtureEmissive` like every other lit
+  // surface in the house — barely present at midday, carrying the room at
+  // night — so nothing here has to know what time it is.
+  parts.glow.push(
+    box(`${key}-cove`, across, [y[1] - 0.135, y[1] - 0.115], [at[1] - 0.07, at[1] - 0.015]),
+  );
+
   const panelWidth = Math.min(width * 0.3, 1.15);
   const ends: { at: number; direction: 1 | -1 }[] = [];
   if (gather !== 'right') ends.push({ at: across[0], direction: 1 });

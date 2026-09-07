@@ -126,8 +126,14 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
     saturation: 1.05,
     contrast: 1.02,
     vignette: 0.2,
-    bloomStrength: 0.3,
-    bloomThreshold: 0.75,
+    // Above 1.0, for the reason stated on the field: below it, an ordinary
+    // lit wall spills. Set at 0.75 the blue hour bloomed the interior
+    // plaster itself, and from inside the house that turned the whole
+    // glazed wall into a white smear with the ridge behind it erased. The
+    // fixtures sit at an emissive of 2.0 at this hour and still bloom
+    // freely; the walls no longer do.
+    bloomStrength: 0.34,
+    bloomThreshold: 1.15,
     aoIntensity: 0.95,
   },
   /**
@@ -143,8 +149,10 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
     saturation: 0.98,
     contrast: 1.0,
     vignette: 0.26,
-    bloomStrength: 0.4,
-    bloomThreshold: 0.58,
+    // As the blue hour, and for the same reason — at 0.58 a lit cream wall
+    // was over the line and the interiors glowed from the plaster out.
+    bloomStrength: 0.46,
+    bloomThreshold: 1.0,
     aoIntensity: 0.8,
   },
 };
