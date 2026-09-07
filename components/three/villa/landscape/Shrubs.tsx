@@ -25,7 +25,7 @@ import type { BlobSpec, LandscapeLayout } from './LandscapeTypes';
  * lozenge.
  */
 /** How much of its authored radius a shrub's inner mass keeps. */
-const MASS_SCALE = 0.55;
+const MASS_SCALE = 0.48;
 
 function shrink(specs: readonly BlobSpec[]): BlobSpec[] {
   return specs.map((spec) => ({ ...spec, radius: spec.radius * MASS_SCALE }));
@@ -55,8 +55,8 @@ export function Shrubs({
 
   return (
     <group name="Shrubs">
-      <MergedBlobs name="shrubs-mid" specs={mid} material={materials.foliageMid} />
-      <MergedBlobs name="shrubs-dark" specs={dark} material={materials.foliageDark} />
+      <MergedBlobs name="shrubs-mid" specs={mid} material={materials.canopyCore} />
+      <MergedBlobs name="shrubs-dark" specs={dark} material={materials.canopyCoreDark} />
       <FoliageCards name="shrub-foliage" cards={cards} castShadow={false} />
     </group>
   );

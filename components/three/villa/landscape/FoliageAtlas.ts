@@ -16,8 +16,18 @@ import { CanvasTexture, LinearMipmapLinearFilter, LinearFilter, SRGBColorSpace }
  * call.
  */
 
-/** Side of the whole atlas, in pixels. Four 256 px cells. */
-const ATLAS_SIZE = 512;
+/**
+ * Side of the whole atlas, in pixels. Four 512 px cells.
+ *
+ * Doubled from 256. At the old size a leaf was drawn 19-34 px long inside a
+ * 256 px cell — a tenth of the card each — so by the time a shrub was two
+ * metres across on screen its leaves had merged into one green mass. The
+ * shape of an individual leaf is the whole reason this technique works;
+ * below a certain relative size it stops being foliage and starts being a
+ * cabbage. Four megabytes of texture, uploaded once, is the cheapest fix
+ * available to that problem.
+ */
+const ATLAS_SIZE = 1024;
 const CELL = ATLAS_SIZE / 2;
 
 /** Deterministic PRNG — the same generator the landscape placement uses. */
@@ -65,6 +75,37 @@ function drawLeaf(
 }
 
 /**
+ * One twig: a thin, slightly bowed taper from the cluster's middle outward.
+ *
+ * Real planting is not a solid ball of leaf. There is woody structure under
+ * it, and the glimpses of it through the gaps are a large part of what the
+ * eye reads as a plant rather than as a painted volume. These are drawn
+ * first and mostly covered; what survives is the point.
+ */
+function drawTwig(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  angle: number,
+  length: number,
+  width: number,
+  fill: string,
+): void {
+  const bow = (angle % 1) * 0.5 - 0.25;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(0, -width / 2);
+  ctx.quadraticCurveTo(length * 0.55, -width * 0.3 + length * bow * 0.25, length, 0);
+  ctx.quadraticCurveTo(length * 0.55, width * 0.3 + length * bow * 0.25, 0, width / 2);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.restore();
+}
+
+/**
  * Fills one atlas cell with an irregular cluster.
  *
  * Leaves are scattered inside a squashed disc whose radius is itself
@@ -92,7 +133,7 @@ function drawCell(
   ctx.rect(originX, originY, CELL, CELL);
   ctx.clip();
 
-  // A per-cell outline: six harmonics of radius against angle.
+  // A per-cell outline: nine harmonics of radius against angle.
   //
   // The ceiling of 0.66 matters more than it looks. The first version let
   // the cluster reach the full half-cell, which meant the leaves covered
@@ -100,38 +141,78 @@ function drawCell(
   // test to cut, and every card rendered as an opaque grey rectangle. A
   // foliage card is mostly hole; the cluster has to sit well inside its own
   // tile for the technique to work at all.
-  const lobes = Array.from({ length: 6 }, () => between(rng, 0.62, 1.0));
+  //
+  // Three more harmonics than before, at nearly twice the amplitude, and a
+  // floor that lets the outline collapse to a third of its reach. Six
+  // gentle harmonics still described a disc, and a disc is what made every
+  // shrub in the scene read as a topiary ball. A real crown is lopsided:
+  // it has a side the light came from and a side it did not.
+  const lobes = Array.from({ length: 9 }, () => between(rng, 0.45, 1.0));
+  // Each cell is stretched on one axis, so the four variants are not four
+  // versions of the same rounded mass.
+  const aspect = between(rng, 0.72, 1.24);
   const radiusAt = (angle: number) => {
-    let r = 0.52;
+    let r = 0.5;
     for (let i = 0; i < lobes.length; i += 1) {
-      r += Math.cos(angle * (i + 1) + lobes[i]! * 6.283) * 0.07 * lobes[i]!;
+      r += Math.cos(angle * (i + 1) + lobes[i]! * 6.283) * 0.062 * lobes[i]!;
     }
-    return Math.min(r, 0.66);
+    return Math.min(Math.max(r, 0.3), 0.66);
   };
+
+  // A slow angular mask that thins the cluster in two or three places, so
+  // sky shows through the crown instead of stopping at its rim.
+  const gapPhase = between(rng, 0, 6.283);
+  const gapLobes = Math.round(between(rng, 2, 3));
+  const gapAt = (angle: number) => 0.34 + 0.66 * Math.abs(Math.cos(angle * gapLobes + gapPhase));
+
+  // Woody structure first. Everything below is drawn over it.
+  const twigs = Math.round(between(rng, 9, 16));
+  for (let i = 0; i < twigs; i += 1) {
+    const angle = (i / twigs) * Math.PI * 2 + between(rng, -0.3, 0.3);
+    drawTwig(
+      ctx,
+      cx,
+      cy,
+      angle,
+      radiusAt(angle) * (CELL / 2) * between(rng, 0.55, 1.0),
+      between(rng, 1.6, 3.4),
+      `hsl(${between(rng, 28, 46).toFixed(1)} ${between(rng, 14, 26).toFixed(1)}% ${between(rng, 11, 19).toFixed(1)}%)`,
+    );
+  }
 
   for (let i = 0; i < leafCount; i += 1) {
     const angle = rng() * Math.PI * 2;
     // Square-root bias fills the middle before the edge; the extra factor
     // pulls a minority of leaves out past the outline as stragglers.
-    const t = Math.sqrt(rng()) * (rng() > 0.9 ? 1.08 : 0.94);
+    const t = Math.sqrt(rng()) * (rng() > 0.9 ? 1.1 : 0.94);
+    // Thinned where the gap mask is low, so the crown has genuine holes
+    // rather than a uniformly dense interior.
+    if (rng() > gapAt(angle) + 0.14) continue;
+
     const reach = radiusAt(angle) * t * (CELL / 2);
-    const x = cx + Math.cos(angle) * reach;
-    const y = cy + Math.sin(angle) * reach * 0.9;
+    const x = cx + Math.cos(angle) * reach * aspect;
+    const y = cy + Math.sin(angle) * reach * (0.9 / aspect);
 
     // Darker toward the middle: a canopy is lit from outside, and the tonal
-    // gradient is what gives a flat card the appearance of depth.
+    // gradient is what gives a flat card the appearance of depth. The range
+    // is far wider than it was — a real crown runs from near-black in its
+    // own shadow to a bright rim, and compressing that into twenty-six
+    // points of lightness is most of what made these read as flat cut-outs.
     const depth = 1 - t * 0.55;
-    const hue = 78 + between(rng, -12, 14);
-    const sat = 26 + between(rng, -8, 12);
-    const light = 20 + (1 - depth) * 26 + between(rng, -5, 7);
+    const rim = t > 0.82 && rng() > 0.55;
+    const hue = (rim ? 71 : 80) + between(rng, -13, 16);
+    const sat = (rim ? 34 : 24) + between(rng, -9, 14);
+    const light = 9 + (1 - depth) * 44 + (rim ? 9 : 0) + between(rng, -5, 8);
 
-    const length = between(rng, 19, 34) * (0.78 + (1 - t) * 0.36);
+    // Small. Each leaf is now a twentieth of the cell rather than a tenth,
+    // which is the difference between reading a plant and reading a mass.
+    const length = between(rng, 13, 27) * (0.8 + (1 - t) * 0.34);
     drawLeaf(
       ctx,
       x,
       y,
       length,
-      length * between(rng, 0.3, 0.46),
+      length * between(rng, 0.26, 0.44),
       rng() * Math.PI * 2,
       `hsl(${hue.toFixed(1)} ${sat.toFixed(1)}% ${light.toFixed(1)}%)`,
     );
@@ -157,10 +238,15 @@ export function getFoliageAtlas(): CanvasTexture {
   if (ctx) {
     // Four cells, each a different density and seed: two full clusters for
     // the body of a crown, one sparse for its edge, one small for shrubs.
-    drawCell(ctx, 0, 0, 0x466f4c, 420);
-    drawCell(ctx, CELL, 0, 0x2f5a38, 370);
-    drawCell(ctx, 0, CELL, 0x6a8f52, 215);
-    drawCell(ctx, CELL, CELL, 0x3d7a44, 275);
+    //
+    // Counts are roughly four times what they were, which keeps the same
+    // coverage now that each leaf covers a quarter of the area. Drawing
+    // costs a few tens of milliseconds, once, on a canvas that is never
+    // touched again.
+    drawCell(ctx, 0, 0, 0x466f4c, 1700);
+    drawCell(ctx, CELL, 0, 0x2f5a38, 1500);
+    drawCell(ctx, 0, CELL, 0x6a8f52, 900);
+    drawCell(ctx, CELL, CELL, 0x3d7a44, 1150);
   }
 
   atlas = new CanvasTexture(canvas);
@@ -168,7 +254,7 @@ export function getFoliageAtlas(): CanvasTexture {
   atlas.magFilter = LinearFilter;
   atlas.minFilter = LinearMipmapLinearFilter;
   atlas.generateMipmaps = true;
-  atlas.anisotropy = 4;
+  atlas.anisotropy = 8;
   atlas.needsUpdate = true;
   return atlas;
 }

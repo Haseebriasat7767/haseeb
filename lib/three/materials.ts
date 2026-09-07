@@ -566,6 +566,28 @@ uniform float uAshlarTone;
 uniform float uAshlarRough;
 uniform float uAshlarSeed;
 
+// Self-contained value noise for the weathering below.
+//
+// It does not call the shared \`aureliaNoise\`, and cannot: several passes
+// anchor on \`#include <common>\`, and the last one to patch ends up first
+// in the compiled source, so a helper defined by another pass may not exist
+// yet at this point in the file. Twelve lines of duplication is the price
+// of that ordering being unknowable from here.
+float aureliaWeatherHash(vec2 p) {
+  return fract(sin(dot(p, vec2(41.7, 289.3)) + uAshlarSeed * 0.37) * 24634.6345);
+}
+
+float aureliaWeatherNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(aureliaWeatherHash(i), aureliaWeatherHash(i + vec2(1.0, 0.0)), f.x),
+    mix(aureliaWeatherHash(i + vec2(0.0, 1.0)), aureliaWeatherHash(i + vec2(1.0, 1.0)), f.x),
+    f.y
+  );
+}
+
 float aureliaSlabHash(vec2 cell, float salt) {
   float h = sin(dot(cell, vec2(127.1, 311.7)) + salt * 13.37 + uAshlarSeed) * 43758.5453;
   return fract(h);
@@ -579,6 +601,8 @@ struct AureliaSlab {
   vec2 chamfer;   // tilt direction in the slab's own plane
   vec3 planeU;    // world direction of the plane's first axis
   vec3 planeV;    // and its second
+  float mottle;   // slow tonal drift across the elevation, centred on zero
+  float streak;   // rain washing down the face, 0 in the clean field
 };
 
 AureliaSlab aureliaAshlar(vec3 worldPos, vec3 worldNormal) {
@@ -635,6 +659,37 @@ AureliaSlab aureliaAshlar(vec3 worldPos, vec3 worldNormal) {
   // How wide a pixel is on this surface, in the same metres.
   float footprint = max(fwidth(nearest), 1e-5);
   slab.joint *= 1.0 - smoothstep(jointWidth * 0.6, jointWidth * 2.4, footprint);
+
+  // Weathering.
+  //
+  // Two effects, both very small, and between them most of the difference
+  // between stone and a flat fill. The first is tonal drift measured in
+  // metres rather than in slabs: real cladding is never one colour across
+  // an elevation, because the blocks came from different parts of the
+  // quarry and the wall has stood outside. The second is what rain does —
+  // water collects at a course joint, spills over it and washes down the
+  // face below, leaving a vertical streak that is dirtier and rougher than
+  // the stone around it. It is the single most recognisable weathering
+  // signal on a modern facade, and its absence is a large part of why an
+  // untouched render reads as a computer model of a building rather than as
+  // a building.
+  slab.mottle =
+    (aureliaWeatherNoise(worldPos.xz * 0.13 + worldPos.y * 0.07) * 0.62 +
+     aureliaWeatherNoise(worldPos.xz * 0.47 + worldPos.y * 0.21) * 0.38) -
+    0.5;
+
+  // Vertical faces only: paving does not streak, it pools.
+  float aureliaVertical = 1.0 - smoothstep(0.35, 0.72, a.y);
+  // Strongest just under the joint at the top of the course, fading down.
+  float aureliaRun = smoothstep(0.04, 0.86, fy);
+  // Narrow in x, long in y — a streak, not a stain. Two octaves, because a
+  // single frequency gave every streak the same width and the elevation
+  // read as corduroy; the second one varies where they start and how wide
+  // they run. Sparse, too: rain finds a few paths down a wall, not fifty.
+  float aureliaWash =
+    aureliaWeatherNoise(vec2(p.x * 2.1, p.y * 0.22)) * 0.68 +
+    aureliaWeatherNoise(vec2(p.x * 5.3, p.y * 0.14)) * 0.32;
+  slab.streak = aureliaVertical * aureliaRun * smoothstep(0.58, 0.98, aureliaWash);
 
   vec2 cell = vec2(col, row);
   slab.tone = (aureliaSlabHash(cell, 1.0) - 0.5) * 2.0;
@@ -708,13 +763,18 @@ function withAshlar<T extends MeshStandardMaterial>(material: T, options: Ashlar
   AureliaSlab aureliaSlab = aureliaAshlar(vAureliaWorldPos, vAureliaWorldNormal);
   // Piece-to-piece variation first, then the joint darkening over it.
   diffuseColor.rgb *= 1.0 + aureliaSlab.tone * uAshlarTone;
+  diffuseColor.rgb *= 1.0 + aureliaSlab.mottle * 0.085;
+  diffuseColor.rgb *= 1.0 - aureliaSlab.streak * 0.105;
   diffuseColor.rgb *= 1.0 - aureliaSlab.joint * uAshlarDepth;`,
       )
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
   roughnessFactor = clamp(
-    roughnessFactor + aureliaSlab.rough * uAshlarRough + aureliaSlab.joint * 0.09,
+    roughnessFactor
+      + aureliaSlab.rough * uAshlarRough
+      + aureliaSlab.joint * 0.09
+      + aureliaSlab.streak * 0.11,
     0.05,
     1.0
   );`,
@@ -1333,6 +1393,35 @@ function createMaterials() {
       roughnessVariation: 0.05,
       seed: 59,
       // As the mid foliage.
+      normalStrength: 0.09,
+      normalScale: 1.6,
+    }),
+    /**
+     * The inner mass of a crown — what shows through the gaps between the
+     * foliage cards, and nothing else.
+     *
+     * It is much darker than `foliageMid` on purpose. This volume is not a
+     * surface anyone is meant to read: its whole job is to stop the canopy
+     * being see-through and to cast the shadow. Drawn in a lit sage it
+     * showed through the holes in the cards as a pale green blob sitting
+     * inside the plant, which is the single clearest way to give away that
+     * a tree is made of intersecting quads. Drawn as deep canopy shadow,
+     * the same gaps read as depth.
+     */
+    canopyCore: withVariation(standard({ color: '#39422f', roughness: 0.88, metalness: 0 }), {
+      scale: 0.9,
+      colorVariation: 0.06,
+      roughnessVariation: 0.05,
+      seed: 53,
+      normalStrength: 0.09,
+      normalScale: 1.6,
+    }),
+    /** The shadowed half of the same mass. */
+    canopyCoreDark: withVariation(standard({ color: '#232a1d', roughness: 0.92, metalness: 0 }), {
+      scale: 0.9,
+      colorVariation: 0.06,
+      roughnessVariation: 0.05,
+      seed: 59,
       normalStrength: 0.09,
       normalScale: 1.6,
     }),

@@ -39,7 +39,7 @@ import type { LandscapeLayout } from './LandscapeTypes';
  * crown's shadow, and stopping the tree being see-through — while no longer
  * being the thing the eye traces the outline of.
  */
-const MASS_SCALE = 0.58;
+const MASS_SCALE = 0.52;
 
 function shrink(specs: readonly BlobSpec[]): BlobSpec[] {
   return specs.map((spec) => ({ ...spec, radius: spec.radius * MASS_SCALE }));
@@ -70,8 +70,8 @@ export function Trees({
       <MergedBranches name="tree-trunks" specs={layout.trees.trunks} material={materials.bark} />
       {/* The inner mass. Still shadow-casting, but no longer the thing the
           eye reads as the shape of the tree. */}
-      <MergedBlobs name="tree-canopy-mid" specs={mid} material={materials.foliageMid} />
-      <MergedBlobs name="tree-canopy-dark" specs={dark} material={materials.foliageDark} />
+      <MergedBlobs name="tree-canopy-mid" specs={mid} material={materials.canopyCore} />
+      <MergedBlobs name="tree-canopy-dark" specs={dark} material={materials.canopyCoreDark} />
       {/* Alpha-tested shadows cost a second pass over every card, so only
           the top tier buys them; below that the inner mass still casts. */}
       <FoliageCards name="tree-foliage" cards={cards} castShadow={detail === 'high'} />
