@@ -9,7 +9,7 @@ import {
 import type { SurfaceFamily, SurfaceMaps } from './SurfaceMaps';
 
 /**
- * The loading layer for real scanned PBR sets.
+ * The loading layer for authored PBR map sets held on disk.
  *
  * ## Why this exists as its own file
  *
@@ -58,7 +58,7 @@ import type { SurfaceFamily, SurfaceMaps } from './SurfaceMaps';
 const ROOT = '/assets/surfaces';
 
 /**
- * Families for which real scans are present.
+ * Families for which authored map sets are present on disk.
  *
  * Deliberately a manifest rather than a probe: a missing texture resolves
  * as a failed image request, which three reports asynchronously and long
@@ -66,10 +66,30 @@ const ROOT = '/assets/surfaces';
  * exists keeps the decision synchronous and keeps a missing file from
  * silently producing a black surface.
  *
- * Empty until scans are actually added to the repository. It is the only
- * line that changes when they are.
+ * ## What these files actually are
+ *
+ * Not photographs. They are authored in Blender by `tools/blender/surfaces.py`
+ * and baked to disk — procedural node graphs sampled on a 4D torus so they
+ * tile seamlessly, with the normals baked from real displacement rather than
+ * approximated in two dimensions.
+ *
+ * That is a genuine step up from the runtime canvas bakes they replace:
+ * terrazzo gets real Voronoi cell geometry for its aggregate, oak gets ring
+ * lines that wander and a different phase and tone per board, travertine
+ * gets bedding planes with pores lying in them. None of it is a scan, and
+ * the asset audit must go on saying so — a generated limestone still has
+ * the statistics its author thought limestone had.
  */
-export const SCANNED_FAMILIES: readonly SurfaceFamily[] = [];
+export const SCANNED_FAMILIES: readonly SurfaceFamily[] = [
+  'plaster',
+  'stone',
+  'oak',
+  'marble',
+  'linen',
+  'wool',
+  'leather',
+  'paving',
+];
 
 export function hasScannedMaps(family: SurfaceFamily): boolean {
   return SCANNED_FAMILIES.includes(family);
