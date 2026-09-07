@@ -1,19 +1,7 @@
 import type { BlobSpec } from '../villa/landscape/LandscapeTypes';
 import type { Form } from '../villa/furniture/FormTypes';
-import {
-  createBed,
-  createBowl,
-  createFloorLamp,
-  createFloorVessel,
-  createHeadboard,
-  createLoungeChair,
-  createLowTable,
-  createNightstand,
-  createOttoman,
-  createPedestalTable,
-  createSofa,
-  createTableLamp,
-} from '../villa/furniture/Pieces';
+import { createFloorVessel } from '../villa/furniture/Pieces';
+import type { ModelName } from '../models/ModelLibrary';
 import { emptyParts, type Parts } from '../villa/interior/Furniture';
 import type { BoxSpec, Range } from '../villa/VillaTypes';
 
@@ -77,6 +65,35 @@ function flutedPanel(
   }
 }
 
+/**
+ * A Blender-authored piece standing somewhere in the room.
+ *
+ * Kept as data next to the procedural geometry rather than as JSX, so the
+ * whole fit-out is still one pure function that a floor-plan file could
+ * drive later.
+ */
+export type ModelPlacement = {
+  key: string;
+  name: ModelName;
+  position: [number, number, number];
+  rotationY: number;
+};
+
+/**
+ * Which way a piece faces, in the rotation the loaded models actually need.
+ *
+ * The models are authored in Blender facing +Y, and the glTF exporter maps
+ * Blender +Y onto -Z. So a piece at zero rotation looks toward -Z, which is
+ * "north" in the villa's own vocabulary — and every angle here is derived
+ * from that one fact rather than guessed at a site.
+ */
+export const FACE = {
+  north: 0,
+  east: -Math.PI / 2,
+  south: Math.PI,
+  west: Math.PI / 2,
+} as const;
+
 export type ApartmentLayout = {
   parts: Parts;
   forms: Form[];
@@ -84,6 +101,8 @@ export type ApartmentLayout = {
   walls: BoxSpec[];
   /** The dropped soffit over the lounge. */
   soffit: BoxSpec[];
+  /** Furniture loaded from glTF rather than generated. */
+  models: ModelPlacement[];
 };
 
 export function createApartment(
@@ -95,6 +114,18 @@ export function createApartment(
 ): ApartmentLayout {
   const parts = emptyParts();
   const forms: Form[] = [];
+  const models: ModelPlacement[] = [];
+
+  const put = (
+    key: string,
+    name: ModelName,
+    x: number,
+    z: number,
+    y: number,
+    facing: keyof typeof FACE,
+  ) => {
+    models.push({ key, name, position: [x, y, z], rotationY: FACE[facing] });
+  };
   const walls: BoxSpec[] = [];
   const soffit: BoxSpec[] = [];
 
@@ -233,35 +264,21 @@ export function createApartment(
   parts.rugs.push(box('apt-rug', [-7.6, 1.6], [floorY, floorY + 0.022], [-4.4, 4.4]));
 
   // Sofa against the glass end, facing the media wall.
-  createSofa(forms, 'apt-sofa', { at: [0.9, 0.2], floorY, facing: 'west', seed: 31 }, {
-    width: 3.2,
-    depth: 1.08,
-  });
+  put('apt-sofa', 'sofa-3seat', 0.9, 0.2, floorY, 'west');
   // Two chairs turned back toward it, closing the group.
-  createLoungeChair(forms, 'apt-chair-a', { at: [-4.6, -3.3], floorY, facing: 'east', seed: 47 }, {
-    width: 1.04,
-  });
-  createLoungeChair(forms, 'apt-chair-b', { at: [-4.4, 3.4], floorY, facing: 'east', seed: 53 }, {
-    width: 1.04,
-  });
-  createOttoman(forms, 'apt-ottoman', { at: [-1.6, 3.7], floorY, facing: 'north', seed: 59 }, {
-    width: 0.96,
-    depth: 0.64,
-  });
+  put('apt-chair-a', 'lounge-chair', -4.6, -3.3, floorY, 'east');
+  put('apt-chair-b', 'lounge-chair', -4.4, 3.4, floorY, 'east');
+  put('apt-ottoman', 'ottoman', -1.6, 3.7, floorY, 'north');
 
-  // A cluster of low tables rather than one — the reference for this room
-  // is three organic drums at different heights, not a rectangle.
-  createLowTable(forms, 'apt-table', { at: [-2.4, 0.1], floorY, facing: 'west', seed: 61 }, {
-    width: 1.2,
-    depth: 0.82,
-    height: 0.34,
-  });
-  createPedestalTable(forms, 'apt-drum-a', [-3.5, -1.4], floorY, { height: 0.44, radius: 0.3, seed: 67 });
-  createPedestalTable(forms, 'apt-drum-b', [-1.4, 1.5], floorY, { height: 0.29, radius: 0.26, seed: 71 });
-  createBowl(forms, 'apt-bowl', [-2.4, 0.1], floorY + 0.34, { radius: 0.18, height: 0.11 });
+  // A cluster at three heights rather than one table — the reference for
+  // this room is organic drums, not a rectangle.
+  put('apt-table', 'low-table', -2.4, 0.1, floorY, 'west');
+  put('apt-drum-a', 'side-drum', -3.5, -1.4, floorY, 'north');
+  put('apt-drum-b', 'side-drum', -1.4, 1.5, floorY, 'north');
+  put('apt-bowl', 'bowl', -2.4, 0.1, floorY + 0.42, 'north');
 
-  createFloorLamp(forms, 'apt-lamp', [-6.6, 5.1], floorY, 1.62);
-  createFloorVessel(forms, 'apt-urn', [-7.4, -5.2], floorY, { height: 0.7, radius: 0.23, material: 'ceramic' });
+  put('apt-lamp', 'floor-lamp', -6.6, 5.1, floorY, 'north');
+  put('apt-urn', 'vessel-tall', -7.4, -5.2, floorY, 'north');
 
   // ── Lounge: planting ──────────────────────────────────────────────────
   // Two indoor trees, in the corners where the glass turns. Every one of
@@ -331,26 +348,15 @@ export function createApartment(
     box('apt-bed-rug', [bedX + 0.6, bedX + 5.4], [floorY, floorY + 0.022], [bedCentreZ - 2.6, bedCentreZ + 2.6]),
   );
 
-  const bedPlacement = { at: [bedX + 1.9, bedCentreZ] as const, floorY, facing: 'east' as const, seed: 97 };
-  createHeadboard(forms, 'apt-headboard', bedPlacement, { width: 2.5, height: 1.2 });
-  createBed(forms, 'apt-bed', bedPlacement, { width: 1.98, length: 2.12 });
+  // The bed model carries its own headboard and pillows.
+  put('apt-bed', 'bed', bedX + 1.9, bedCentreZ, floorY, 'east');
+  put('apt-night-a', 'nightstand', bedX + 0.85, bedCentreZ - 1.5, floorY, 'east');
+  put('apt-night-b', 'nightstand', bedX + 0.85, bedCentreZ + 1.5, floorY, 'east');
+  put('apt-lamp-a', 'table-lamp', bedX + 0.85, bedCentreZ - 1.5, floorY + 0.44, 'east');
+  put('apt-lamp-b', 'table-lamp', bedX + 0.85, bedCentreZ + 1.5, floorY + 0.44, 'east');
 
-  createNightstand(forms, 'apt-night-a', [bedX + 0.85, bedCentreZ - 1.5], floorY, 101, 'east');
-  createNightstand(forms, 'apt-night-b', [bedX + 0.85, bedCentreZ + 1.5], floorY, 103, 'east');
-  createTableLamp(forms, 'apt-lamp-a', [bedX + 0.85, bedCentreZ - 1.5], floorY + 0.52, { height: 0.48 });
-  createTableLamp(forms, 'apt-lamp-b', [bedX + 0.85, bedCentreZ + 1.5], floorY + 0.52, { height: 0.48 });
-
-  createLoungeChair(
-    forms,
-    'apt-bed-chair',
-    { at: [bedX + 6.4, bedroomZ[0] + 2.2], floorY, facing: 'south', seed: 107 },
-    { width: 1.0 },
-  );
-  createPedestalTable(forms, 'apt-bed-table', [bedX + 6.4, bedroomZ[0] + 3.6], floorY, {
-    height: 0.5,
-    radius: 0.24,
-    seed: 109,
-  });
+  put('apt-bed-chair', 'lounge-chair', bedX + 6.4, bedroomZ[0] + 2.2, floorY, 'south');
+  put('apt-bed-table', 'side-drum', bedX + 6.4, bedroomZ[0] + 3.6, floorY, 'north');
 
   plant('apt-bed-tree', bedX + 5.6, bedroomZ[0] + 1.0, 2.3, 839);
 
@@ -358,7 +364,7 @@ export function createApartment(
     box('apt-bed-sheer', [bedX + 3.4, loungeBackX - 0.4], [floorY, ceilingY], [z[0] + 0.28, z[0] + 0.34]),
   );
 
-  return { parts, forms, walls, soffit };
+  return { parts, forms, walls, soffit, models };
 }
 
 export type { BlobSpec };

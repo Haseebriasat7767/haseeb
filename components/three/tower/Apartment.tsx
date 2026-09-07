@@ -7,6 +7,7 @@ import { FoliageCards } from '../villa/landscape/FoliageCards';
 import { createFoliageCards } from '../villa/landscape/FoliageGeometry';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../villa/VillaPrimitives';
 import type { DetailTier } from '../villa/VillaTypes';
+import { Model } from '../models/ModelLibrary';
 import type { ApartmentLayout } from './ApartmentGeometry';
 
 /**
@@ -25,7 +26,7 @@ export function Apartment({
   detail?: DetailTier;
 }) {
   const materials = getMaterials();
-  const { parts, forms, walls, soffit } = layout;
+  const { parts, forms, walls, soffit, models } = layout;
 
   // Indoor trees share the outdoor cards, scaled well down: a crown outside
   // is mostly gaps and runs several times its own radius in card size,
@@ -42,6 +43,19 @@ export function Apartment({
       <MergedBoxes name="apt-soffit" specs={soffit} material={materials.plaster} />
 
       <FormRenderer name="apt-forms" forms={forms} />
+
+      {/* The Blender-authored pieces. Each is its own draw call rather than
+          merged, which is the price of real geometry — fourteen of them
+          against a budget of two hundred and fifty is a price worth paying
+          for furniture that has a silhouette. */}
+      {models.map((m) => (
+        <Model
+          key={m.key}
+          name={m.name}
+          position={m.position}
+          rotationY={m.rotationY}
+        />
+      ))}
 
       <MergedBoxes name="apt-joinery" specs={parts.joinery} material={materials.joinery} />
       <MergedBoxes name="apt-plaster" specs={parts.plaster} material={materials.plaster} />

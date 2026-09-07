@@ -64,3 +64,61 @@ Drop them in at the same paths and filenames and nothing else changes — the
 loader does not care how the pixels were made. Only clearly CC0 or otherwise
 commercially-redistributable sources, and every file recorded in the audit
 table above with its true source and licence.
+
+---
+
+# Model library
+
+Twelve furniture pieces in `models/*.glb`, authored by
+`tools/blender/models.py` and loaded by
+`components/three/models/ModelLibrary.tsx`.
+
+| Piece | Ref | Tris | Size |
+| --- | --- | --- | --- |
+| `sofa-3seat` | MDL-01 | 7,804 | 79 KB |
+| `lounge-chair` | MDL-02 | 3,076 | 22 KB |
+| `ottoman` | MDL-02 | 360 | 2 KB |
+| `low-table` | MDL-03 | 1,132 | 10 KB |
+| `side-drum` | MDL-03 | 504 | 2 KB |
+| `bed` | MDL-04 | 7,452 | 77 KB |
+| `nightstand` | MDL-05 | 740 | 13 KB |
+| `table-lamp` | MDL-05 | 472 | 4 KB |
+| `floor-lamp` | MDL-11 | 472 | 4 KB |
+| `vessel-tall` | MDL-10 | 864 | 4 KB |
+| `vessel-round` | MDL-10 | 792 | 4 KB |
+| `bowl` | MDL-10 | 504 | 3 KB |
+
+**24,172 triangles and 228 KB for the whole library**, Draco-compressed —
+less than a single texture map. All project-authored; no third-party
+licence applies.
+
+## The export contract
+
+Every piece obeys the same rules, because a loader cannot guess:
+
+- glTF 2.0 binary, one file per piece, Draco-compressed
+- metres, Y-up, −Z forward (Blender is Z-up; the exporter converts)
+- **origin at the floor contact point, centred in plan** — so placing a
+  piece is `position = [x, floorY, z]` with no per-asset offset
+- PBR metal-rough only, modifiers applied, no custom nodes
+
+A piece authored in Blender faces +Y, which the exporter maps to −Z. The
+`FACE` table in `ApartmentGeometry.ts` derives every rotation from that one
+fact rather than guessing per site.
+
+## Draco decoder
+
+Vendored to `public/assets/draco/` from three's own distribution, so the
+site has no third-party runtime dependency and works offline and behind a
+strict content policy. **`useGLTF`'s second argument must be the decoder
+path, not `true`** — passing `true` silently points it at Google's
+`gstatic.com` CDN, which works on a developer machine and fails closed
+anywhere locked down.
+
+## Regenerating
+
+```
+python3 tools/blender/models.py                    # build and export all
+python3 tools/blender/models.py sofa-3seat bed     # or just some
+python3 tools/blender/models.py --preview          # render contact sheets
+```
