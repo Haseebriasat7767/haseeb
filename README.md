@@ -810,6 +810,31 @@ the cost has stopped scaling with how many floors are furnished. It scales with
 how many _kinds_ of thing are on them, which is the number that should govern
 it.
 
+### And why that alone made it worse
+
+That was asserted before it was measured, and the measurement disagreed: the
+atrium view went from 967 draw calls to **1235**. The total went down and the
+drawn count went up, because the two are not the same number and frustum
+culling is what separates them.
+
+A hundred and forty cloned models are a hundred and forty bounding spheres, and
+in any one framing most of them are off screen and rejected before they cost
+anything. Collapse them into one `InstancedMesh` per piece and there is one
+bounding sphere spanning the whole podium — always on screen, never rejected,
+so every piece of shop fitting on all five levels is drawn whether or not any
+of it is in frame. Instancing had removed the ceiling and taken the culling
+with it.
+
+So a placement carries a `chunk`, and a batch is per piece _per chunk_. The
+retail fit-out chunks by level, which is the axis the cameras actually cut
+along: standing on one floor of an atrium, the floors below you are behind a
+slab. That gives the culling back without giving back the batching.
+
+The lesson is the ordinary one, and it is here because the first version of
+this section did not have it: a draw-call count you reasoned about is not a
+draw-call count you measured, and instancing is a trade against culling rather
+than a free win.
+
 ### Five levels, five programmes
 
 The podium was five copies of the same clothes shop. That fixed the emptiness

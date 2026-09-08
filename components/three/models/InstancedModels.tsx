@@ -27,6 +27,13 @@ export type ModelPlacement = {
   name: ModelName;
   position: [number, number, number];
   rotationY: number;
+  /**
+   * Which spatial batch this placement belongs to — a retail level, a room.
+   *
+   * Optional, and the difference between instancing being a win and a loss.
+   * See the note on culling below.
+   */
+  chunk?: string;
 };
 
 /**
@@ -47,11 +54,29 @@ export type ModelPlacement = {
  * shows up if you count, which is why it survived until a phase that wanted
  * to multiply it by twenty storeys.
  *
- * Batched, the same fit-out is sixty-four draw calls: one per distinct
- * primitive rather than one per primitive per placement. The cost stops
- * scaling with how many floors are furnished and starts scaling with how
- * many *kinds* of thing are on them, which is the number that should govern
- * it.
+ * Batched, the same fit-out is a few dozen: one per distinct primitive rather
+ * than one per primitive per placement. The cost stops scaling with how many
+ * floors are furnished and starts scaling with how many *kinds* of thing are
+ * on them, which is the number that should govern it.
+ *
+ * ## Why that alone made things worse
+ *
+ * Instancing was measured, and the first version of it took the atrium view
+ * from 967 draw calls to 1235. The total went down and the drawn count went
+ * up, because the two are not the same number and frustum culling is what
+ * separates them.
+ *
+ * A hundred and forty cloned models are a hundred and forty bounding spheres,
+ * and in any one framing three quarters of them are off screen and rejected
+ * before they cost anything. Collapse them into one `InstancedMesh` per piece
+ * and there is one bounding sphere spanning the whole podium — always on
+ * screen, never rejected, so every piece of shop fitting on all five levels
+ * is drawn whether or not any of it is in frame.
+ *
+ * So placements carry a `chunk`, and a batch is per piece *per chunk*. The
+ * retail fit-out chunks by level, which is the axis the cameras actually cut
+ * along: standing on one floor of an atrium, the floors below you are behind
+ * a slab. That restores the culling without giving back the batching.
  *
  * ## The transform that is easy to get wrong
  *
@@ -76,16 +101,19 @@ export function InstancedModels({
   // Grouped before anything is loaded, so the hook below is handed a stable,
   // deduplicated URL list rather than one entry per placement.
   const groups = useMemo(() => {
-    const byName = new Map<ModelName, ModelPlacement[]>();
+    const byBatch = new Map<string, { model: ModelName; items: ModelPlacement[] }>();
     for (const placement of placements) {
-      const list = byName.get(placement.name);
-      if (list) list.push(placement);
-      else byName.set(placement.name, [placement]);
+      const id = `${placement.name}::${placement.chunk ?? ''}`;
+      const batch = byBatch.get(id);
+      if (batch) batch.items.push(placement);
+      else byBatch.set(id, { model: placement.name, items: [placement] });
     }
-    return [...byName.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [...byBatch.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [placements]);
 
-  const urls = useMemo(() => groups.map(([modelName]) => modelUrl(modelName)), [groups]);
+  // Deduplicated: several batches of the same piece are one download and one
+  // upload, however many chunks they are split across.
+  const urls = useMemo(() => groups.map(([, batch]) => modelUrl(batch.model)), [groups]);
 
   // One call with an array: `useGLTF` returns them in order, and calling it
   // per model would put a hook inside a loop over data that changes.
@@ -100,7 +128,8 @@ export function InstancedModels({
     const one = new Vector3(1, 1, 1);
     const combined = new Matrix4();
 
-    groups.forEach(([modelName, group], index) => {
+    groups.forEach(([batchId, batch], index) => {
+      const group = batch.items;
       const scene = loaded[index]?.scene;
       if (!scene) return;
       // World matrices within the model are only meaningful once the graph
@@ -123,7 +152,7 @@ export function InstancedModels({
 
       for (const [partIndex, part] of parts.entries()) {
         const instanced = new InstancedMesh(part.geometry, part.material, group.length);
-        instanced.name = `${name}-${modelName}-${partIndex}`;
+        instanced.name = `${name}-${batchId}-${partIndex}`;
         instanced.castShadow = castShadow;
         instanced.receiveShadow = receiveShadow;
 

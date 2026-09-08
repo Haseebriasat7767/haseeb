@@ -169,8 +169,12 @@ function fitOut(programme: Programme, bay: Bay): void {
 
 export function createRetailProps(plan: TowerPlan): PropPlacement[] {
   const out: PropPlacement[] = [];
+  // Chunked by level. Instancing without this draws every piece of shop
+  // fitting on all five floors in every framing, because one batch spanning
+  // the whole podium is one bounding sphere and is never off screen.
+  let chunk = '';
   const put = (key: string, name: ModelName, x: number, y: number, z: number, yaw: number) => {
-    out.push({ key, name, position: [x, y, z], rotationY: yaw });
+    out.push({ key, name, position: [x, y, z], rotationY: yaw, chunk });
   };
 
   const { atriumX, atriumZ, podiumLevels, podiumLevelHeight } = plan;
@@ -178,6 +182,7 @@ export function createRetailProps(plan: TowerPlan): PropPlacement[] {
 
   for (let level = 0; level < podiumLevels; level += 1) {
     const y = level * podiumLevelHeight;
+    chunk = `retail-${level}`;
     const programme = PROGRAMMES[level % PROGRAMMES.length]!;
     // Just under this level's slab. Pendants carry their own drop, so what
     // they want is the soffit, not the floor.

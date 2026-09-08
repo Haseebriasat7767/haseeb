@@ -19,6 +19,8 @@ export type PropPlacement = {
   name: ModelName;
   position: [number, number, number];
   rotationY: number;
+  /** Spatial batch, so instancing does not defeat frustum culling. */
+  chunk?: string;
 };
 
 /** Deterministic hash, matching the rest of the project. */
