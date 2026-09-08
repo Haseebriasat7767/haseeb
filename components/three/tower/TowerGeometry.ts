@@ -12,6 +12,17 @@ import type { PalmSpec, ShorelineLayout, TowerConfig, TowerLayout, TowerPlan } f
  * toward the landward end so the whole ocean face of the podium roof is
  * left as deck.
  */
+/**
+ * The entrance doors on the ocean elevation, in Z, and their head height.
+ *
+ * Centred on the colonnade, five metres wide: a retail podium's main door is
+ * not a domestic one, and this is the opening a visitor on foot walks through
+ * from the boardwalk. Shared by the shell, the plinth and the shopfront so
+ * the three cannot drift apart and leave a doorway with a wall behind it.
+ */
+export const ENTRANCE_Z: Range = [-2.6, 2.6];
+export const ENTRANCE_HEAD = 2.7;
+
 export const TOWER_CONFIG: TowerConfig = {
   podiumWidth: 64,
   podiumDepth: 44,
@@ -96,12 +107,27 @@ function box(key: string, x: Range, y: Range, z: Range): BoxSpec {
  * corners meet without overlapping, so the merged geometry has no z-fighting
  * seam where a chamfer would otherwise double up.
  */
-function ring(out: BoxSpec[], key: string, x: Range, y: Range, z: Range, thickness: number): void {
+function ring(
+  out: BoxSpec[],
+  key: string,
+  x: Range,
+  y: Range,
+  z: Range,
+  thickness: number,
+  /** A stretch of the ocean (east) run to leave out — see `roundedRing`. */
+  openEastZ?: Range,
+): void {
   const innerZ: Range = [z[0] + thickness, z[1] - thickness];
   out.push(box(`${key}-n`, x, y, [z[0], z[0] + thickness]));
   out.push(box(`${key}-s`, x, y, [z[1] - thickness, z[1]]));
   out.push(box(`${key}-w`, [x[0], x[0] + thickness], y, innerZ));
-  out.push(box(`${key}-e`, [x[1] - thickness, x[1]], y, innerZ));
+  const eastX: Range = [x[1] - thickness, x[1]];
+  if (openEastZ) {
+    out.push(box(`${key}-e0`, eastX, y, [innerZ[0], openEastZ[0]]));
+    out.push(box(`${key}-e1`, eastX, y, [openEastZ[1], innerZ[1]]));
+  } else {
+    out.push(box(`${key}-e`, eastX, y, innerZ));
+  }
 }
 
 /**
@@ -161,11 +187,20 @@ function roundedRing(
   thickness: number,
   cornerR: number,
   steps = 5,
+  /**
+   * A stretch of the ocean (east) run to leave out, in Z.
+   *
+   * A doorway, in other words. The podium shell was a closed ring for its
+   * full twenty-five metres, which is right for a massing study and wrong
+   * for a building — there was no way in. It only mattered once the camera
+   * came off its rails and someone tried to walk through the front of it.
+   */
+  openEastZ?: Range,
 ): void {
   const r = Math.max(0, Math.min(cornerR, (x[1] - x[0]) / 2 - 0.01, (z[1] - z[0]) / 2 - 0.01));
 
   if (r <= thickness) {
-    ring(out, key, x, y, z, thickness);
+    ring(out, key, x, y, z, thickness, openEastZ);
     return;
   }
 
@@ -175,7 +210,13 @@ function roundedRing(
   out.push(box(`${key}-n`, innerX, y, [z[0], z[0] + thickness]));
   out.push(box(`${key}-s`, innerX, y, [z[1] - thickness, z[1]]));
   out.push(box(`${key}-w`, [x[0], x[0] + thickness], y, innerZ));
-  out.push(box(`${key}-e`, [x[1] - thickness, x[1]], y, innerZ));
+  const eastX: Range = [x[1] - thickness, x[1]];
+  if (openEastZ) {
+    out.push(box(`${key}-e0`, eastX, y, [innerZ[0], openEastZ[0]]));
+    out.push(box(`${key}-e1`, eastX, y, [openEastZ[1], innerZ[1]]));
+  } else {
+    out.push(box(`${key}-e`, eastX, y, innerZ));
+  }
 
   arcRun(out, `${key}-cnw`, x[0] + r, z[0] + r, r, Math.PI, y, thickness, steps);
   arcRun(out, `${key}-cne`, x[1] - r, z[0] + r, r, -Math.PI / 2, y, thickness, steps);
@@ -378,15 +419,30 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   // retail levels are a real volume you can stand inside, and filling them
   // with stone would make the whole podium a prop that only works from
   // outside — which is exactly what a five-storey mall must not be.
+  // Built in two lifts so the ocean elevation can be opened at street level:
+  // the ring is closed above the door head and split around the doors below
+  // it. Two extra boxes, and the difference between a building you can enter
+  // and a solid drum with shopfronts painted on it.
   roundedRing(
     mass,
     'podium-shell',
     innerX,
-    [0, podiumTopY],
+    [ENTRANCE_HEAD, podiumTopY],
     innerZ,
     0.45,
     podiumCornerRadius - shopfrontInset,
     7,
+  );
+  roundedRing(
+    mass,
+    'podium-shell-base',
+    innerX,
+    [0, ENTRANCE_HEAD],
+    innerZ,
+    0.45,
+    podiumCornerRadius - shopfrontInset,
+    7,
+    ENTRANCE_Z,
   );
 
   // Ground floor, solid: the atrium void starts above it.
@@ -463,6 +519,9 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
       podiumBandDepth,
       podiumCornerRadius,
       7,
+      // The band at grade is a plinth. Carried across the doors it would be
+      // a 620mm kerb in the entrance, which is not a threshold, it is a trip.
+      level === 0 ? ENTRANCE_Z : undefined,
     );
 
     // A lit reveal tucked under every band. This is the detail that makes
@@ -495,7 +554,15 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     const shopZ: Range = [innerZ[0] + pr, innerZ[1] - pr];
     const shopX: Range = [innerX[0] + pr, innerX[1] - pr];
 
-    glazedWall(podiumGlass, mullions, `shop-e-${level}`, 'z', shopZ, innerX[1], y, 0.1, 7, 0.16);
+    if (level === 0) {
+      // The entrance. Glass either side of the opening for its full height,
+      // and a transom over it — the doors themselves are the void.
+      glazedWall(podiumGlass, mullions, `shop-e-0a`, 'z', [shopZ[0], ENTRANCE_Z[0]], innerX[1], y, 0.1, 3, 0.16); // prettier-ignore
+      glazedWall(podiumGlass, mullions, `shop-e-0b`, 'z', [ENTRANCE_Z[1], shopZ[1]], innerX[1], y, 0.1, 3, 0.16); // prettier-ignore
+      glazedWall(podiumGlass, mullions, `shop-e-0t`, 'z', ENTRANCE_Z, innerX[1], [ENTRANCE_HEAD, y[1]], 0.1, 2, 0.16); // prettier-ignore
+    } else {
+      glazedWall(podiumGlass, mullions, `shop-e-${level}`, 'z', shopZ, innerX[1], y, 0.1, 7, 0.16);
+    }
     glazedWall(podiumGlass, mullions, `shop-w-${level}`, 'z', shopZ, innerX[0], y, 0.1, 7, 0.16);
     glazedWall(podiumGlass, mullions, `shop-s-${level}`, 'x', shopX, innerZ[1], y, 0.1, 11, 0.16);
     glazedWall(podiumGlass, mullions, `shop-n-${level}`, 'x', shopX, innerZ[0], y, 0.1, 11, 0.16);

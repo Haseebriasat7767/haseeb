@@ -45,6 +45,7 @@ export function TowerWalkthrough() {
 
   const [step, setStep] = useState(initial);
   const [hour, setHour] = useState<TimeOfDay>(OPENING_HOUR);
+  const [walking, setWalking] = useState(false);
   const webgl = useWebGLSupport();
 
   const view = TOWER_VIEWS[step] ?? DEFAULT_TOWER_VIEW;
@@ -66,20 +67,45 @@ export function TowerWalkthrough() {
       <ExperienceViewport
         className="h-[86svh] w-full"
         view={view}
-        mode="fixed"
+        mode={walking ? 'walk' : 'fixed'}
         content="tower"
         timeOfDay={hour}
         label={`Three-dimensional view of the oceanfront tower — ${view.label}`}
       >
-        {/* Readability ground for the caption and the controls. */}
-        <div
-          aria-hidden="true"
-          className="ease-luxe pointer-events-none absolute inset-x-0 bottom-0 h-[54%] transition-[background] duration-[1200ms]"
-          style={scrim}
-        />
+        {/* Readability ground for the caption and the controls. Dropped in
+            walk mode: a gradient over the bottom half of a first-person view
+            is a gradient over the floor you are trying to walk on. */}
+        {walking ? null : (
+          <div
+            aria-hidden="true"
+            className="ease-luxe pointer-events-none absolute inset-x-0 bottom-0 h-[54%] transition-[background] duration-[1200ms]"
+            style={scrim}
+          />
+        )}
+
+        {/* The switch between the two ways of seeing the building: a set of
+            composed framings, or the run of the place on foot. */}
+        {webgl === false ? null : (
+          // `top-24`, not `top-6`: the site header is fixed, 80px tall and
+          // z-40, so at `top-6` this button sat inside its box and was
+          // unclickable across its whole width — the header ate the pointer.
+          <button
+            type="button"
+            onClick={() => setWalking((on) => !on)}
+            className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+          >
+            {walking ? 'Guided tour' : 'Walk the building'}
+          </button>
+        )}
+
+        {walking ? (
+          <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
+            Click to look · W A S D to walk · Shift to run
+          </div>
+        ) : null}
 
         {/* The hour, down the left edge on a wide screen. */}
-        {webgl === false ? null : (
+        {webgl === false || walking ? null : (
           <HourDial
             value={hour}
             onChange={setHour}
@@ -90,6 +116,7 @@ export function TowerWalkthrough() {
         {/* Step index down the right edge, doubling as navigation. */}
         <nav
           aria-label="Walkthrough steps"
+          hidden={walking}
           className="absolute top-1/2 right-6 z-10 hidden -translate-y-1/2 lg:block"
         >
           <ol className="flex flex-col items-end gap-4">
@@ -128,8 +155,10 @@ export function TowerWalkthrough() {
           </ol>
         </nav>
 
-        {/* Caption and step controls. */}
-        <div className="px-gutter absolute inset-x-0 bottom-0 z-10 pb-6 lg:pb-10">
+        {/* Caption and step controls. Gone entirely on foot: on a phone this
+            block plus the hour dial covers most of the frame, and none of it
+            means anything when the camera is no longer on a numbered step. */}
+        <div hidden={walking} className="px-gutter absolute inset-x-0 bottom-0 z-10 pb-6 lg:pb-10">
           <div className="max-w-wide mx-auto flex flex-col gap-4 lg:pl-[7.5rem]">
             <div className="max-w-[56ch]">
               <p className="text-eyebrow text-bone/70 flex items-center gap-4 uppercase">

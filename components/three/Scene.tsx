@@ -157,21 +157,27 @@ export function Scene({
       // samples and therefore needs every frame it can get. Without this the
       // tracer sat below its minimum sample count forever and quietly showed
       // its rasterized fallback, which looked like the tracer doing nothing.
+      // Walk mode renders every frame by definition: the camera is moving
+      // because a person is moving it, and `demand` would show them a still.
       frameloop={mode === 'fixed' && !cinematic ? 'demand' : 'always'}
       className="h-full w-full"
     >
       <color attach="background" args={[lighting.atmosphere.background]} />
 
-      <CameraController
-        view={view}
-        mode={mode}
-        parallax={parallax}
-        reducedMotion={reducedMotion}
-        // The tower stands on an ocean that runs to the horizon. Near is
-        // lifted with far to keep the depth ratio sane — nothing in this
-        // scene is ever within a quarter metre of the eye.
-        {...(content === 'tower' ? { near: 0.25, far: 3000 } : {})}
-      />
+      {/* In walk mode the visitor owns the camera; a controller easing it
+          toward a framing would be fighting them for it every frame. */}
+      {mode === 'walk' ? null : (
+        <CameraController
+          view={view}
+          mode={mode}
+          parallax={parallax}
+          reducedMotion={reducedMotion}
+          // The tower stands on an ocean that runs to the horizon. Near is
+          // lifted with far to keep the depth ratio sane — nothing in this
+          // scene is ever within a quarter metre of the eye.
+          {...(content === 'tower' ? { near: 0.25, far: 3000 } : {})}
+        />
+      )}
       <SceneEnvironment
         lighting={lighting}
         shadows={quality.shadows}
@@ -201,7 +207,7 @@ export function Scene({
           (content === 'placeholder' ? (
             <PlaceholderMassing />
           ) : content === 'tower' ? (
-            <TowerScene detail={quality.tier} />
+            <TowerScene detail={quality.tier} walk={mode === 'walk'} />
           ) : (
             <ProceduralVilla detail={quality.tier} lighting={lighting} />
           ))}

@@ -33,8 +33,10 @@ export type TimeOfDay = 'morning' | 'day' | 'goldenHour' | 'blueHour' | 'night';
 /**
  * Camera behaviour modes the scene supports. `journey` is the scroll-driven
  * mode: it tweens position, target, and focal length between named views.
+ * `walk` hands the camera to the visitor: free look and free movement, with
+ * the building as a collider rather than as a set of framings.
  */
-export type CameraMode = 'orbit' | 'cinematic' | 'fixed' | 'journey';
+export type CameraMode = 'orbit' | 'cinematic' | 'fixed' | 'journey' | 'walk';
 
 /** Which building the Canvas renders. */
 export type SceneContent = 'villa' | 'tower' | 'placeholder';

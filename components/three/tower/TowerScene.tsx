@@ -24,6 +24,8 @@ import { Amenity } from './Amenity';
 import { Apartment } from './Apartment';
 import { createAmenity } from './AmenityGeometry';
 import { createCore } from './CoreGeometry';
+import { createWalkCollider } from './WalkCollider';
+import { WalkControls } from '../WalkControls';
 import { createApartment } from './ApartmentGeometry';
 import { InstancedModels } from '../models/InstancedModels';
 import { createParkLayout } from './Park';
@@ -50,9 +52,12 @@ import type { TowerConfig } from './TowerTypes';
 export function TowerScene({
   config,
   detail = 'high',
+  walk = false,
 }: {
   config?: Partial<TowerConfig>;
   detail?: DetailTier;
+  /** Hands the camera to the visitor and builds the collider they walk on. */
+  walk?: boolean;
 }) {
   const layout = useMemo(
     () => createTowerLayout(config ? { ...TOWER_CONFIG, ...config } : TOWER_CONFIG),
@@ -137,6 +142,16 @@ export function TowerScene({
     ];
   }, [layout.plan]);
 
+  // The surfaces a visitor can stand on. Built only when they can actually
+  // walk — it is a second merged geometry over the whole building and there
+  // is no reason to pay for it while the camera is on rails.
+  const collider = useMemo(
+    () => (walk ? createWalkCollider(layout, amenity, core, apartment, shoreline, plaza) : null),
+    [walk, layout, amenity, core, apartment, shoreline, plaza],
+  );
+
+  useEffect(() => () => collider?.geometry.dispose(), [collider]);
+
   useEffect(
     () => () => {
       disposeVillaGeometries();
@@ -150,6 +165,11 @@ export function TowerScene({
   return (
     <ChamferProvider value={ARCHITECTURAL_CHAMFER[detail]}>
       <group name="TowerScene">
+        {/* Free roam. Starts on the boardwalk at the ocean entrance, facing
+            the colonnade, so the first thing a visitor does is walk in. */}
+        {collider ? (
+          <WalkControls collider={collider} start={[40, 0.3, 6]} heading={Math.PI / 2} />
+        ) : null}
         {/* The land behind the building IS the lawn.
             
             It used to be the villa's terrain material with a separate green
