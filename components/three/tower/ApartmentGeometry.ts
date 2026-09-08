@@ -350,6 +350,32 @@ export function createApartment(
     box('apt-bed-sheer', [bedX + 3.4, loungeBackX - 0.4], [floorY, ceilingY], [z[0] + 0.28, z[0] + 0.34]),
   );
 
+  // ── Kitchen and bathroom ──────────────────────────────────────────────
+  //
+  // The zone behind the bedroom and west of the lounge was empty floor
+  // plate. An apartment without a kitchen or a bathroom does not read as an
+  // apartment however well the lounge is dressed — it reads as a showroom.
+
+  const kitchenBackX = westX + 0.3;
+  const partX = -16.7;
+  const bathZ = 3.8;
+
+  walls.push(box('apt-wall-kitchen', [partX, partX + 0.2], [floorY, ceilingY], [-1.4, 10.8]));
+  walls.push(box('apt-wall-bath', [partX + 0.2, -9.4], [floorY, ceilingY], [bathZ, bathZ + 0.2]));
+
+  // Honed stone underfoot in the wet rooms, as it would be.
+  parts.stone.push(box('apt-bath-floor', [partX + 0.2, -9.4], [floorY, floorY + 0.015], [bathZ + 0.2, 10.8]));
+
+  // Kitchen: a run against the wall, an island parallel to it.
+  put('apt-kitchen-run', 'kitchen-run', kitchenBackX + 0.33, 5.0, floorY, 'east');
+  put('apt-kitchen-island', 'kitchen-island', kitchenBackX + 3.3, 5.0, floorY, 'east');
+
+  // Bathroom: vanity on the party wall, bath freestanding in the light.
+  put('apt-vanity', 'vanity', partX + 0.46, 7.2, floorY, 'east');
+  put('apt-bath', 'bath', -12.4, 7.6, floorY, 'north');
+  put('apt-wc', 'wc', -15.2, bathZ + 0.5, floorY, 'south');
+  put('apt-shower', 'shower-screen', -10.6, 5.2, floorY, 'north');
+
   return { parts, forms, walls, soffit, models };
 }
 

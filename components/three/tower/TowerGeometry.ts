@@ -49,6 +49,10 @@ export const TOWER_CONFIG: TowerConfig = {
   // they step as they rise. Both are silhouette, which is the half of a
   // facade you read from a distance.
   cornerRadius: 4.2,
+  // Generous on the base: a banded podium turns its corner over a much
+  // longer radius than the tower does, which is what stops the two reading
+  // as the same building at two scales.
+  podiumCornerRadius: 7.5,
   // Both steps sit ABOVE the fitted level.
   //
   // Set lower, they shrink the floor plate out from under the apartment —
@@ -318,6 +322,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     coreWidth,
     furnishedLevel,
     cornerRadius,
+    podiumCornerRadius,
     setbacks,
     crownHeight,
     columnRadius,
@@ -379,7 +384,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   // retail levels are a real volume you can stand inside, and filling them
   // with stone would make the whole podium a prop that only works from
   // outside — which is exactly what a five-storey mall must not be.
-  ring(mass, 'podium-shell', innerX, [0, podiumTopY], innerZ, 0.45);
+  roundedRing(mass, 'podium-shell', innerX, [0, podiumTopY], innerZ, 0.45, podiumCornerRadius - shopfrontInset, 7);
 
   // Ground floor, solid: the atrium void starts above it.
   floors.push(box('podium-floor-0', innerX, [-0.2, 0], innerZ));
@@ -441,13 +446,15 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     const y = level * podiumLevelHeight;
     const cap = level === podiumLevels;
     const height = cap ? podiumBandHeight * 1.9 : podiumBandHeight;
-    ring(
+    roundedRing(
       bands,
       `podium-band-${level}`,
       podiumX,
       [y - (level === 0 ? 0 : height / 2), y + (level === 0 ? height : height / 2)],
       podiumZ,
       podiumBandDepth,
+      podiumCornerRadius,
+      7,
     );
 
     // A lit reveal tucked under every band. This is the detail that makes
@@ -455,7 +462,16 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     // of light rather than a dark block under a lit tower.
     if (level > 0) {
       const glowY: Range = [y - height / 2 - 0.16, y - height / 2 - 0.04];
-      ring(signage, `podium-glow-${level}`, podiumX, glowY, podiumZ, podiumBandDepth * 0.55);
+      roundedRing(
+        signage,
+        `podium-glow-${level}`,
+        podiumX,
+        glowY,
+        podiumZ,
+        podiumBandDepth * 0.55,
+        podiumCornerRadius,
+        7,
+      );
     }
   }
 
@@ -465,10 +481,25 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     const y1 = (level + 1) * podiumLevelHeight - podiumBandHeight / 2;
     const y: Range = [y0, y1];
 
-    glazedWall(podiumGlass, mullions, `shop-e-${level}`, 'z', innerZ, innerX[1], y, 0.1, 9, 0.16);
-    glazedWall(podiumGlass, mullions, `shop-w-${level}`, 'z', innerZ, innerX[0], y, 0.1, 9, 0.16);
-    glazedWall(podiumGlass, mullions, `shop-s-${level}`, 'x', innerX, innerZ[1], y, 0.1, 13, 0.16);
-    glazedWall(podiumGlass, mullions, `shop-n-${level}`, 'x', innerX, innerZ[0], y, 0.1, 13, 0.16);
+    // Held back by the corner radius, with the glazing carried round the
+    // four quarters so the shopfront ribbon is continuous like the bands.
+    const pr = podiumCornerRadius - shopfrontInset;
+    const shopZ: Range = [innerZ[0] + pr, innerZ[1] - pr];
+    const shopX: Range = [innerX[0] + pr, innerX[1] - pr];
+
+    glazedWall(podiumGlass, mullions, `shop-e-${level}`, 'z', shopZ, innerX[1], y, 0.1, 7, 0.16);
+    glazedWall(podiumGlass, mullions, `shop-w-${level}`, 'z', shopZ, innerX[0], y, 0.1, 7, 0.16);
+    glazedWall(podiumGlass, mullions, `shop-s-${level}`, 'x', shopX, innerZ[1], y, 0.1, 11, 0.16);
+    glazedWall(podiumGlass, mullions, `shop-n-${level}`, 'x', shopX, innerZ[0], y, 0.1, 11, 0.16);
+
+    for (const [ck, cx, cz, a0] of [
+      ['nw', innerX[0] + pr, innerZ[0] + pr, Math.PI],
+      ['ne', innerX[1] - pr, innerZ[0] + pr, -Math.PI / 2],
+      ['se', innerX[1] - pr, innerZ[1] - pr, 0],
+      ['sw', innerX[0] + pr, innerZ[1] - pr, Math.PI / 2],
+    ] as const) {
+      arcRun(podiumGlass, `shop-c-${level}-${ck}`, cx, cz, pr, a0, y, 0.1, 7);
+    }
   }
 
   // The colonnade at the ocean entrance, and the deep soffit it holds up.
@@ -512,9 +543,6 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   // The service blade. Solid, full height, and deliberately reading as a
   // different material from the glass it braces.
   core.push(box('tower-core', coreX, [towerBaseY, crownTopY], [towerZ[0] + 0.6, towerZ[1] - 0.6]));
-
-  const slabX: Range = [towerX[0] - slabProjection, towerX[1] + slabProjection];
-  const slabZ: Range = [towerZ[0] - slabProjection, towerZ[1] + slabProjection];
 
   /** How far the tower has stepped in by a given level. */
   const insetAt = (level: number) =>
@@ -699,13 +727,17 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   );
   // Recessed, so the light source itself is never in frame — only the wash
   // it throws on the parapet return.
-  ring(
+  // On the crown's own bounds, not the tower's base ones. Left on `slabX`
+  // it hung a lit frame three metres out past a parapet that had stepped
+  // in twice — a rectangle floating in the air above a rounded building.
+  roundedRing(
     crownGlow,
     'crown-glow',
-    [slabX[0] + 0.5, slabX[1] - 0.5],
+    [topX[0] - slabProjection + 0.5, topX[1] + slabProjection - 0.5],
     [towerTopY + crownHeight * 0.45, towerTopY + crownHeight * 0.62],
-    [slabZ[0] + 0.5, slabZ[1] - 0.5],
+    [topZ[0] - slabProjection + 0.5, topZ[1] + slabProjection - 0.5],
     0.3,
+    cornerRadius,
   );
 
   // ── Amenity deck on the podium roof ───────────────────────────────────
@@ -741,14 +773,16 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   );
 
   // Parapet upstand plus frameless glass above it, all the way round.
-  ring(deckParapet, 'deck-upstand', podiumX, [deckY, deckY + 0.42], podiumZ, 0.55);
-  ring(
+  roundedRing(deckParapet, 'deck-upstand', podiumX, [deckY, deckY + 0.42], podiumZ, 0.55, podiumCornerRadius, 7);
+  roundedRing(
     deckGlass,
     'deck-balustrade',
     [podiumX[0] + 0.24, podiumX[1] - 0.24],
     [deckY + 0.42, deckY + deckParapetHeight],
     [podiumZ[0] + 0.24, podiumZ[1] - 0.24],
     0.045,
+    podiumCornerRadius - 0.24,
+    7,
   );
 
   // The pool, set out from the ocean edge so a swimmer faces the water.

@@ -57,7 +57,13 @@ export type ModelName =
   | 'tray'
   | 'book-stack'
   | 'candle-cluster'
-  | 'ceiling-soffit';
+  | 'ceiling-soffit'
+  | 'kitchen-island'
+  | 'kitchen-run'
+  | 'vanity'
+  | 'bath'
+  | 'wc'
+  | 'shower-screen';
 
 export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
@@ -81,6 +87,12 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'book-stack',
   'candle-cluster',
   'ceiling-soffit',
+  'kitchen-island',
+  'kitchen-run',
+  'vanity',
+  'bath',
+  'wc',
+  'shower-screen',
 ];
 
 function url(name: ModelName): string {

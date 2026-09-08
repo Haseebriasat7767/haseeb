@@ -712,6 +712,136 @@ def p_ceiling_soffit():
     return parts
 
 
+def p_kitchen_island():
+    """A stone island with waterfall ends — the piece a kitchen is sold on."""
+    parts = []
+    w, d, h = 2.6, 1.05, 0.9
+    top_t = 0.055
+
+    body = rounded_box("island_body", (w - 0.14, d - 0.1, h - top_t),
+                       (0, 0, (h - top_t) / 2), bevel=0.008)
+    parts.append(assign(body, "joinery"))
+
+    top = rounded_box("island_top", (w, d, top_t), (0, 0, h - top_t / 2), bevel=0.01)
+    parts.append(assign(top, "marble"))
+    # The waterfall: the top's own material carried down both ends to the
+    # floor, which is the whole detail and the reason islands cost what they
+    # cost.
+    for side, x in (("l", -1), ("r", 1)):
+        fall = rounded_box(f"island_fall_{side}", (top_t, d, h - top_t),
+                           (x * (w / 2 - top_t / 2), 0, (h - top_t) / 2), bevel=0.01)
+        parts.append(assign(fall, "marble"))
+
+    # A sunk basin and a slim tap.
+    sink = rounded_box("island_sink", (0.62, 0.42, 0.02), (-0.55, 0.06, h - 0.05), bevel=0.01)
+    parts.append(assign(sink, "darkMetal"))
+    tap = lathe("island_tap",
+                [(0.0, 0.0), (0.032, 0.0), (0.032, 0.02), (0.017, 0.05), (0.017, 0.30), (0.0, 0.30)],
+                verts=16)
+    tap.location = (-0.55, -0.3, h)
+    parts.append(assign(tap, "bronze"))
+    spout = cylinder("island_spout", 0.017, 0.2, (-0.55, -0.2, h + 0.29), verts=14, bevel=0.004)
+    spout.rotation_euler = (math.radians(90), 0, 0)
+    parts.append(assign(spout, "bronze"))
+    return parts
+
+
+def p_kitchen_run():
+    """Tall units with a worktop and a splashback — the wall side."""
+    parts = []
+    w, d = 3.6, 0.66
+
+    tall = rounded_box("run_tall", (w, d, 2.4), (0, 0, 1.2), bevel=0.006)
+    parts.append(assign(tall, "joinery"))
+
+    # Shadow gaps between the door leaves, which is what stops a run of
+    # units reading as one slab of timber.
+    for i in range(1, 5):
+        x = -w / 2 + (w / 5) * i
+        gap = rounded_box(f"run_gap_{i}", (0.014, 0.02, 2.3), (x, -d / 2, 1.2), bevel=0.002)
+        parts.append(assign(gap, "darkMetal"))
+
+    worktop = rounded_box("run_worktop", (w, d + 0.04, 0.05), (0, -0.02, 0.925), bevel=0.008)
+    parts.append(assign(worktop, "marble"))
+    splash = rounded_box("run_splash", (w, 0.02, 0.5), (0, d / 2 - 0.02, 1.2), bevel=0.004)
+    parts.append(assign(splash, "marble"))
+    return parts
+
+
+def p_vanity():
+    """A hung vanity with a countertop basin."""
+    parts = []
+    w, d = 1.5, 0.52
+
+    body = rounded_box("vanity_body", (w, d, 0.42), (0, 0, 0.71), bevel=0.008)
+    parts.append(assign(body, "joinery"))
+    top = rounded_box("vanity_top", (w + 0.04, d + 0.03, 0.045), (0, 0, 0.9525), bevel=0.008)
+    parts.append(assign(top, "marble"))
+
+    basin = lathe("vanity_basin",
+                  [(0.0, 0.0), (0.20, 0.0), (0.235, 0.05), (0.245, 0.15), (0.245, 0.16),
+                   (0.225, 0.16), (0.225, 0.055), (0.185, 0.02), (0.0, 0.02)],
+                  verts=32)
+    basin.location = (0, 0, 0.975)
+    parts.append(assign(basin, "ceramic"))
+
+    tap = lathe("vanity_tap",
+                [(0.0, 0.0), (0.026, 0.0), (0.026, 0.015), (0.014, 0.04), (0.014, 0.26), (0.0, 0.26)],
+                verts=14)
+    tap.location = (0, 0.19, 0.975)
+    parts.append(assign(tap, "bronze"))
+
+    mirror = rounded_box("vanity_mirror", (w - 0.2, 0.02, 1.0), (0, d / 2 - 0.01, 1.62), bevel=0.006)
+    parts.append(assign(mirror, "darkMetal"))
+    return parts
+
+
+def p_bath():
+    """A freestanding stone bath — a lathed vessel, squashed to an oval."""
+    parts = []
+    body = lathe(
+        "bath_body",
+        [(0.0, 0.0), (0.48, 0.0), (0.56, 0.07), (0.60, 0.50), (0.60, 0.56),
+         (0.545, 0.56), (0.545, 0.12), (0.46, 0.05), (0.0, 0.05)],
+        verts=44,
+    )
+    # Real baths are ovals, and a circular one reads as a paddling pool.
+    body.scale = Vector((1.0, 1.9, 1.0))
+    bpy.context.view_layer.objects.active = body
+    body.select_set(True)
+    bpy.ops.object.transform_apply(scale=True)
+    body.select_set(False)
+    parts.append(assign(body, "marble"))
+
+    tap = cylinder("bath_tap", 0.02, 0.34, (0, -1.02, 0.17), verts=14, bevel=0.004)
+    parts.append(assign(tap, "bronze"))
+    return parts
+
+
+def p_wc():
+    parts = []
+    body = rounded_box("wc_body", (0.38, 0.56, 0.34), (0, 0, 0.42), bevel=0.07,
+                       segments=4, subsurf=1)
+    parts.append(assign(body, "ceramic"))
+    lid = rounded_box("wc_lid", (0.36, 0.5, 0.035), (0, 0.02, 0.60), bevel=0.015)
+    parts.append(assign(lid, "ceramic"))
+    plate = rounded_box("wc_plate", (0.15, 0.015, 0.09), (0, 0.29, 0.95), bevel=0.004)
+    parts.append(assign(plate, "bronze"))
+    return parts
+
+
+def p_shower_screen():
+    """Frameless glass on a bronze channel."""
+    parts = []
+    glass = rounded_box("screen_glass", (1.1, 0.012, 2.1), (0, 0, 1.06), bevel=0.004)
+    parts.append(assign(glass, "marble"))
+    channel = rounded_box("screen_channel", (1.14, 0.05, 0.03), (0, 0, 0.015), bevel=0.004)
+    parts.append(assign(channel, "bronze"))
+    post = cylinder("screen_post", 0.018, 2.12, (0.56, 0, 1.06), verts=12, bevel=0.004)
+    parts.append(assign(post, "bronze"))
+    return parts
+
+
 PIECES = {
     "sofa-3seat": (p_sofa_3seat, "MDL-01"),
     "lounge-chair": (p_lounge_chair, "MDL-02"),
@@ -734,6 +864,12 @@ PIECES = {
     "book-stack": (p_book_stack, "MDL-10"),
     "candle-cluster": (p_candle_cluster, "MDL-10"),
     "ceiling-soffit": (p_ceiling_soffit, "MDL-09"),
+    "kitchen-island": (p_kitchen_island, "MDL-07"),
+    "kitchen-run": (p_kitchen_run, "MDL-07"),
+    "vanity": (p_vanity, "MDL-08"),
+    "bath": (p_bath, "MDL-08"),
+    "wc": (p_wc, "MDL-08"),
+    "shower-screen": (p_shower_screen, "MDL-08"),
 }
 
 

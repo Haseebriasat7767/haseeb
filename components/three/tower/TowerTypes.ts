@@ -53,6 +53,8 @@ export type TowerConfig = {
   furnishedLevel: number;
   /** Plan radius at the tower's corners. Zero gives a square building. */
   cornerRadius: number;
+  /** Plan radius at the podium's corners. */
+  podiumCornerRadius: number;
   /** Levels at which the tower steps in, and by how much on each side. */
   setbacks: readonly { level: number; inset: number }[];
   /** Height of the parapet and lit band above the top floor. */

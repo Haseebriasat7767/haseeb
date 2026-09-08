@@ -107,6 +107,24 @@ export const TOWER_VIEWS: readonly CameraView[] = [
     exposure: INTERIOR_EXPOSURE,
   },
   {
+    id: 'kitchen',
+    label: 'Kitchen',
+    // Across the island toward the run, which is the way a kitchen is
+    // photographed: the island is the object, the run is the backdrop.
+    position: [-18.6, 64.34, 8.6],
+    target: [-23.2, 63.7, 3.6],
+    fov: 62,
+    exposure: INTERIOR_EXPOSURE,
+  },
+  {
+    id: 'bathroom',
+    label: 'Bathroom',
+    position: [-10.4, 64.3, 9.8],
+    target: [-15.4, 63.5, 5.6],
+    fov: 62,
+    exposure: INTERIOR_EXPOSURE,
+  },
+  {
     id: 'balcony',
     label: 'Balcony',
     // Outside the glass line, inside the balustrade, turned toward the sun.
@@ -150,6 +168,10 @@ export const TOWER_VIEW_NOTES: Record<string, string> = {
     'Twelfth floor. A millwork wall of open shelving either side of a fluted media panel, a dropped soffit with a cove above the seating, and the ocean glazing running away to the right.',
   bedroom:
     'The master, behind the lounge. A fluted headboard wall, and the northern glazing running down the right-hand side.',
+  kitchen:
+    'A stone island with waterfall ends facing a run of tall units, worktop and splashback in the same slab.',
+  bathroom:
+    'Vanity on the party wall with the bath freestanding in the daylight, honed stone underfoot.',
   balcony:
     'Two and a half metres of balcony, frameless glass, and the sun going down over the water. This is the view the upper floors are sold on.',
   elevation:
