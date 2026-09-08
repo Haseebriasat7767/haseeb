@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { ViewportPlaceholder } from '@/components/three/ViewportPlaceholder';
 import { TowerWalkthrough } from '@/components/tower/TowerWalkthrough';
 import { Container } from '@/components/ui/Container';
 
@@ -20,9 +21,19 @@ export default function TowerPage() {
       {/* The view first and full bleed, as the explorer does: the building
           is the argument, and a heading above it would push it off the
           first screen. */}
-      {/* `useSearchParams` needs a boundary, and the fallback holds the
-          frame's height so the page below does not jump when it resolves. */}
-      <Suspense fallback={<div className="h-[86svh] w-full" aria-hidden="true" />}>
+      {/* `useSearchParams` needs a boundary, and reading it bails the whole
+          subtree out of server rendering — so this fallback is not a brief
+          flash, it is everything a visitor sees until the client bundle
+          arrives and hydrates. An empty div of the right height held the
+          layout and showed a black rectangle for the duration, which on a
+          phone on mobile data reads as a broken page. */}
+      <Suspense
+        fallback={
+          <div className="relative h-[86svh] w-full">
+            <ViewportPlaceholder />
+          </div>
+        }
+      >
         <TowerWalkthrough />
       </Suspense>
 

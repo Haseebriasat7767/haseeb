@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { ViewportPlaceholder } from '@/components/three/ViewportPlaceholder';
 import { ResidenceExplorer } from '@/components/explorer/ResidenceExplorer';
 
 export const metadata: Metadata = {
@@ -25,7 +26,13 @@ export default function ExperiencePage() {
         heading has nothing to do until the visitor has looked. It now sits
         underneath, introducing the rail rather than the image.
       */}
-      <Suspense fallback={<div className="h-[86svh] w-full" aria-hidden="true" />}>
+      <Suspense
+        fallback={
+          <div className="relative h-[86svh] w-full">
+            <ViewportPlaceholder />
+          </div>
+        }
+      >
         <ResidenceExplorer />
       </Suspense>
     </>

@@ -5,6 +5,7 @@ import {
   SRGBColorSpace,
   type Texture,
 } from 'three';
+import { getDecalMaxSize } from '../../textures/DecalMaps';
 
 /**
  * A foliage atlas, baked in Blender and drawn at runtime as a fallback.
@@ -248,6 +249,29 @@ function drawCell(
  */
 const BAKED_ATLAS = '/assets/foliage/atlas.png';
 
+/**
+ * Redraws the baked sheet down to whatever ceiling the tier has set.
+ *
+ * Shares `DecalMaps`' ceiling deliberately: a foliage atlas and a signage
+ * atlas are the same kind of asset with the same failure mode, and having two
+ * numbers to keep in step is how one of them gets forgotten.
+ */
+function fitToBudget(image: HTMLImageElement): HTMLImageElement | HTMLCanvasElement {
+  const max = getDecalMaxSize();
+  const longest = Math.max(image.width, image.height);
+  if (longest <= max) return image;
+
+  const scale = max / longest;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return image;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
 let atlas: CanvasTexture | null = null;
 
 /**
@@ -268,7 +292,10 @@ let atlas: CanvasTexture | null = null;
 function upgradeToBakedAtlas(texture: Texture): void {
   const image = new Image();
   image.onload = () => {
-    texture.image = image;
+    // Capped to the same ceiling the decal sheets use. At 2048 this one sheet
+    // is 21 MB on the GPU, and on a phone that was part of what pushed the
+    // scene into losing its WebGL context and going black.
+    texture.image = fitToBudget(image);
     texture.needsUpdate = true;
   };
   // No handler on failure. The canvas bake is already in the texture and is

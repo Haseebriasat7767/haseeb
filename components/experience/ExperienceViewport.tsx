@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
+import { ViewportPlaceholder } from '@/components/three/ViewportPlaceholder';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import type { HotspotConfig } from '@/lib/experience/spaces';
 import { cn } from '@/lib/utils/cn';
@@ -10,7 +11,12 @@ import type { CameraMode, CameraView, SceneContent, TimeOfDay } from '@/types';
 
 const ExperienceCanvas = dynamic(
   () => import('./ExperienceCanvas').then((mod) => mod.ExperienceCanvas),
-  { ssr: false },
+  // The `loading` fallback is not optional here. Without it this area renders
+  // nothing at all while the three.js chunk downloads — a black rectangle with
+  // no spinner and no text, for however long that takes on the visitor's
+  // connection. `LoadingScreen` cannot do this job: it reads drei's
+  // `useProgress` and so ships inside the very chunk being waited for.
+  { ssr: false, loading: () => <ViewportPlaceholder /> },
 );
 
 type ExperienceViewportProps = {
@@ -111,7 +117,12 @@ export function ExperienceViewport({
           onCinematicProgress={onCinematicProgress}
           onReady={onReady}
         />
-      ) : null}
+      ) : (
+        // Still deciding whether WebGL exists, or the viewport has not been
+        // scrolled to yet. Both used to render null, which is the same black
+        // rectangle by another route.
+        <ViewportPlaceholder />
+      )}
       {children}
     </div>
   );

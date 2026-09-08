@@ -1,10 +1,4 @@
-import {
-  LinearFilter,
-  LinearMipmapLinearFilter,
-  SRGBColorSpace,
-  TextureLoader,
-  type Texture,
-} from 'three';
+import { LinearFilter, LinearMipmapLinearFilter, SRGBColorSpace, Texture } from 'three';
 
 /**
  * The Tier 4 decal sheets — signage, wayfinding and the project identity.
@@ -128,28 +122,98 @@ export const IDENTITY_ASPECT = 8;
 
 // ── loading ───────────────────────────────────────────────────────────────
 
-const cached = new Map<string, Texture>();
-let loader: TextureLoader | null = null;
+/**
+ * Longest edge a decal sheet is allowed to occupy on the GPU.
+ *
+ * ## Why this exists
+ *
+ * Because not having it produced a black screen on a phone, and it took a bug
+ * report to find out. These sheets are authored at 2048 px, which is right for
+ * a desktop framing where a shopfront sign is read from ten metres. Uploaded
+ * as-is they cost 21 MB each — three of them plus the foliage atlas came to
+ * 64 MB of the scene's 94 MB of texture memory, and a mid-range mobile GPU
+ * responds to that by losing the WebGL context. A lost context is not an
+ * error anyone sees: the canvas simply goes black and stays black.
+ *
+ * On a 412 px-wide screen a tenant name on a fascia is a couple of dozen
+ * pixels tall. There was never anything in that fourth mip level to see.
+ */
+let maxSheetSize = 2048;
 
 /**
- * A decal sheet, loaded once and shared.
+ * Sets the ceiling and drops anything already loaded above it.
+ *
+ * Mirrors `setSurfaceMapResolution`: the size is a property of the device
+ * rather than of the call site, so it is set once by `Scene` from the quality
+ * tier and every loader below reads it.
+ */
+export function getDecalMaxSize(): number {
+  return maxSheetSize;
+}
+
+export function setDecalMaxSize(size: number): void {
+  if (size === maxSheetSize) return;
+  maxSheetSize = size;
+  disposeDecalSheets();
+}
+
+/**
+ * Redraws an image at or below the ceiling, keeping its aspect.
+ *
+ * A canvas rather than a smaller file on disk: the sheets are one asset each
+ * and re-baking them per tier would mean three more files to keep in step
+ * with the atlas rects. The download is unchanged — this is about what
+ * reaches the GPU, which is what the context is lost over.
+ */
+function fit(image: HTMLImageElement, max: number): HTMLImageElement | HTMLCanvasElement {
+  const longest = Math.max(image.width, image.height);
+  if (longest <= max) return image;
+
+  const scale = max / longest;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return image;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+const cached = new Map<string, Texture>();
+
+/**
+ * A decal sheet, loaded once and shared, at no more than the tier's ceiling.
  *
  * Mipmapped and anisotropic, because these are read at every angle from a
  * metre away to a hundred and thirty. Unmipped lettering at a grazing angle
  * across a facade is a field of sparkle, which is worse than no sign at all.
+ *
+ * Loaded by hand rather than through `TextureLoader` because the image has to
+ * be resized between decode and upload, and the loader uploads what it is
+ * given. The texture is returned empty and filled in on decode, which every
+ * call site already tolerates — they hand it straight to a material.
  */
 export function getDecalSheet(url: string): Texture {
-  const hit = cached.get(url);
+  const key = `${url}@${maxSheetSize}`;
+  const hit = cached.get(key);
   if (hit) return hit;
 
-  loader ??= new TextureLoader();
-  const texture = loader.load(url);
+  const texture = new Texture();
   texture.colorSpace = SRGBColorSpace;
   texture.magFilter = LinearFilter;
   texture.minFilter = LinearMipmapLinearFilter;
   texture.generateMipmaps = true;
   texture.anisotropy = 8;
-  cached.set(url, texture);
+
+  const image = new Image();
+  image.onload = () => {
+    texture.image = fit(image, maxSheetSize);
+    texture.needsUpdate = true;
+  };
+  image.src = url;
+
+  cached.set(key, texture);
   return texture;
 }
 

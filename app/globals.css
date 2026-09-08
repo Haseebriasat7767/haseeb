@@ -175,3 +175,15 @@
   */
   animation: aurelia-rise 1000ms var(--ease-luxe) both;
 }
+
+/* The indeterminate sweep on `ViewportPlaceholder`, shown while the three.js
+   chunk downloads. Deliberately slow: it is a sign of life, not a progress
+   bar, and there is nothing yet to measure. */
+@keyframes viewport-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}

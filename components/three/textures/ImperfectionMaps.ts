@@ -25,6 +25,26 @@ export type ImperfectionMask = 'streaks' | 'staining' | 'edgewear';
 
 const ROOT = '/assets/decals/imperfection';
 
+/**
+ * Whether these are layered at all.
+ *
+ * Off below the top tier. Three 1024 px masks are 16 MB on the GPU, and what
+ * they buy is a subtle modulation of roughness — the least visible thing in
+ * the material chain, on the devices least able to afford it. On a phone the
+ * whole building is four hundred pixels wide.
+ */
+let enabled = true;
+
+export function imperfectionEnabled(): boolean {
+  return enabled;
+}
+
+export function setImperfectionEnabled(next: boolean): void {
+  if (next === enabled) return;
+  enabled = next;
+  disposeImperfectionMasks();
+}
+
 const cached = new Map<ImperfectionMask, Texture>();
 let loader: TextureLoader | null = null;
 

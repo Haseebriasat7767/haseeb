@@ -6,6 +6,8 @@ import { ACESFilmicToneMapping } from 'three';
 import { useQualityTier } from '@/hooks/useQualityTier';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { getPostProfile, resolveGrade } from '@/lib/three/grading';
+import { setDecalMaxSize } from '@/components/three/textures/DecalMaps';
+import { setImperfectionEnabled } from '@/components/three/textures/ImperfectionMaps';
 import { setSurfaceMapResolution } from '@/components/three/textures/SurfaceMaps';
 import { setSurfaceMapsEnabled } from '@/lib/three/materials';
 import { DEFAULT_TIME_OF_DAY, resolveLighting } from '@/lib/three/lighting';
@@ -118,6 +120,21 @@ export function Scene({
   // afford twice as much of it. Settled here alongside the other material
   // decisions, and before the children below first ask for a map.
   useMemo(() => setSurfaceMapResolution(quality.tier === 'high' ? 1024 : 512), [quality.tier]);
+
+  // What the decal and foliage sheets may cost on the GPU.
+  //
+  // Not a quality preference — a hard budget. Authored at 2048 px they are
+  // 21 MB each, and three of them plus the masks below made up 80 MB of the
+  // 94 MB this scene was uploading. A mid-range mobile GPU answers that by
+  // losing the WebGL context, and a lost context is a black canvas with no
+  // error and no explanation, which is exactly what a phone showed.
+  useMemo(
+    () => setDecalMaxSize(quality.tier === 'high' ? 2048 : quality.tier === 'medium' ? 768 : 512),
+    [quality.tier],
+  );
+  // Roughness weathering is the least visible thing in the material chain and
+  // costs 16 MB. Top tier only.
+  useMemo(() => setImperfectionEnabled(quality.tier === 'high'), [quality.tier]);
 
   const post = useMemo(() => getPostProfile(quality.tier), [quality.tier]);
   const grade = useMemo(() => resolveGrade(timeOfDay ?? DEFAULT_TIME_OF_DAY), [timeOfDay]);

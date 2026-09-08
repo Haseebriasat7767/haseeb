@@ -9,6 +9,7 @@ import {
 } from 'three';
 import {
   getImperfectionMask,
+  imperfectionEnabled,
   type ImperfectionMask,
 } from '@/components/three/textures/ImperfectionMaps';
 import { getSurfaceMaps, type SurfaceFamily } from '@/components/three/textures/SurfaceMaps';
@@ -1131,7 +1132,9 @@ function withImperfection<T extends MeshStandardMaterial>(
   // Off wherever sampled maps are off. The low tier renders plain unit cubes
   // whose UVs run 0-1 across a face of any size, so a mask tiled against
   // metres would stretch one copy of itself over a whole elevation.
-  if (!surfaceMapsEnabled) return material;
+  //
+  // Also off below the top tier, on GPU budget: see `ImperfectionMaps`.
+  if (!surfaceMapsEnabled || !imperfectionEnabled()) return material;
 
   const existing = material.onBeforeCompile;
 
