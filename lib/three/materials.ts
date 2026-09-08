@@ -1616,7 +1616,10 @@ function createMaterials() {
       normalScale: 1.6,
     }),
     /** Ornamental grass — warmer and drier than the foliage greens. */
-    grass: withVariation(standard({ color: '#6b7347', roughness: 0.86, metalness: 0 }), {
+    // Mown subtropical lawn, not a temperate meadow. The old olive read as
+    // dry grass in every frame; irrigated turf in this light is a much
+    // greener, more saturated colour, and the park is largely made of it.
+    grass: withVariation(standard({ color: '#6d9440', roughness: 0.84, metalness: 0 }), {
       scale: 1.3,
       colorVariation: 0.05,
       roughnessVariation: 0.04,

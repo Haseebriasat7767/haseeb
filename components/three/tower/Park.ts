@@ -89,9 +89,9 @@ export function createParkLayout(
   const zRange: Range = [-spanZ / 2, spanZ / 2];
   const parkX: Range = [backX - 46, backX + 34];
 
-  // The lawn. A slab rather than a plane so it has a visible edge where it
-  // meets the paving, which is what a mown edge actually looks like.
-  lawn.push(box('park-lawn', parkX, [-0.08, 0.06], zRange));
+  // No lawn slab: the tower scene's ground plane carries the grass itself,
+  // so there is no patch to have an edge. The field stays on the layout
+  // because the villa's site may want a bounded lawn later.
 
   const STEP = 2.6;
   const steps = Math.floor(span(zRange) / STEP);

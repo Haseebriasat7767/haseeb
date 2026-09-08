@@ -112,17 +112,23 @@ export function TowerScene({
   return (
     <ChamferProvider value={ARCHITECTURAL_CHAMFER[detail]}>
       <group name="TowerScene">
-        {/* The land behind the building. Takes the villa's terrain material,
-            which already fades into the atmosphere with distance, so the
-            city side of the site has a horizon rather than an edge. */}
+        {/* The land behind the building IS the lawn.
+            
+            It used to be the villa's terrain material with a separate green
+            slab laid over the park, and that slab was the problem: an
+            eighty-metre rectangle of bright green on dark ground, whose
+            edges were the most visible thing in any aerial. Widening it
+            only made a bigger rectangle. Mown ground has no edge because it
+            runs past everything you can see, so the ground plane carries
+            the grass itself and is sized to end well beyond the fog. */}
         <mesh
           name="ground"
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[layout.plan.podiumX[0] - 640, -0.08, 0]}
-          material={materials.terrain}
+          position={[layout.plan.podiumX[0] - 900, -0.08, 0]}
+          material={materials.grass}
           receiveShadow
         >
-          <planeGeometry args={[1400, 1400]} />
+          <planeGeometry args={[3000, 3000]} />
         </mesh>
 
         <MergedBoxes name="plaza" specs={plaza} material={materials.paving} castShadow={false} />
@@ -158,7 +164,6 @@ export function TowerScene({
 
         {/* ── The park ─────────────────────────────────────────────── */}
         <group name="Park">
-          <MergedBoxes name="park-lawn" specs={park.lawn} material={materials.grass} castShadow={false} />
           <MergedBoxes name="park-beds" specs={park.beds} material={materials.foliageMid} />
           <MergedBoxes name="park-edging" specs={park.edging} material={materials.stone} />
           <MergedBoxes name="park-path" specs={park.path} material={materials.paving} castShadow={false} />

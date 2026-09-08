@@ -170,31 +170,52 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
   day: {
     id: 'day',
     label: 'Day',
+    // Re-tuned to a clear subtropical afternoon.
+    //
+    // The old settings were a temperate overcast-ish midday: a high sun, a
+    // pale grey-blue dome and short shadows. What this coast actually looks
+    // like is the opposite on all three counts — very clear air, a deeply
+    // saturated zenith that pales to haze at the horizon, and a sun low
+    // enough to throw shadows across the ground rather than under things.
+    //
+    // Turbidity DOWN clears the air; rayleigh UP is what deepens the blue,
+    // and it is the parameter doing most of the work here. Nothing is
+    // copied from anywhere: this is the same physical sky model the project
+    // already ran, given the numbers that describe this climate.
     sun: {
-      elevation: 47,
+      elevation: 38,
       azimuth: 55,
-      intensity: 3.1,
-      color: '#fff6e8',
-      shadowExtent: 42,
+      intensity: 3.4,
+      color: '#fff4e2',
+      shadowExtent: 46,
       shadowBias: -0.0004,
       shadowNormalBias: 0.05,
     },
     skyModel: {
-      turbidity: 3.2,
-      rayleigh: 1.8,
-      mieCoefficient: 0.005,
+      turbidity: 2.3,
+      rayleigh: 2.9,
+      mieCoefficient: 0.004,
       mieDirectionalG: 0.8,
-      elevation: 42,
-      environmentIntensity: 0.55,
+      elevation: 34,
+      environmentIntensity: 0.62,
     },
-    sky: { skyColor: '#c2d3e4', groundColor: '#3f4433', intensity: 0.1 },
-    bounce: { azimuthOffset: 170, elevation: 14, intensity: 0.14, color: '#b99a63' },
+    sky: { skyColor: '#8fb6de', groundColor: '#4a5238', intensity: 0.12 },
+    bounce: { azimuthOffset: 170, elevation: 14, intensity: 0.15, color: '#b99a63' },
     atmosphere: {
-      background: '#9db4cd',
-      fogColor: '#b3c6d9',
-      fogNear: 130,
-      fogFar: 360,
-      exposure: 0.4,
+      background: '#6ea3d4',
+      // Pale and slightly warm: the horizon haze is what the deep zenith
+      // is read against, and without the contrast the dome reads flat.
+      fogColor: '#c6dcee',
+      // Clear air, and a lot of it. At 150/420 the palms two hundred metres
+      // down the shore were already half dissolved, which is a temperate
+      // winter afternoon, not this. Pushing both out is most of what makes
+      // the sky read as blue rather than as haze.
+      fogNear: 320,
+      fogFar: 1400,
+      // A third of a stop down. The sky's radiance was landing high enough
+      // on the ACES curve to desaturate toward white; holding it lower is
+      // what keeps the blue.
+      exposure: 0.38,
     },
     interior: { intensity: 16, activeLights: 5 },
     exterior: { intensity: 0, activeLights: 0 },

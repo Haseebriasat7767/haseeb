@@ -79,11 +79,19 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
   /** Clean daylight. The most neutral of the five, by intent: midday is
    *  when a building should be judged on its own materials. */
   day: {
-    slope: [1.0, 1.0, 1.0],
-    offset: [0.0, 0.0, 0.003],
-    power: [1.0, 1.0, 1.0],
-    saturation: 1.03,
-    contrast: 1.07,
+    // A clear subtropical afternoon, graded for it.
+    //
+    // ACES desaturates as it rolls off, and a bright sky sits high enough
+    // on that curve to head toward white however blue the model says it is
+    // — which is why this hour kept rendering as haze. The blue slope and
+    // the extra saturation put the colour back where the physics had it
+    // before the tone curve ate it, rather than pretending the sky is a
+    // different sky.
+    slope: [0.985, 0.995, 1.035],
+    offset: [0.0, 0.0, 0.006],
+    power: [1.0, 1.0, 0.985],
+    saturation: 1.14,
+    contrast: 1.09,
     vignette: 0.13,
     bloomStrength: 0.07,
     bloomThreshold: 2.1,
