@@ -13,7 +13,9 @@ import { Shoreline } from './Shoreline';
 import { Tower } from './Tower';
 import { Apartment } from './Apartment';
 import { createApartment } from './ApartmentGeometry';
+import { Model } from '../models/ModelLibrary';
 import { createParkLayout } from './Park';
+import { createSiteProps } from './SiteProps';
 import { createSkyline } from './Skyline';
 import { createShorelineLayout, createTowerLayout, TOWER_CONFIG } from './TowerGeometry';
 import type { TowerConfig } from './TowerTypes';
@@ -51,7 +53,11 @@ export function TowerScene({
   // Clear of the plaza, which already reaches fourteen metres past the
   // podium: at the first setting the path ran straight through the
   // building's own footprint.
-  const park = useMemo(() => createParkLayout(layout.plan.podiumX[0] - 52, 300), [layout.plan]);
+  const parkBackX = layout.plan.podiumX[0] - 52;
+  const park = useMemo(() => createParkLayout(parkBackX, 300), [parkBackX]);
+
+  // People, cars, a boat, and the loose furniture on the deck.
+  const props = useMemo(() => createSiteProps(layout.plan, parkBackX), [layout.plan, parkBackX]);
 
   // Broadleaf crowns reuse the villa's card technique — a tree's outline is
   // decided by a texture with leaves and gaps in it, not by geometry.
@@ -174,6 +180,13 @@ export function TowerScene({
         </group>
 
         <Tower layout={layout} detail={detail} />
+
+        {/* What makes the site look inhabited. Each is its own draw call;
+            twenty of them against a budget of two hundred and fifty is
+            cheap for the difference between a place and a massing model. */}
+        {props.map((p) => (
+          <Model key={p.key} name={p.name} position={p.position} rotationY={p.rotationY} />
+        ))}
         <Apartment layout={apartment} detail={detail} />
         <Shoreline layout={shoreline} detail={detail} />
       </group>

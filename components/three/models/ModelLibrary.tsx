@@ -63,7 +63,17 @@ export type ModelName =
   | 'vanity'
   | 'bath'
   | 'wc'
-  | 'shower-screen';
+  | 'shower-screen'
+  | 'person-standing'
+  | 'person-seated'
+  | 'car-saloon'
+  | 'car-suv'
+  | 'boat-tender'
+  | 'dining-table'
+  | 'dining-chair'
+  | 'parasol'
+  | 'outdoor-sofa'
+  | 'cabana';
 
 export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
@@ -93,6 +103,16 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'bath',
   'wc',
   'shower-screen',
+  'person-standing',
+  'person-seated',
+  'car-saloon',
+  'car-suv',
+  'boat-tender',
+  'dining-table',
+  'dining-chair',
+  'parasol',
+  'outdoor-sofa',
+  'cabana',
 ];
 
 function url(name: ModelName): string {

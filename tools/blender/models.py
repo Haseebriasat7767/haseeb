@@ -154,6 +154,15 @@ def cylinder(name, radius, height, location=(0, 0, 0), verts=32, bevel=0.006):
     return obj
 
 
+def sphere(name, radius, location=(0, 0, 0), segments=16, rings=10):
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=location,
+                                         segments=segments, ring_count=rings)
+    obj = bpy.context.active_object
+    obj.name = name
+    bpy.ops.object.shade_smooth()
+    return obj
+
+
 def lathe(name, profile, verts=32):
     """
     A turned solid from a 2-D profile of (radius, height) pairs.
@@ -842,6 +851,210 @@ def p_shower_screen():
     return parts
 
 
+def _limb(name, top_r, bot_r, length, verts=10):
+    return lathe(name, [(0.0, 0.0), (bot_r, 0.0), (bot_r * 0.96, length * 0.12),
+                        (top_r, length * 0.9), (top_r * 0.9, length), (0.0, length)], verts=verts)
+
+
+def _figure(seated: bool):
+    """
+    Architectural entourage: a person, simplified.
+
+    Deliberately not detailed. These stand at ten to forty metres in a
+    render and their whole job is scale and life — a plaza with nobody on
+    it reads as a model however good the building is. Detail at this
+    distance is triangles nobody resolves, and a half-realistic face is far
+    worse than an obvious abstraction.
+    """
+    parts = []
+    hip = 0.50 if seated else 0.90
+    torso_h = 0.64
+
+    for side in (-1, 1):
+        if seated:
+            thigh = _limb(f"leg_t_{side}", 0.075, 0.085, 0.44)
+            thigh.rotation_euler = (math.radians(90), 0, 0)
+            thigh.location = (side * 0.10, 0.02, hip - 0.04)
+            parts.append(assign(thigh, "upholsteryDark"))
+            shin = _limb(f"leg_s_{side}", 0.055, 0.07, 0.46)
+            shin.location = (side * 0.10, 0.44, 0.02)
+            parts.append(assign(shin, "upholsteryDark"))
+        else:
+            leg = _limb(f"leg_{side}", 0.062, 0.088, hip)
+            leg.location = (side * 0.095, 0, 0)
+            parts.append(assign(leg, "upholsteryDark"))
+
+    torso = rounded_box("torso", (0.36, 0.21, torso_h), (0, 0, hip + torso_h / 2),
+                        bevel=0.07, segments=3, subsurf=1)
+    parts.append(assign(torso, "linen"))
+
+    # Thinner, longer, and tucked in against the ribs. At the first sizing
+    # they were short fat blocks starting at the torso's own edge, so they
+    # merged into the shirt and read as shoulders rather than arms.
+    for side in (-1, 1):
+        arm = _limb(f"arm_{side}", 0.040, 0.052, 0.66)
+        arm.rotation_euler = (0, math.radians(180), math.radians(side * 4))
+        arm.location = (side * 0.215, 0.01, hip + torso_h + 0.02)
+        parts.append(assign(arm, "linen"))
+
+    neck_y = hip + torso_h
+    head = sphere("head", 0.105, (0, 0, neck_y + 0.13), segments=14, rings=9)
+    head.scale = Vector((0.86, 0.94, 1.12))
+    bpy.context.view_layer.objects.active = head
+    head.select_set(True)
+    bpy.ops.object.transform_apply(scale=True)
+    head.select_set(False)
+    parts.append(assign(head, "stone"))
+    return parts
+
+
+def p_person_standing():
+    return _figure(seated=False)
+
+
+def p_person_seated():
+    return _figure(seated=True)
+
+
+def _wheel(name, x, y, r, w):
+    tyre = cylinder(name, r, w, (x, y, r), verts=16, bevel=0.012)
+    tyre.rotation_euler = (0, math.radians(90), 0)
+    return assign(tyre, "darkMetal")
+
+
+def p_car_saloon():
+    parts = []
+    L, W = 4.72, 1.86
+    # No subdivision on the body.
+    #
+    # Subsurf pulls a bevelled box in hard, and the shrink is what made the
+    # first car read as a pickup: the flanks retreated behind the wheels so
+    # they stood proud like castors, and the cabin ended up perched on a
+    # flat deck rather than growing out of the body. A heavy multi-segment
+    # bevel gives the same softness and keeps the dimensions honest.
+    # Lifted so the wheels stand in arches. Sat lower it swallowed them
+    # and the whole thing read as a loaf.
+    body = rounded_box("car_body", (W, L, 0.60), (0, 0, 0.66), bevel=0.20, segments=6)
+    parts.append(assign(body, "upholsteryDark"))
+    # The greenhouse, set back, narrower, and overlapping the body so the
+    # two read as one shell.
+    cabin = rounded_box("car_cabin", (W - 0.30, L * 0.44, 0.54), (0, -0.18, 1.13),
+                        bevel=0.20, segments=6)
+    parts.append(assign(cabin, "darkMetal"))
+    for x in (-1, 1):
+        for y in (L / 2 - 0.92, -(L / 2 - 0.88)):
+            parts.append(_wheel(f"car_wheel_{x}_{y:.0f}", x * (W / 2 - 0.15), y, 0.33, 0.22))
+    return parts
+
+
+def p_car_suv():
+    parts = []
+    L, W = 4.95, 2.00
+    body = rounded_box("suv_body", (W, L, 0.78), (0, 0, 0.82), bevel=0.18, segments=6)
+    parts.append(assign(body, "stone"))
+    cabin = rounded_box("suv_cabin", (W - 0.22, L * 0.50, 0.62), (0, -0.12, 1.52),
+                        bevel=0.17, segments=6)
+    parts.append(assign(cabin, "darkMetal"))
+    for x in (-1, 1):
+        for y in (L / 2 - 1.0, -(L / 2 - 0.96)):
+            parts.append(_wheel(f"suv_wheel_{x}_{y:.0f}", x * (W / 2 - 0.17), y, 0.39, 0.26))
+    return parts
+
+
+def p_boat_tender():
+    """A small motor tender — hull, screen, outboard."""
+    parts = []
+    hull = extruded_profile(
+        "tender_hull",
+        [(-3.4, 0.30), (-2.4, 0.14), (-0.6, 0.05), (1.6, 0.06), (3.1, 0.22), (3.5, 0.52),
+         (3.4, 0.98), (1.6, 0.86), (-1.0, 0.80), (-3.2, 0.86), (-3.5, 0.72)],
+        1.85, bevel=0.06,
+    )
+    parts.append(assign(hull, "linen"))
+    deck = rounded_box("tender_deck", (1.7, 2.4, 0.06), (0, 1.4, 0.86), bevel=0.02)
+    parts.append(assign(deck, "teak" if "teak" in PALETTE else "joinery"))
+    screen = rounded_box("tender_screen", (1.4, 0.05, 0.42), (0, 0.3, 1.08), bevel=0.02)
+    parts.append(assign(screen, "marble"))
+    engine = rounded_box("tender_engine", (0.42, 0.5, 0.72), (0, -3.2, 0.96), bevel=0.05)
+    parts.append(assign(engine, "darkMetal"))
+    return parts
+
+
+def p_dining_table():
+    parts = []
+    top = rounded_box("dining_top", (1.1, 2.4, 0.05), (0, 0, 0.735), bevel=0.012)
+    parts.append(assign(top, "marble"))
+    for y in (-0.82, 0.82):
+        leg = lathe(f"dining_leg_{y:.0f}",
+                    [(0.0, 0.0), (0.30, 0.0), (0.30, 0.04), (0.11, 0.16), (0.11, 0.71), (0.0, 0.71)],
+                    verts=24)
+        leg.location = (0, y, 0)
+        parts.append(assign(leg, "stone"))
+    return parts
+
+
+def p_dining_chair():
+    parts = []
+    seat = rounded_box("dchair_seat", (0.46, 0.46, 0.09), (0, 0, 0.44),
+                       bevel=0.04, segments=3, subsurf=1)
+    parts.append(assign(seat, "upholstery"))
+    back = swept_arc("dchair_back", radius=0.30, arc_deg=150, section=0.09, height=0.44, verts=20)
+    back.location = (0, 0.30, 0.70)
+    parts.append(assign(back, "upholstery"))
+    for x in (-1, 1):
+        for y in (-1, 1):
+            leg = _limb(f"dchair_leg_{x}_{y}", 0.016, 0.024, 0.44, verts=8)
+            leg.location = (x * 0.18, y * 0.18, 0)
+            parts.append(assign(leg, "bronze"))
+    return parts
+
+
+def p_parasol():
+    parts = []
+    post = lathe("parasol_post",
+                 [(0.0, 0.0), (0.22, 0.0), (0.22, 0.05), (0.035, 0.09), (0.03, 2.35), (0.0, 2.35)],
+                 verts=20)
+    parts.append(assign(post, "bronze"))
+    canopy = lathe("parasol_canopy",
+                   [(0.0, 2.52), (0.42, 2.36), (1.30, 2.06), (1.42, 2.00), (1.40, 1.98),
+                    (1.26, 2.03), (0.40, 2.33), (0.0, 2.49)],
+                   verts=10)
+    parts.append(assign(canopy, "linen"))
+    return parts
+
+
+def p_outdoor_sofa():
+    parts = []
+    base = rounded_box("osofa_base", (2.2, 0.9, 0.3), (0, 0, 0.15), bevel=0.03)
+    parts.append(assign(base, "teak" if "teak" in PALETTE else "joinery"))
+    seat = rounded_box("osofa_seat", (2.1, 0.84, 0.16), (0, 0, 0.38),
+                       bevel=0.06, segments=4, subsurf=1)
+    parts.append(assign(seat, "linen"))
+    back = rounded_box("osofa_back", (2.1, 0.18, 0.42), (0, -0.33, 0.61),
+                       bevel=0.06, segments=4, subsurf=1)
+    parts.append(assign(back, "linen"))
+    return parts
+
+
+def p_cabana():
+    """Four posts, a flat canopy and a daybed under it."""
+    parts = []
+    w, d, h = 2.6, 2.6, 2.5
+    for x in (-1, 1):
+        for y in (-1, 1):
+            post = cylinder(f"cab_post_{x}_{y}", 0.055, h, (x * (w / 2 - 0.1), y * (d / 2 - 0.1), h / 2),
+                            verts=12, bevel=0.006)
+            parts.append(assign(post, "bronze"))
+    roof = rounded_box("cab_roof", (w + 0.3, d + 0.3, 0.12), (0, 0, h + 0.06), bevel=0.03)
+    parts.append(assign(roof, "linen"))
+    bed = rounded_box("cab_bed", (1.9, 1.9, 0.34), (0, 0, 0.17), bevel=0.05, segments=3)
+    parts.append(assign(bed, "teak" if "teak" in PALETTE else "joinery"))
+    mattress = rounded_box("cab_mattress", (1.82, 1.82, 0.18), (0, 0, 0.43),
+                           bevel=0.07, segments=4, subsurf=1)
+    parts.append(assign(mattress, "linen"))
+    return parts
+
+
 PIECES = {
     "sofa-3seat": (p_sofa_3seat, "MDL-01"),
     "lounge-chair": (p_lounge_chair, "MDL-02"),
@@ -870,6 +1083,16 @@ PIECES = {
     "bath": (p_bath, "MDL-08"),
     "wc": (p_wc, "MDL-08"),
     "shower-screen": (p_shower_screen, "MDL-08"),
+    "person-standing": (p_person_standing, "MDL-16"),
+    "person-seated": (p_person_seated, "MDL-16"),
+    "car-saloon": (p_car_saloon, "MDL-17"),
+    "car-suv": (p_car_suv, "MDL-17"),
+    "boat-tender": (p_boat_tender, "MDL-18"),
+    "dining-table": (p_dining_table, "MDL-06"),
+    "dining-chair": (p_dining_chair, "MDL-06"),
+    "parasol": (p_parasol, "MDL-12"),
+    "outdoor-sofa": (p_outdoor_sofa, "MDL-12"),
+    "cabana": (p_cabana, "MDL-12"),
 }
 
 

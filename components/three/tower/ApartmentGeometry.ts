@@ -350,6 +350,15 @@ export function createApartment(
     box('apt-bed-sheer', [bedX + 3.4, loungeBackX - 0.4], [floorY, ceilingY], [z[0] + 0.28, z[0] + 0.34]),
   );
 
+  // Dining, between the kitchen and the lounge glazing.
+  put('apt-dining', 'dining-table', -12.6, -6.0, floorY, 'north');
+  for (let i = 0; i < 6; i += 1) {
+    const side = i < 3 ? -1 : 1;
+    const z = -6.0 + ((i % 3) - 1) * 0.78;
+    put(`apt-dchair-${i}`, 'dining-chair', -12.6 + side * 0.86, z, floorY,
+        side < 0 ? 'east' : 'west');
+  }
+
   // ── Kitchen and bathroom ──────────────────────────────────────────────
   //
   // The zone behind the bedroom and west of the lounge was empty floor
