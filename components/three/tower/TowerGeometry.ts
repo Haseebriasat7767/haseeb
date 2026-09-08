@@ -850,16 +850,33 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   // On the deck: a loose grove south of the pool and a second group between
   // the pool and the tower, never a row. Both are held south of the roof
   // light, which owns the northern half of the deck.
-  const palmSouthLimit = lightZ[1] + 1.6;
-  for (let i = 0; i < 10; i += 1) {
+  //
+  // Every position is tested against the deck it is supposed to be standing
+  // on. The first version generated z from `poolZ[1] + 2.8` upward, which
+  // runs to 29 m against a deck that stops at 21 — so half the grove stood
+  // in mid-air off the roof edge, ten storeys up. A palm floating beside a
+  // tower is the single most obvious kind of wrong, and nothing in the
+  // maths said so; only the bounds do.
+  const margin = 1.6;
+  const standable = (x: number, z: number): boolean => {
+    if (x < deckX[0] + margin || x > deckX[1] - margin) return false;
+    if (z < deckZ[0] + margin || z > deckZ[1] - margin) return false;
+    // Not through the roof light, and not in the water.
+    if (x > lightX[0] - margin && x < lightX[1] + margin &&
+        z > lightZ[0] - margin && z < lightZ[1] + margin) return false;
+    if (x > poolX[0] - margin && x < poolX[1] + margin &&
+        z > poolZ[0] - margin && z < poolZ[1] + margin) return false;
+    return true;
+  };
+
+  for (let i = 0, placed = 0; i < 90 && placed < 10; i += 1) {
     const r = rand(200 + i * 13);
     const r2 = rand(600 + i * 9);
-    const grove = i % 2 === 0;
-    const z = grove
-      ? poolZ[1] + 2.8 + r * 7
-      : Math.max(palmSouthLimit, poolZ[0] - 1 + r * (poolLength * 0.6));
-    const x = grove ? poolX[0] - 3 + r2 * (poolWidth + 7) : deckX[0] + 1.5 + r2 * 6;
-    palms.push(palm(`deck-palm-${i}`, x, z, deckTop, 900 + i * 31));
+    const x = deckX[0] + r2 * (deckX[1] - deckX[0]);
+    const z = deckZ[0] + r * (deckZ[1] - deckZ[0]);
+    if (!standable(x, z)) continue;
+    palms.push(palm(`deck-palm-${placed}`, x, z, deckTop, 900 + i * 31));
+    placed += 1;
   }
 
   return {

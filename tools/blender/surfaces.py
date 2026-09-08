@@ -463,6 +463,108 @@ def m_teak(g, bsdf):
     return h, 0.38
 
 
+def m_bronze(g, bsdf):
+    # Brushed metal is a directional material: the whole look is thousands
+    # of parallel scratches, and noise without direction reads as cast.
+    streak = noise(g, 900.0, detail=3.0, rough=0.75)
+    broad = noise(g, 14.0, detail=4.0, rough=0.5)
+    band, _ = wave(g, 1, 700, distort_src=streak, distort=0.9)
+    col = g.ramp(band, [(0.0, (0.42, 0.31, 0.17, 1)), (0.5, (0.60, 0.46, 0.26, 1)), (1.0, (0.44, 0.33, 0.18, 1))])
+    tone = g.mixrgb(0.3, col, g.ramp(broad, [(0.4, (0.48, 0.36, 0.20, 1)), (0.6, (0.58, 0.45, 0.26, 1))]))
+    g.l.new(O(tone), bsdf.inputs["Base Color"])
+    # Deliberately NOT metallic for the bake.
+    #
+    # A metal has no diffuse component, so baking Diffuse off a metallic
+    # BSDF returns black — which is exactly what the first bronze bake did,
+    # a 16 KB albedo of nothing. The map's job is to carry the colour and
+    # the brush marks; `materials.ts` sets metalness at runtime, where it
+    # belongs.
+    r = g.ramp(band, [(0.0, (0.20,) * 3 + (1,)), (0.5, (0.34,) * 3 + (1,))])
+    g.l.new(O(r), bsdf.inputs["Roughness"])
+    return band, 0.06
+
+
+def m_tile(g, bsdf):
+    # Large format, thin joint. The joint is the whole read: without it a
+    # tiled floor is just a stone floor.
+    across, _ = wave(g, 0, 2)
+    down, _ = wave(g, 1, 4)
+    fine = noise(g, 90.0, detail=6.0, rough=0.6)
+    drift = noise(g, 3.0, detail=5.0, rough=0.55)
+    jx = g.ramp(across, [(0.0, (0.30, 0.29, 0.28, 1)), (0.012, (1, 1, 1, 1)), (0.988, (1, 1, 1, 1)), (1.0, (0.30, 0.29, 0.28, 1))])
+    jz = g.ramp(down, [(0.0, (0.30, 0.29, 0.28, 1)), (0.02, (1, 1, 1, 1)), (0.98, (1, 1, 1, 1)), (1.0, (0.30, 0.29, 0.28, 1))])
+    joints = g.new("ShaderNodeMix", data_type="RGBA", blend_type="MULTIPLY")
+    joints.inputs[0].default_value = 1.0
+    g.l.new(O(jx), joints.inputs[6])
+    g.l.new(O(jz), joints.inputs[7])
+    base = g.mixrgb(0.35, g.ramp(fine, [(0.35, (0.78, 0.76, 0.72, 1)), (0.7, (0.87, 0.85, 0.81, 1))]),
+                    g.ramp(drift, [(0.4, (0.74, 0.72, 0.68, 1)), (0.6, (0.86, 0.84, 0.80, 1))]))
+    body = g.new("ShaderNodeMix", data_type="RGBA", blend_type="MULTIPLY")
+    body.inputs[0].default_value = 1.0
+    g.l.new(O(base), body.inputs[6])
+    g.l.new(O(joints), body.inputs[7])
+    g.l.new(O(body), bsdf.inputs["Base Color"])
+    r = g.ramp(fine, [(0.3, (0.24,) * 3 + (1,)), (0.75, (0.34,) * 3 + (1,))])
+    g.l.new(O(r), bsdf.inputs["Roughness"])
+    return joints, 0.22
+
+
+def m_sand(g, bsdf):
+    # Combed by wind and tide: the ripples are directional and the grain is
+    # not, so both go in.
+    ripple_src = noise(g, 5.0, detail=4.0, rough=0.5)
+    ripple, _ = wave(g, 0, 34, distort_src=ripple_src, distort=3.2)
+    grain = noise(g, 520.0, detail=3.0, rough=0.7)
+    drift = noise(g, 8.0, detail=5.0, rough=0.55)
+    col = g.ramp(grain, [(0.3, (0.80, 0.75, 0.65, 1)), (0.75, (0.92, 0.88, 0.79, 1))])
+    tone = g.mixrgb(0.25, col, g.ramp(drift, [(0.4, (0.83, 0.78, 0.68, 1)), (0.6, (0.91, 0.87, 0.78, 1))]))
+    g.l.new(O(tone), bsdf.inputs["Base Color"])
+    r = g.ramp(grain, [(0.3, (0.90,) * 3 + (1,)), (0.75, (0.97,) * 3 + (1,))])
+    g.l.new(O(r), bsdf.inputs["Roughness"])
+    h = g.mixrgb(0.55, ripple, grain)
+    return h, 0.5
+
+
+def m_boucle(g, bsdf):
+    # Looped yarn: a field of little bobbles, which is what separates
+    # boucle from every other pale upholstery and why the reference rooms
+    # read as soft.
+    loop = voronoi(g, 190.0, feature="F1", randomness=1.0)
+    edge = voronoi(g, 190.0, feature="DISTANCE_TO_EDGE", randomness=1.0)
+    fibre = noise(g, 700.0, detail=3.0, rough=0.7)
+    col = g.ramp(loop, [(0.0, (0.80, 0.77, 0.71, 1)), (1.0, (0.94, 0.92, 0.87, 1))])
+    shade = g.ramp(edge, [(0.0, (0.72, 0.70, 0.66, 1)), (0.14, (1, 1, 1, 1))])
+    body = g.new("ShaderNodeMix", data_type="RGBA", blend_type="MULTIPLY")
+    body.inputs[0].default_value = 0.85
+    g.l.new(O(col), body.inputs[6])
+    g.l.new(O(shade), body.inputs[7])
+    g.l.new(O(body), bsdf.inputs["Base Color"])
+    r = g.ramp(fibre, [(0.3, (0.92,) * 3 + (1,)), (0.75, (0.98,) * 3 + (1,))])
+    g.l.new(O(r), bsdf.inputs["Roughness"])
+    h = g.mixrgb(0.7, edge, fibre)
+    return h, 0.85
+
+
+def m_glass_grime(g, bsdf):
+    # Greyscale only, and very faint. Salt film and dust in the corners is
+    # the detail that most sells real glass; overdone it reads as a dirty
+    # window, which sells nothing.
+    film = noise(g, 6.0, detail=6.0, rough=0.6)
+    runs_src = noise(g, 3.0, detail=4.0, rough=0.5)
+    runs, _ = wave(g, 1, 26, distort_src=runs_src, distort=4.5)
+    spec = noise(g, 240.0, detail=3.0, rough=0.7)
+    base = g.ramp(film, [(0.35, (0.90, 0.90, 0.90, 1)), (0.75, (1.0, 1.0, 1.0, 1))])
+    streak = g.ramp(runs, [(0.44, (1, 1, 1, 1)), (0.5, (0.93, 0.93, 0.93, 1)), (0.56, (1, 1, 1, 1))])
+    body = g.new("ShaderNodeMix", data_type="RGBA", blend_type="MULTIPLY")
+    body.inputs[0].default_value = 0.7
+    g.l.new(O(base), body.inputs[6])
+    g.l.new(O(streak), body.inputs[7])
+    g.l.new(O(body), bsdf.inputs["Base Color"])
+    r = g.ramp(spec, [(0.35, (0.06,) * 3 + (1,)), (0.8, (0.14,) * 3 + (1,))])
+    g.l.new(O(r), bsdf.inputs["Roughness"])
+    return film, 0.03
+
+
 # family -> (builder, resolution, tile in metres, note)
 FAMILIES = {
     "plaster":  (m_plaster,  1024, 1.60, "Fine lime render"),
@@ -476,6 +578,11 @@ FAMILIES = {
     "concrete": (m_concrete, 1024, 2.40, "Board-marked concrete"),
     "terrazzo": (m_terrazzo, 1024, 1.80, "Fine-aggregate terrazzo"),
     "teak":     (m_teak,     1024, 1.20, "Weathered teak decking"),
+    "bronze":     (m_bronze,     1024, 0.60, "Brushed anodised bronze"),
+    "tile":       (m_tile,       1024, 1.20, "Large-format stone tile"),
+    "sand":       (m_sand,       1024, 3.00, "Wind-combed beach sand"),
+    "boucle":     (m_boucle,     1024, 0.12, "Looped boucle upholstery"),
+    "glassGrime": (m_glass_grime, 1024, 4.00, "Salt film and dust on glass"),
 }
 
 

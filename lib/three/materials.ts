@@ -1273,7 +1273,7 @@ function createMaterials() {
           normalScale: 5.0,
         },
       ),
-      'oak',
+      'teak',
       0.85,
     ),
     /** Legacy Phase 1 diagnostic massing only — kept simple deliberately. */
@@ -1289,7 +1289,8 @@ function createMaterials() {
      * generated environment map, this behaves as real metal — it reflects
      * the sky rather than resolving to a flat fill.
      */
-    bronze: withVariation(standard({ color: '#b08e5c', roughness: 0.26, metalness: 0.95 }), {
+    bronze: withMaps(
+      withVariation(standard({ color: '#b08e5c', roughness: 0.26, metalness: 0.95 }), {
       scale: 3,
       colorVariation: 0.02,
       roughnessVariation: 0.04,
@@ -1297,7 +1298,10 @@ function createMaterials() {
       // Brushed bronze: barely there, but enough to break the highlight.
       normalStrength: 0.015,
       normalScale: 2.0,
-    }),
+      }),
+      'bronze',
+      0.6,
+    ),
     /**
      * Reveals, trim, soffits, slab shadow lines — satin dark anodized
      * aluminium. The environment map is what keeps this from reading as a
@@ -1510,7 +1514,8 @@ function createMaterials() {
      * anisotropy stretches the noise along the shore, the way wind and tide
      * actually comb a beach.
      */
-    sand: withVariation(standard({ color: '#d9cbae', roughness: 0.94, metalness: 0 }), {
+    sand: withMaps(
+      withVariation(standard({ color: '#d9cbae', roughness: 0.94, metalness: 0 }), {
       scale: 3.2,
       colorVariation: 0.05,
       roughnessVariation: 0.04,
@@ -1518,7 +1523,9 @@ function createMaterials() {
       anisotropy: [1, 1, 2.6],
       normalStrength: 0.05,
       normalScale: 22,
-    }),
+      }),
+      'sand',
+    ),
     /**
      * Palm fronds. Thin, translucent-looking, and much lighter than the
      * villa's broadleaf canopy — a palm photographs almost yellow-green
@@ -1735,7 +1742,7 @@ function createMaterials() {
         normalStrength: 0.009,
         normalScale: 8.5,
       }),
-      'linen',
+      'boucle',
       0.9,
     ),
     /** Accent upholstery — occasional chairs, stools, bed throws. */

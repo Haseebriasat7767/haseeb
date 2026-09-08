@@ -1,6 +1,6 @@
 # Surface map library
 
-Eleven PBR families, three maps each, in `surfaces/<family>/`. They are
+Sixteen PBR families, three maps each, in `surfaces/<family>/`. They are
 loaded by `components/three/textures/ScannedMaps.ts`, which is the
 authoritative reference for paths and filenames — **not this file**, which
 was previously out of date and described a layout the loader never used.
@@ -41,14 +41,25 @@ replaced:
 | `concrete` | albedo / roughness / normal | 1K | 2.40 m | `tools/blender/surfaces.py` | Project-authored |
 | `terrazzo` | albedo / roughness / normal | 1K | 1.80 m | `tools/blender/surfaces.py` | Project-authored |
 | `teak` | albedo / roughness / normal | 1K | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
+| `bronze` | albedo / roughness / normal | 1K | 0.60 m | `tools/blender/surfaces.py` | Project-authored |
+| `tile` | albedo / roughness / normal | 1K | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
+| `sand` | albedo / roughness / normal | 1K | 3.00 m | `tools/blender/surfaces.py` | Project-authored |
+| `boucle` | albedo / roughness / normal | 1K | 0.12 m | `tools/blender/surfaces.py` | Project-authored |
+| `glassGrime` | albedo / roughness / normal | 1K | 4.00 m | `tools/blender/surfaces.py` | Project-authored |
 
-Total on disk: about 10 MB. All project-authored, so there is no third-party
+Total on disk: about 15 MB. All sixteen are wired. All project-authored, so there is no third-party
 licence to honour and nothing here restricts commercial use or
 redistribution.
 
-`concrete`, `terrazzo` and `teak` are baked but not yet wired: they need
-adding to the `SurfaceFamily` union and given a procedural fallback recipe
-in `SurfaceMaps.ts` before `SCANNED_FAMILIES` can list them.
+Every family is listed in `SCANNED_FAMILIES` and carries a procedural
+fallback in `SurfaceMaps.ts` for the case where a file is missing from a
+build. The original eight keep hand-tuned recipes; the newer eight share a
+generic one, since they always ship with real maps.
+
+**Metallic families bake with `Metallic = 0`.** A metal has no diffuse
+component, so baking Diffuse off a metallic BSDF returns black — the first
+bronze albedo was 16 KB of nothing. The map carries colour and brush marks;
+`materials.ts` sets metalness at runtime.
 
 ## Regenerating
 

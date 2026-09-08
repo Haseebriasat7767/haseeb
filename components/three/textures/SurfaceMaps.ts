@@ -70,7 +70,22 @@ export function setSurfaceMapResolution(size: 512 | 1024): void {
 }
 
 export type SurfaceFamily =
-  'plaster' | 'stone' | 'oak' | 'marble' | 'linen' | 'wool' | 'leather' | 'paving';
+  | 'plaster'
+  | 'stone'
+  | 'oak'
+  | 'marble'
+  | 'linen'
+  | 'wool'
+  | 'leather'
+  | 'paving'
+  | 'concrete'
+  | 'terrazzo'
+  | 'teak'
+  | 'bronze'
+  | 'tile'
+  | 'sand'
+  | 'boucle'
+  | 'glassGrime';
 
 export type SurfaceMaps = {
   // `Texture` rather than `CanvasTexture`: the procedural path bakes into a
@@ -161,8 +176,49 @@ type Recipe = {
 /** Lattice cells across one tile. Higher is finer detail. */
 const P = 16;
 
+/**
+ * A generic fallback recipe.
+ *
+ * The eight families below this line all ship with authored map sets, so
+ * this path only runs if a file is missing from the build — and the honest
+ * response to that is a plausible surface rather than a black one. The
+ * original eight keep their hand-tuned recipes because they predate the
+ * maps and were what the project shipped for months.
+ */
+function plain(
+  base: [number, number, number],
+  metres: number,
+  normalScale: number,
+  rough: number,
+  detail: number,
+): Recipe {
+  return {
+    base,
+    metres,
+    normalScale,
+    sample: (u, v) => {
+      const fine = fbm(u * P * detail, v * P * detail, P * detail, 53, 4);
+      const broad = fbm(u * 3, v * 3, 3, 71, 2);
+      return {
+        height: 0.5 + (fine - 0.5) * 0.5 + (broad - 0.5) * 0.3,
+        tone: 1 + (broad - 0.5) * 0.05 + (fine - 0.5) * 0.03,
+        rough: rough + (fine - 0.5) * 0.06,
+      };
+    },
+  };
+}
+
 function makeRecipes(): Record<SurfaceFamily, Recipe> {
   return {
+    concrete: plain([190, 189, 183], 2.4, 0.22, 0.8, 2.0),
+    terrazzo: plain([212, 209, 202], 1.8, 0.06, 0.26, 3.0),
+    teak: plain([168, 148, 118], 1.2, 0.3, 0.72, 2.5),
+    bronze: plain([150, 118, 74], 0.6, 0.05, 0.28, 6.0),
+    tile: plain([210, 206, 197], 1.2, 0.16, 0.28, 2.0),
+    sand: plain([219, 203, 176], 3.0, 0.4, 0.94, 5.0),
+    boucle: plain([222, 216, 205], 0.12, 0.7, 0.94, 6.0),
+    glassGrime: plain([245, 245, 245], 4.0, 0.02, 0.1, 1.5),
+
     /**
      * Polished plaster: micro variation only. The brief is explicit that
      * this must not read as concrete, so the height field is shallow and
