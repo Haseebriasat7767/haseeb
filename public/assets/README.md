@@ -80,13 +80,12 @@ table above with its true source and licence.
 
 # Model library
 
-Twelve furniture pieces in `models/*.glb`, authored by
+Thirty-seven pieces in `models/*.glb`, authored by
 `tools/blender/models.py` and loaded by
 `components/three/models/ModelLibrary.tsx`.
 
 | Piece | Ref | Tris | Size |
 | --- | --- | --- | --- |
-| `sofa-3seat` | MDL-01 | 7,804 | 79 KB |
 | `lounge-chair` | MDL-02 | 3,076 | 22 KB |
 | `ottoman` | MDL-02 | 360 | 2 KB |
 | `low-table` | MDL-03 | 1,132 | 10 KB |
@@ -98,8 +97,33 @@ Twelve furniture pieces in `models/*.glb`, authored by
 | `vessel-tall` | MDL-10 | 864 | 4 KB |
 | `vessel-round` | MDL-10 | 792 | 4 KB |
 | `bowl` | MDL-10 | 504 | 3 KB |
+| `organic-table-lg` | MDL-03 | 2,040 | 20 KB |
+| `organic-table-sm` | MDL-03 | 2,104 | 21 KB |
+| `stone-lounger` | MDL-12 | 552 | 7 KB |
+| `wingback` | MDL-02 | 3,036 | 22 KB |
+| `planter-cyl` | MDL-10 | 640 | 3 KB |
+| `tray` | MDL-10 | 2,040 | 19 KB |
+| `book-stack` | MDL-10 | 564 | 9 KB |
+| `candle-cluster` | MDL-10 | 720 | 15 KB |
+| `ceiling-soffit` | MDL-09 | 2,040 | 20 KB |
+| `kitchen-island` | MDL-07 | 1,264 | 18 KB |
+| `kitchen-run` | MDL-07 | 1,316 | 18 KB |
+| `vanity` | MDL-08 | 1,216 | 12 KB |
+| `bath` | MDL-08 | 868 | 6 KB |
+| `wc` | MDL-08 | 1,576 | 21 KB |
+| `shower-screen` | MDL-08 | 516 | 8 KB |
+| `person-standing` | MDL-16 | 1,392 | 14 KB |
+| `person-seated` | MDL-16 | 1,592 | 16 KB |
+| `car-saloon` | MDL-17 | 1,928 | 28 KB |
+| `car-suv` | MDL-17 | 1,928 | 28 KB |
+| `boat-tender` | MDL-18 | 928 | 13 KB |
+| `dining-table` | MDL-06 | 668 | 5 KB |
+| `dining-chair` | MDL-06 | 1,924 | 14 KB |
+| `parasol` | MDL-12 | 340 | 3 KB |
+| `outdoor-sofa` | MDL-12 | 2,588 | 30 KB |
+| `cabana` | MDL-12 | 2,136 | 28 KB |
 
-**24,172 triangles and 228 KB for the whole library**, Draco-compressed —
+**60,088 triangles and 639 KB for the whole library**, Draco-compressed —
 less than a single texture map. All project-authored; no third-party
 licence applies.
 
