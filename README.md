@@ -877,8 +877,39 @@ hides:
   half that framing with a lamp shade. The camera positions are as much a
   constraint on the fit-out as the walls are.
 
+### The amenity floor
+
+The tower's lowest residential level sits at 25 m, which is the podium roof,
+which is the deck. It is therefore the one floor in the building with an
+outdoor room already attached, and putting apartments on it would spend that on
+four households while making the deck somewhere residents reach by lift from
+elsewhere. Every building of this type does the same thing for the same reason,
+so this level is now gym, spa and residents' lounge.
+
+The gym and the lounge take the ocean end, because that is where the glazing
+and the deck are; the spa takes the landward third against the service core,
+because a treatment room wants no daylight and no view and because it is the
+part of the programme that needs plumbing near the risers. Three new pieces
+support it — a treadmill, a treatment table and a bank of lockers — and two
+framings were added to see it from.
+
+Three things this level got wrong first, all of the same kind — geometry that
+is correct in the numbers and invisible in the render:
+
+- **The plunge pool was sunk into the slab and then tiled over.** Only two
+  centimetres of rim showed. It is now a raised vessel: four upstands, a floor
+  and water inside, the same pattern that fixed the planter trough. A solid
+  block taller than its own water level contains the water rather than holding
+  it.
+- **The spa was planned around its rooms rather than around its corridor**, so
+  the bays, the lockers and the pool all competed for the same strip against
+  the core and there was nowhere to stand. A wet zone is a spine with rooms off
+  it, and the spine has to be drawn first.
+- **The gym framing was blown to paper** at the exposure the apartment uses.
+  That floor looks west into the sun over open water; it is stopped down by
+  about a third of a stop from the other interiors.
+
 ### Still to do
 
-The amenity interior (gym, spa, residents' lounge), the core lift lobby and
-corridor, a second residential unit type, the sub-penthouse and penthouse, and
-the roof plant enclosure. All of it is now affordable, which it was not before.
+The core lift lobby and corridor, a second residential unit type, the
+sub-penthouse and penthouse, and the roof plant enclosure.

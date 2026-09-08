@@ -102,6 +102,34 @@ export const TOWER_VIEWS: readonly CameraView[] = [
     fov: 56,
   },
   {
+    id: 'gym',
+    label: 'Gym',
+    // On the amenity floor at the base of the tower, behind the treadmills
+    // and looking out past them to the sea. Nobody runs facing a wall when
+    // the alternative is the Atlantic, and the framing follows the machines.
+    position: [-2.4, 26.7, -7.8],
+    target: [2.6, 26.0, -3.2],
+    fov: 62,
+    // Stopped down from the other interiors. This floor looks straight west
+    // into the sun over open water at golden hour, which at the exposure the
+    // apartment uses blows the whole frame to paper.
+    exposure: 0.82,
+  },
+  {
+    id: 'spa',
+    label: 'Spa',
+    // The landward third of the same floor: treatment bays off a tiled
+    // corridor, with the plunge pool and the sauna at the end.
+    // Along the line of the bay openings rather than down the middle of the
+    // corridor. Centred in the corridor you see two blank partitions edge-on
+    // and none of the rooms they divide; set against them you look obliquely
+    // into all three, with the plunge and the sauna closing the end.
+    position: [-18.2, 26.6, -9.4],
+    target: [-18.7, 26.1, 2.2],
+    fov: 66,
+    exposure: INTERIOR_EXPOSURE,
+  },
+  {
     id: 'residence',
     label: 'Living room',
     // Turned to face the room, not the window.
@@ -186,6 +214,8 @@ export const TOWER_VIEW_NOTES: Record<string, string> = {
     'The food hall on the fourth retail level — a servery on the atrium with stools along it, communal tables behind, and pendants over both.',
   cinema:
     'The cinema foyer at the top of the podium: a box office facing the void and the auditorium seating behind it, on the one level that needs no daylight.',
+  gym: 'The gym on the amenity floor at the base of the tower, its treadmills turned to the ocean glazing and a mirrored wall behind them.',
+  spa: 'The spa on the same floor: three treatment bays off a tiled corridor, with a plunge pool and a cedar sauna at the far end against the core.',
   gallery:
     'Third retail level. Frameless glass at the balustrade with a bronze capping rail — the same detail the apartment balconies use, because it is the same condition.',
   deck: 'The amenity deck occupies the whole ocean half of the podium roof, twenty-five metres up, with the pool set back from the edge so a swimmer faces the water.',

@@ -20,7 +20,9 @@ import { createIdentityDecals, createSignageDecals, createWayfindingDecals } fro
 import { Palms } from './Palms';
 import { Shoreline } from './Shoreline';
 import { Tower } from './Tower';
+import { Amenity } from './Amenity';
 import { Apartment } from './Apartment';
+import { createAmenity } from './AmenityGeometry';
 import { createApartment } from './ApartmentGeometry';
 import { InstancedModels } from '../models/InstancedModels';
 import { createParkLayout } from './Park';
@@ -71,6 +73,10 @@ export function TowerScene({
 
   // The retail fit-out, on every level around the atrium.
   const retail = useMemo(() => createRetailProps(layout.plan), [layout.plan]);
+
+  // The amenity floor at the base of the tower — gym, spa and residents'
+  // lounge, on the one level that opens onto the deck.
+  const amenity = useMemo(() => createAmenity(layout.plan), [layout.plan]);
 
   // Tier 4. Three sheets, three draw calls, and the difference between a
   // podium that is let and one that is not.
@@ -248,6 +254,7 @@ export function TowerScene({
             standing in twenty places. Batched by piece it is a few dozen,
             and the cost stops scaling with how many floors are furnished. */}
         <InstancedModels name="site-props" placements={[...props, ...retail]} />
+        <Amenity layout={amenity} />
         <Apartment layout={apartment} detail={detail} />
         <Shoreline layout={shoreline} detail={detail} />
       </group>

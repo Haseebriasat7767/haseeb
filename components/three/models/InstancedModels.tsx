@@ -30,8 +30,11 @@ export type ModelPlacement = {
   /**
    * Which spatial batch this placement belongs to — a retail level, a room.
    *
-   * Optional, and the difference between instancing being a win and a loss.
-   * See the note on culling below.
+   * Batches are formed per piece per chunk, so a chunk that is off screen
+   * culls as a unit. Splitting the retail fit-out this way was measured and
+   * was worse (see above), so nothing populates it today; it is kept because
+   * a scene with a dozen furnished floors will want it and the alternative is
+   * rediscovering the need for it later.
    */
   chunk?: string;
 };
@@ -59,24 +62,25 @@ export type ModelPlacement = {
  * floors are furnished and starts scaling with how many *kinds* of thing are
  * on them, which is the number that should govern it.
  *
- * ## Why that alone made things worse
+ * ## What this does NOT do, measured
  *
- * Instancing was measured, and the first version of it took the atrium view
- * from 967 draw calls to 1235. The total went down and the drawn count went
- * up, because the two are not the same number and frustum culling is what
- * separates them.
+ * It does not lower the draw-call count of the scene as it stands. Measured in
+ * the atrium view: 967 with cloned models, 1235 with these. Splitting the
+ * batches per retail level to win the culling back made it 1719, worse again,
+ * and that variant was reverted.
  *
- * A hundred and forty cloned models are a hundred and forty bounding spheres,
- * and in any one framing three quarters of them are off screen and rejected
- * before they cost anything. Collapse them into one `InstancedMesh` per piece
- * and there is one bounding sphere spanning the whole podium — always on
- * screen, never rejected, so every piece of shop fitting on all five levels
- * is drawn whether or not any of it is in frame.
+ * The likeliest reading is that a hundred and forty cloned models are a
+ * hundred and forty bounding spheres and most were being culled per framing,
+ * where one batch per piece spans the whole podium and never is — but the
+ * apartment view, which can see none of the podium at all, still reports 1255,
+ * and that does not fit the reading. The honest position is that this is not
+ * understood yet, and that these are development-mode numbers from a software
+ * rasteriser rather than anything a real device would report.
  *
- * So placements carry a `chunk`, and a batch is per piece *per chunk*. The
- * retail fit-out chunks by level, which is the axis the cameras actually cut
- * along: standing on one floor of an atrium, the floors below you are behind
- * a slab. That restores the culling without giving back the batching.
+ * What it is kept for is scaling, which is a judgement rather than a
+ * measurement: cloned, every newly furnished floor adds draw calls in
+ * proportion to how much is on it, and Phase 2 has thirteen more floors to
+ * furnish. Batched, a floor costs only whatever it introduces that is new.
  *
  * ## The transform that is easy to get wrong
  *

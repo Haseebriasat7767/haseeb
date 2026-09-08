@@ -1401,6 +1401,105 @@ def p_gym_rack():
     return parts
 
 
+
+def p_treadmill():
+    """A treadmill: deck, running belt, uprights and a console.
+
+    The one gym machine worth modelling. A gym reads as a gym from its
+    silhouette against a window, and a treadmill's — a raked deck with two
+    uprights and a bar across them — is the one everybody recognises. The
+    rest of a gym is racks, benches and mats, all of which the library
+    already has or can make out of boxes.
+    """
+    parts = []
+    # The deck, raked slightly nose-up the way a running belt sits.
+    # Authored facing +Y like everything else: the console is at the FRONT,
+    # so `FACE.east` turns a treadmill to look at the ocean rather than away
+    # from it. Building it mirrored and correcting at the call site is how a
+    # library ends up with a different rule per piece.
+    deck = rounded_box("tm_deck", (0.78, 1.55, 0.13), (0, -0.05, 0.20), bevel=0.02)
+    deck.rotation_euler = (math.radians(3), 0, 0)
+    parts.append(assign(deck, "darkMetal"))
+    belt = rounded_box("tm_belt", (0.56, 1.34, 0.03), (0, -0.05, 0.275), bevel=0.008)
+    belt.rotation_euler = (math.radians(3), 0, 0)
+    parts.append(assign(belt, "upholsteryDark"))
+    # Side rails either side of the belt, which is what you grab.
+    for x in (-1, 1):
+        rail = rounded_box(f"tm_rail_{x}", (0.09, 1.10, 0.05), (x * 0.34, -0.02, 0.33), bevel=0.018)
+        parts.append(assign(rail, "bronze"))
+    # Uprights, raked forward, carrying the console.
+    for x in (-1, 1):
+        post = rounded_box(f"tm_post_{x}", (0.07, 0.09, 1.05), (x * 0.33, 0.60, 0.72), bevel=0.02)
+        post.rotation_euler = (math.radians(-11), 0, 0)
+        parts.append(assign(post, "darkMetal"))
+    console = rounded_box("tm_console", (0.72, 0.10, 0.34), (0, 0.72, 1.22), bevel=0.02)
+    console.rotation_euler = (math.radians(-24), 0, 0)
+    parts.append(assign(console, "darkMetal"))
+    screen = rounded_box("tm_screen", (0.56, 0.03, 0.22), (0, 0.775, 1.23), bevel=0.008)
+    screen.rotation_euler = (math.radians(-24), 0, 0)
+    parts.append(assign(screen, "glow"))
+    bar = cylinder("tm_bar", 0.019, 0.70, (0, 0.63, 1.02), verts=10, bevel=0.003)
+    bar.rotation_euler = (0, math.radians(90), 0)
+    parts.append(assign(bar, "bronze"))
+    return parts
+
+
+def p_treatment_table():
+    """A spa treatment table: padded top, face cradle, a plinth under it.
+
+    Deliberately not the bed model. A massage table is narrower, higher and
+    has no headboard, and dressing a treatment room with a double bed is the
+    single quickest way to make a spa read as a hotel room.
+    """
+    parts = []
+    plinth = rounded_box("spa_plinth", (0.62, 1.70, 0.56), (0, 0, 0.28), bevel=0.03)
+    parts.append(assign(plinth, "joinery"))
+    pad = rounded_box("spa_pad", (0.74, 1.92, 0.14), (0, 0, 0.63), bevel=0.06, segments=3, subsurf=1)
+    parts.append(assign(pad, "linen"))
+    # The face cradle, which is most of what says "treatment" rather than "bed".
+    cradle = rounded_box("spa_cradle", (0.30, 0.16, 0.09), (0, -1.02, 0.66), bevel=0.03)
+    parts.append(assign(cradle, "upholsteryDark"))
+    towel = rounded_box("spa_towel", (0.66, 0.44, 0.05), (0, 0.52, 0.72), bevel=0.02)
+    parts.append(assign(towel, "linen"))
+    return parts
+
+
+def p_locker_bank():
+    """Six changing-room lockers with a bench in front.
+
+    One piece rather than six, for the same reason the auditorium row is one
+    piece: they are only ever placed as a run.
+
+    Doors and bench on +Y, so the run faces the way the convention says a
+    piece faces and a wall of lockers put against a wall has its doors in the
+    room rather than in the plaster.
+    """
+    parts = []
+    w, d, h = 2.10, 0.52, 1.85
+    carcass = rounded_box("lkr_carcass", (w, d, h), (0, 0, h / 2), bevel=0.012)
+    parts.append(assign(carcass, "joinery"))
+    # Door faces proud of the carcass, with a reveal between each.
+    for i in range(6):
+        col = i % 3
+        row = i // 3
+        dw = (w - 0.10) / 3 - 0.02
+        dh = (h - 0.12) / 2 - 0.02
+        x = -w / 2 + 0.05 + ((w - 0.10) / 3) * (col + 0.5)
+        z = 0.06 + ((h - 0.12) / 2) * (row + 0.5)
+        door = rounded_box(f"lkr_door_{i}", (dw, 0.03, dh), (x, d / 2 + 0.012, z), bevel=0.008)
+        parts.append(assign(door, "bronze"))
+        pull = cylinder(f"lkr_pull_{i}", 0.010, 0.11, (x + dw / 2 - 0.06, d / 2 + 0.035, z),
+                        verts=8, bevel=0.002)
+        parts.append(assign(pull, "darkMetal"))
+    bench = rounded_box("lkr_bench", (w - 0.20, 0.34, 0.07), (0, 0.86, 0.44), bevel=0.02)
+    parts.append(assign(bench, "joinery"))
+    for x in (-1, 1):
+        leg = rounded_box(f"lkr_leg_{x}", (0.06, 0.30, 0.41), (x * (w / 2 - 0.28), 0.86, 0.205),
+                          bevel=0.012)
+        parts.append(assign(leg, "darkMetal"))
+    return parts
+
+
 PIECES = {
     "sofa-3seat": (p_sofa_3seat, "MDL-01"),
     "lounge-chair": (p_lounge_chair, "MDL-02"),
@@ -1448,6 +1547,9 @@ PIECES = {
     "lift-doors": (p_lift_doors, "MDL-14"),
     "gym-bench": (p_gym_bench, "MDL-15"),
     "gym-rack": (p_gym_rack, "MDL-15"),
+    "treadmill": (p_treadmill, "MDL-15"),
+    "treatment-table": (p_treatment_table, "MDL-15"),
+    "locker-bank": (p_locker_bank, "MDL-15"),
     "bar-stool": (p_bar_stool, "MDL-06"),
     "cinema-row": (p_cinema_row, "MDL-13"),
     "pendant": (p_pendant, "MDL-11"),

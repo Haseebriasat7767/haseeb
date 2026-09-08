@@ -87,7 +87,10 @@ export type ModelName =
   | 'cinema-row'
   | 'pendant'
   | 'wall-light'
-  | 'planter-trough';
+  | 'planter-trough'
+  | 'treadmill'
+  | 'treatment-table'
+  | 'locker-bank';
 
 export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
@@ -141,6 +144,9 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'pendant',
   'wall-light',
   'planter-trough',
+  'treadmill',
+  'treatment-table',
+  'locker-bank',
 ];
 
 function url(name: ModelName): string {
