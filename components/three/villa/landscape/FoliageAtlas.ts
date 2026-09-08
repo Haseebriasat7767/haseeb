@@ -1,19 +1,31 @@
-import { CanvasTexture, LinearMipmapLinearFilter, LinearFilter, SRGBColorSpace } from 'three';
+import {
+  CanvasTexture,
+  LinearMipmapLinearFilter,
+  LinearFilter,
+  SRGBColorSpace,
+  type Texture,
+} from 'three';
 
 /**
- * A foliage atlas, drawn at runtime into a canvas.
- *
- * Aurelia has never downloaded an asset and does not start here. The
- * alternative — a CC0 leaf cut-out from ambientCG or Poly Haven — would
- * have been defensible under the Route B decision, but a foliage alpha is
- * one of the few textures a program can actually draw convincingly: it is
- * a few dozen small blades scattered inside a ragged outline, which is
- * exactly the kind of thing a seeded loop is good at and a photograph is
- * merely convenient for.
+ * A foliage atlas, baked in Blender and drawn at runtime as a fallback.
  *
  * Four cells in a 2x2 grid. Instances pick a cell through a per-instance
  * UV offset, so all four variants still share one texture and one draw
  * call.
+ *
+ * Two implementations of the same layout live here. `tools/blender/foliage.py`
+ * bakes it to `/assets/foliage/atlas.png` at 2048 px with every leaf modelled
+ * as a polygon; the canvas below draws it at 1024 px out of filled quadratic
+ * curves. The canvas one is not dead code and not a placeholder — it is what
+ * fills the texture on the first frame, before any request has returned, and
+ * what the scene keeps if the request never does.
+ *
+ * Neither is downloaded from anywhere. A foliage alpha is one of the few
+ * textures a program can genuinely author: a few thousand small blades
+ * scattered inside a ragged outline, which is what a seeded loop is good at
+ * and what a photograph is merely convenient for. The CC0 cut-outs from
+ * ambientCG and Poly Haven that would otherwise be the obvious source are
+ * blocked by this environment's egress policy in any case.
  */
 
 /**
@@ -221,7 +233,48 @@ function drawCell(
   ctx.restore();
 }
 
+/**
+ * The baked sheet, authored by `tools/blender/foliage.py`.
+ *
+ * Same four cells at the same four offsets, at twice the resolution, with
+ * every leaf a real polygon: a width profile that runs to zero at the tip,
+ * a curved midrib, and two margins perturbed independently. The canvas
+ * below draws a filled quadratic instead, which is a good approximation of
+ * a leaf and not a leaf.
+ *
+ * A manifest rather than a probe, for the reason `ScannedMaps` gives: a
+ * missing file resolves asynchronously, long after the material has been
+ * built and handed out.
+ */
+const BAKED_ATLAS = '/assets/foliage/atlas.png';
+
 let atlas: CanvasTexture | null = null;
+
+/**
+ * Replaces the canvas the texture was seeded with, once the baked sheet has
+ * decoded.
+ *
+ * The swap is an image swap, not a texture swap. `getFoliageAtlas` is
+ * called synchronously from a `useMemo` and its result is written straight
+ * into a `MeshStandardMaterial` and a `MeshDepthMaterial`, so handing back a
+ * different object later would mean reaching into both — and the depth one
+ * is three's own, rebuilt when it feels like it. Keeping one `Texture` and
+ * changing what is inside it leaves every reference in the scene correct.
+ *
+ * The canvas is drawn first regardless, so a slow or failed request costs
+ * fidelity and never a frame of invisible planting: an empty texture samples
+ * as fully transparent and the alpha test would discard the entire canopy.
+ */
+function upgradeToBakedAtlas(texture: Texture): void {
+  const image = new Image();
+  image.onload = () => {
+    texture.image = image;
+    texture.needsUpdate = true;
+  };
+  // No handler on failure. The canvas bake is already in the texture and is
+  // a complete atlas in its own right; there is nothing to recover to.
+  image.src = BAKED_ATLAS;
+}
 
 /**
  * The shared foliage texture. Built once and reused by every card in the
@@ -256,6 +309,7 @@ export function getFoliageAtlas(): CanvasTexture {
   atlas.generateMipmaps = true;
   atlas.anisotropy = 8;
   atlas.needsUpdate = true;
+  upgradeToBakedAtlas(atlas);
   return atlas;
 }
 

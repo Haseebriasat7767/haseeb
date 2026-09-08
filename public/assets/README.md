@@ -165,3 +165,51 @@ python3 tools/blender/models.py                    # build and export all
 python3 tools/blender/models.py sofa-3seat bed     # or just some
 python3 tools/blender/models.py --preview          # render contact sheets
 ```
+
+
+# Foliage atlas
+
+`foliage/atlas.png` — 2048 px, RGBA, 2058 KB. One sheet, four cells in a
+2x2 grid, sampled by `FoliageCards` through a per-instance UV offset so the
+whole canopy of the site is a single draw call.
+
+## Audit
+
+| cell | UV offset | leaves | opaque coverage |
+| --- | --- | --- | --- |
+| top left | 0.0, 0.5 | 1451 | 19% |
+| top right | 0.5, 0.5 | 1283 | 18% |
+| bottom left | 0.0, 0.0 | 781 | 17% |
+| bottom right | 0.5, 0.0 | 1008 | 18% |
+
+Coverage is the number that matters. A foliage card is mostly hole: the
+material is opaque with `alphaTest`, so what is not cut away is what gets
+drawn, and a cell that fills its own tile renders as a green rectangle. The
+first bake of this file came out at 87% and every tree in the park was a
+stack of playing cards. Nothing may cross a cell boundary either — the
+shader samples a fixed 0.5 x 0.5 window per card, so one stray leaf becomes
+foliage hanging off the edge of an unrelated shrub. Both are checked: the
+two boundary lines and the outer edge of the sheet are fully transparent.
+
+Not a photograph and not a scan. Every leaf is a polygon built in Blender
+from a width profile that runs to zero at both ends, drawn about a curved
+midrib with the two margins perturbed independently, lit by nothing and
+rendered orthographically over a transparent film — so the file holds
+silhouette and colour and no shading at all, which is what lets the scene
+light it.
+
+## The canvas fallback is not dead code
+
+`FoliageAtlas.ts` still draws the same four cells at 1024 px out of filled
+quadratic curves. That version fills the texture on the first frame, before
+the request for the baked sheet has returned, and it is what the scene keeps
+if the request never does — an empty texture samples as fully transparent
+and the alpha test would discard the entire canopy. The two share the cell
+order, the density and the colour bands exactly; if one is edited the other
+has to move with it.
+
+## Regenerating
+
+```
+python3 tools/blender/foliage.py
+```
