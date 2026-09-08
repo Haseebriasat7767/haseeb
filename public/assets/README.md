@@ -86,6 +86,7 @@ Thirty-seven pieces in `models/*.glb`, authored by
 
 | Piece | Ref | Tris | Size |
 | --- | --- | --- | --- |
+| `sofa-3seat` | MDL-01 | 7,804 | 79 KB |
 | `lounge-chair` | MDL-02 | 3,076 | 22 KB |
 | `ottoman` | MDL-02 | 360 | 2 KB |
 | `low-table` | MDL-03 | 1,132 | 10 KB |
