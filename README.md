@@ -909,7 +909,47 @@ is correct in the numbers and invisible in the render:
   That floor looks west into the sun over open water; it is stopped down by
   about a third of a stop from the other interiors.
 
+### The core
+
+The service blade was solid for its whole height. Structurally honest and
+architecturally impossible: fifteen floors of apartments with no way into any
+of them, and a walkthrough that stepped from a spa on the lowest level straight
+into a living room on the twelfth with nothing in between. A building is
+largely the parts of it nobody photographs.
+
+The blade keeps its two ends — lifts in one, the escape stair in the other —
+and gives up the six metres between them to a lift lobby, generated at every
+floor height rather than designed fifteen times, because that is what a core
+is. It is the one room in the building with no window in it, so unlike
+everywhere else it has no daylight at all and what light it has is light
+somebody specified: a cove at the head of each long wall, and a pair of wall
+lights flanking the lifts. Those were first placed on the apartment wall, which
+put them behind every camera that would ever stand there — a fitting nobody
+sees lighting a wall nobody looks at.
+
+**It does not connect to the apartment.** The fit-out on the furnished level
+plans the whole plate as one dwelling, with a bed against the wall this lobby
+would open through, so the door here is a leaf on a wall rather than a way in.
+Re-planning the residential floors around a real entrance hall is a question
+about how many apartments are on a floor and where their front doors go — which
+is `DAT-01`, and has to come from the client. That one thing is a placeholder
+and is marked as one in the source.
+
+### Roof plant
+
+The lift overrun, the tanks and the air handling, inside a screened enclosure,
+with a maintenance rail and a mast. A flat parapet with nothing behind it is
+the clearest sign in any render that a building stops at the height its author
+got bored.
+
+The plant is invisible from the beach and from the water, and that is correct —
+it is what screening it is for. From a camera two metres up and a hundred and
+thirty metres out, the parapet occludes everything behind it below about
+ninety-seven metres. What was not correct was the mast: at eight metres it fell
+under the same line and vanished, which looked exactly like the geometry
+failing to generate. It is twenty-two metres now, which is ordinary for a
+lightning and aviation mast on a tower this height, and it reads.
+
 ### Still to do
 
-The core lift lobby and corridor, a second residential unit type, the
-sub-penthouse and penthouse, and the roof plant enclosure.
+A second residential unit type, and the sub-penthouse and penthouse.

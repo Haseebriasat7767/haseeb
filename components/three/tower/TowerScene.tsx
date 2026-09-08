@@ -23,6 +23,7 @@ import { Tower } from './Tower';
 import { Amenity } from './Amenity';
 import { Apartment } from './Apartment';
 import { createAmenity } from './AmenityGeometry';
+import { createCore } from './CoreGeometry';
 import { createApartment } from './ApartmentGeometry';
 import { InstancedModels } from '../models/InstancedModels';
 import { createParkLayout } from './Park';
@@ -77,6 +78,10 @@ export function TowerScene({
   // The amenity floor at the base of the tower — gym, spa and residents'
   // lounge, on the one level that opens onto the deck.
   const amenity = useMemo(() => createAmenity(layout.plan), [layout.plan]);
+
+  // The lift lobby, on every residential level. One arrangement repeated,
+  // which is what a core is.
+  const core = useMemo(() => createCore(layout.plan, TOWER_CONFIG.towerLevels), [layout.plan]);
 
   // Tier 4. Three sheets, three draw calls, and the difference between a
   // podium that is let and one that is not.
@@ -254,6 +259,26 @@ export function TowerScene({
             standing in twenty places. Batched by piece it is a few dozen,
             and the cost stops scaling with how many floors are furnished. */}
         <InstancedModels name="site-props" placements={[...props, ...retail]} />
+        {/* ── The core ─────────────────────────────────────────────── */}
+        <group name="Core">
+          <MergedBoxes name="core-joinery" specs={core.joinery} material={materials.joinery} />
+          <MergedBoxes
+            name="core-screens"
+            specs={core.screens}
+            material={materials.glazing}
+            castShadow={false}
+          />
+          <MergedBoxes name="core-rugs" specs={core.soft} material={materials.rug} />
+          <MergedBoxes
+            name="core-coves"
+            specs={core.coves}
+            material={materials.lightStrip}
+            castShadow={false}
+            receiveShadow={false}
+          />
+          <InstancedModels name="core-models" placements={core.models} />
+        </group>
+
         <Amenity layout={amenity} />
         <Apartment layout={apartment} detail={detail} />
         <Shoreline layout={shoreline} detail={detail} />

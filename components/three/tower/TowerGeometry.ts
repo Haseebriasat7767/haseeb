@@ -548,9 +548,23 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   const coreX: Range = [towerX[0], towerX[0] + coreWidth];
   const glazedX: Range = [coreX[1], towerX[1]];
 
-  // The service blade. Solid, full height, and deliberately reading as a
-  // different material from the glass it braces.
-  core.push(box('tower-core', coreX, [towerBaseY, crownTopY], [towerZ[0] + 0.6, towerZ[1] - 0.6]));
+  // The service blade, full height, and deliberately reading as a different
+  // material from the glass it braces.
+  //
+  // Hollowed through the middle for the lift lobby. Solid, it was structurally
+  // honest and architecturally impossible: fifteen floors of apartments with
+  // no way into any of them, and the walkthrough stepping from a spa on level
+  // one straight into a living room on level twelve with nothing in between.
+  // The blade keeps its two ends — lifts in one, the escape stair in the other
+  // — and gives up the six metres between them.
+  const coreZ: Range = [towerZ[0] + 0.6, towerZ[1] - 0.6];
+  const lobbyZ: Range = [-3.2, 3.2];
+  const coreWall = 0.35;
+  core.push(box('tower-core-n', coreX, [towerBaseY, crownTopY], [coreZ[0], lobbyZ[0]]));
+  core.push(box('tower-core-s', coreX, [towerBaseY, crownTopY], [lobbyZ[1], coreZ[1]]));
+  core.push(box('tower-core-w', [coreX[0], coreX[0] + coreWall], [towerBaseY, crownTopY], lobbyZ));
+  // The wall between the lobby and the apartment beyond it.
+  core.push(box('tower-core-e', [coreX[1] - coreWall, coreX[1]], [towerBaseY, crownTopY], lobbyZ));
 
   /** How far the tower has stepped in by a given level. */
   const insetAt = (level: number) =>
@@ -596,11 +610,29 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     // shell with nothing to stand on, which is exactly what the interior
     // camera on level twelve would have looked down into.
     plates.push(box(`tower-plate-${level}`, lGlazedX, [y, y + slabThickness], lz));
+    // And the lobby's own floor, inside the hollowed core. The plate above
+    // spans the apartment only, so without this the lift lobby is a shaft.
+    plates.push(
+      box(
+        `tower-lobby-plate-${level}`,
+        [coreX[0] + coreWall, coreX[1] - coreWall],
+        [y, y + slabThickness],
+        lobbyZ,
+      ),
+    );
     // The plaster soffit under the plate above. Without it the apartment
     // ceiling is the polished underside of a stone floor, which is why the
     // first interior render came back as a marble slot.
     if (level > 0) {
       ceilings.push(box(`tower-ceiling-${level}`, lGlazedX, [y - 0.09, y], lz));
+      ceilings.push(
+        box(
+          `tower-lobby-ceiling-${level}`,
+          [coreX[0] + coreWall, coreX[1] - coreWall],
+          [y - 0.09, y],
+          lobbyZ,
+        ),
+      );
     }
 
     const glassY: Range = glazeY;
@@ -737,6 +769,99 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     0.3,
     cornerRadius,
   );
+
+  // ── Roof plant ────────────────────────────────────────────────────────
+  //
+  // What is actually on top of a tower, and until now was not: the lift
+  // overrun, the tanks and the air-handling plant, all inside a screened
+  // enclosure, with a maintenance rail round the edge and a mast on top.
+  //
+  // It matters more than a roof anybody can walk on would, because nobody
+  // ever does walk on this one — it is only ever read as silhouette, from the
+  // beach and from the water. A flat parapet with nothing behind it is the
+  // clearest sign in any render that a building stops at the height its
+  // author got bored.
+  const plantX: Range = [topX[0] + 3.4, topX[0] + 14.2];
+  const plantZ: Range = [topZ[0] + 3.0, topZ[1] - 3.0];
+  // Above the crown, not tucked behind it. Screened plant that clears the
+  // parapet by nothing at all is geometry no camera in this project can see:
+  // the aerial framing sits level with the top of the building rather than
+  // above it, so a roof is only ever read as the silhouette it breaks.
+  const plantTop = crownTopY + 1.6;
+
+  // The screen: four louvred walls rather than a solid box, so the enclosure
+  // reads as plant screening and not as another storey.
+  for (const [key, ex, ez] of [
+    ['n', plantX, [plantZ[0], plantZ[0] + 0.16]],
+    ['s', plantX, [plantZ[1] - 0.16, plantZ[1]]],
+    ['w', [plantX[0], plantX[0] + 0.16], plantZ],
+    ['e', [plantX[1] - 0.16, plantX[1]], plantZ],
+  ] as [string, Range, Range][]) {
+    parapets.push(box(`roof-screen-${key}`, ex, [towerTopY + slabThickness, plantTop], ez));
+  }
+
+  // The lift overrun, which has to clear the topmost car and so is the one
+  // thing up here whose height is not a choice.
+  parapets.push(
+    box(
+      'roof-overrun',
+      [coreX[0] + 0.4, coreX[1] - 0.4],
+      [towerTopY + slabThickness, plantTop + 1.4],
+      [lobbyZ[0] - 3.0, lobbyZ[1] + 3.0],
+    ),
+  );
+
+  // Tanks and air handling inside the screen, low enough to be hidden from
+  // the ground and tall enough to break the skyline from the aerial.
+  for (let i = 0; i < 3; i += 1) {
+    const cx = plantX[0] + 2.2 + i * 3.4;
+    parapets.push(
+      box(
+        `roof-plant-${i}`,
+        [cx, cx + 2.4],
+        [towerTopY + slabThickness, crownTopY + 0.2 + i * 0.4],
+        [plantZ[0] + 1.4, plantZ[1] - 1.4],
+      ),
+    );
+  }
+
+  // The mast. Slender, and the last thing on the building.
+  //
+  // Twenty-two metres, not eight. The plant behind it is correctly invisible
+  // from the ground — that is what screening it is for — but the same sight
+  // line hides a mast too, and a mast nobody can see is not a mast. From a
+  // camera two metres up and a hundred and thirty out, the parapet occludes
+  // everything behind it below about ninety-seven metres; the first attempt
+  // topped out at ninety-four and vanished, which looked exactly like the
+  // geometry failing to generate.
+  parapets.push(
+    box(
+      'roof-mast-base',
+      [mid(coreX) - 0.55, mid(coreX) + 0.55],
+      [crownTopY + 3.6, crownTopY + 4.2],
+      [mid(lobbyZ) - 0.55, mid(lobbyZ) + 0.55],
+    ),
+  );
+  parapets.push(
+    box(
+      'roof-mast',
+      [mid(coreX) - 0.2, mid(coreX) + 0.2],
+      [crownTopY + 4.2, crownTopY + 22.0],
+      [mid(lobbyZ) - 0.2, mid(lobbyZ) + 0.2],
+    ),
+  );
+
+  // A maintenance rail set in from the parapet, on the two long elevations.
+  for (const zz of [topZ[0] + 1.2, topZ[1] - 1.2]) {
+    parapets.push(
+      box(
+        `roof-rail-${zz.toFixed(1)}`,
+        [topX[0] + 1.2, topX[1] - 1.2],
+        [crownTopY - 0.06, crownTopY],
+        [zz - 0.05, zz + 0.05],
+      ),
+    );
+  }
 
   // ── Amenity deck on the podium roof ───────────────────────────────────
 

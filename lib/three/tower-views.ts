@@ -130,6 +130,20 @@ export const TOWER_VIEWS: readonly CameraView[] = [
     exposure: INTERIOR_EXPOSURE,
   },
   {
+    id: 'lobby',
+    label: 'Lift lobby',
+    // Inside the service blade on the twelfth residential floor, facing the
+    // lifts. The floor you arrive at, and until now the one part of the
+    // journey the building did not have.
+    position: [-27.3, 64.1, 2.6],
+    target: [-27.8, 63.7, -2.8],
+    fov: 64,
+    // Opened up beyond the other interiors rather than stopped down. This is
+    // the one room in the building with no window in it at all, lit only by
+    // its own coves, and a photographer standing in it would do the same.
+    exposure: 1.4,
+  },
+  {
     id: 'residence',
     label: 'Living room',
     // Turned to face the room, not the window.
@@ -216,6 +230,8 @@ export const TOWER_VIEW_NOTES: Record<string, string> = {
     'The cinema foyer at the top of the podium: a box office facing the void and the auditorium seating behind it, on the one level that needs no daylight.',
   gym: 'The gym on the amenity floor at the base of the tower, its treadmills turned to the ocean glazing and a mirrored wall behind them.',
   spa: 'The spa on the same floor: three treatment bays off a tiled corridor, with a plunge pool and a cedar sauna at the far end against the core.',
+  lobby:
+    'The lift lobby on the twelfth residential floor — two lifts, a glazed screen to the escape stair, and the apartment door. One arrangement, repeated on every level, because that is what a core is.',
   gallery:
     'Third retail level. Frameless glass at the balustrade with a bronze capping rail — the same detail the apartment balconies use, because it is the same condition.',
   deck: 'The amenity deck occupies the whole ocean half of the podium roof, twenty-five metres up, with the pool set back from the edge so a swimmer faces the water.',
