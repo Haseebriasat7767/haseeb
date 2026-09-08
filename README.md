@@ -774,3 +774,86 @@ Cormorant Garamond carries editorial headings; Inter carries UI and body text.
 ## Deployment
 
 Vercel-compatible with no extra configuration — push and import the repository.
+
+## Phase 2 — the rest of the podium
+
+Phase 1 built the tower and furnished exactly one level of it. Phase 2 starts
+on the other nineteen, and the first thing it had to do was not add anything
+at all.
+
+### The draw-call problem, which was invisible
+
+`Model` clones a glTF's scene graph per placement. That is correct — three
+cannot draw one `Object3D` in two places — and a clone shares geometry and
+materials, so it looks cheap. It is not: a clone shares everything except the
+draw call. The retail fit-out was **802 draw calls** on its own. `retail-shelf`
+is nineteen primitives and stood in twenty places, which is three hundred and
+eighty draw calls for one piece of shop fitting. Measured in the atrium view,
+the whole scene came to **967 draw calls and 1.44 M triangles**, against this
+project's own stated budgets of 250 and 250 k.
+
+Nothing about that was visible. The scene renders correctly, and a headless
+SwiftShader frame gives no honest timing to notice it by — the only way to see
+it is to count, which is why it survived until a phase that wanted to multiply
+it by twenty storeys.
+
+`InstancedModels` groups every placement by piece and builds one
+`InstancedMesh` per _primitive_ rather than per placement. The transform that
+matters is the one that is easy to miss: a glTF's meshes sit under nodes with
+their own transforms, so an instance's matrix is the placement multiplied by
+that mesh's matrix within its own model. Using the placement alone collapses
+every part of every piece onto its floor contact point, which looks exactly
+like the models failing to load.
+
+The whole podium fit-out is now **142 draw calls for 27 distinct pieces** — and
+the cost has stopped scaling with how many floors are furnished. It scales with
+how many _kinds_ of thing are on them, which is the number that should govern
+it.
+
+### Five levels, five programmes
+
+The podium was five copies of the same clothes shop. That fixed the emptiness
+of the phase before it and introduced a worse problem: a mall is not one shop
+repeated, and five identical levels stacked in a void read as a rendering
+artefact, because no real developer lets one tenant have all five floors.
+
+Each level now has a programme, and they are the ordinary ones for a podium
+this size — entrance and lobby at grade, fashion above it, home and design
+above that, the food hall where the smell can vent, and the cinema at the top
+where it needs no daylight and pulls people past everything else on the way up.
+Two new walkthrough framings were added so the last two are actually seen; work
+on a level no camera visits is work nobody will ever look at.
+
+### Six new pieces
+
+| Piece            | Ref    | For                                                                                                     |
+| ---------------- | ------ | ------------------------------------------------------------------------------------------------------- |
+| `bar-stool`      | MDL-06 | The food-hall servery                                                                                   |
+| `cinema-row`     | MDL-13 | Four auditorium seats as one piece — an auditorium is rows, not a scatter                               |
+| `pendant`        | MDL-11 | Food hall and lobby. The one piece whose origin is at the CEILING, because that is what it is placed by |
+| `wall-light`     | MDL-11 | Corridors and lobbies                                                                                   |
+| `planter-trough` | MDL-12 | The mall's own landscape                                                                                |
+| `gym-rack`       | MDL-15 | The amenity floor                                                                                       |
+
+### Three defects the new cameras exposed
+
+Furnishing a level and then standing in it finds things that an empty level
+hides:
+
+- **The top retail level had no ceiling.** The floor-plate loop stops one short
+  of the top, which is right for floors — nobody stands on the podium roof from
+  inside — but it left the cinema foyer open to the sky, so from the box office
+  you looked straight up past the parapet at the pool, the parasols and the
+  palms on the deck.
+- **Five bar stools stood over a fifteen-metre drop.** The fit-out is written
+  in metres outward from the void edge, and a negative offset puts a piece on
+  the wrong side of the balustrade.
+- **A floor lamp stood exactly where the upper-gallery camera does**, and filled
+  half that framing with a lamp shade. The camera positions are as much a
+  constraint on the fit-out as the walls are.
+
+### Still to do
+
+The amenity interior (gym, spa, residents' lounge), the core lift lobby and
+corridor, a second residential unit type, the sub-penthouse and penthouse, and
+the roof plant enclosure. All of it is now affordable, which it was not before.

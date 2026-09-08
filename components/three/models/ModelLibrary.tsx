@@ -32,7 +32,7 @@ import type { Group, Mesh, Object3D } from 'three';
  * 77 per cent. Passing the decoder PATH instead is what keeps it local.
  */
 
-const DRACO_PATH = '/assets/draco/';
+export const DRACO_PATH = '/assets/draco/';
 const MODEL_PATH = '/assets/models/';
 
 /** Every piece `tools/blender/models.py` exports. */
@@ -81,7 +81,13 @@ export type ModelName =
   | 'mannequin'
   | 'escalator'
   | 'lift-doors'
-  | 'gym-bench';
+  | 'gym-bench'
+  | 'gym-rack'
+  | 'bar-stool'
+  | 'cinema-row'
+  | 'pendant'
+  | 'wall-light'
+  | 'planter-trough';
 
 export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
@@ -129,10 +135,21 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'escalator',
   'lift-doors',
   'gym-bench',
+  'gym-rack',
+  'bar-stool',
+  'cinema-row',
+  'pendant',
+  'wall-light',
+  'planter-trough',
 ];
 
 function url(name: ModelName): string {
   return `${MODEL_PATH}${name}.glb`;
+}
+
+/** The same path, for `InstancedModels`, which loads the pieces itself. */
+export function modelUrl(name: ModelName): string {
+  return url(name);
 }
 
 /**

@@ -1238,6 +1238,169 @@ def p_gym_bench():
     return parts
 
 
+
+# ── Phase 2: the pieces the other floors need ─────────────────────────────
+#
+# Five retail levels with one fit-out repeated on all of them is five copies
+# of a clothes shop, and that is what the podium was. A mall is a sequence of
+# different rooms: a lobby, then fashion, then home, then the food hall, then
+# the cinema. These are the pieces that sequence needs and the library did
+# not have.
+
+
+def p_bar_stool():
+    """A counter stool: round seat, splayed legs, a footring."""
+    parts = []
+    h = 0.74
+    seat = cylinder("stool_seat", 0.17, 0.07, (0, 0, h), verts=24, bevel=0.014)
+    parts.append(assign(seat, "upholsteryDark"))
+    # Splayed, not vertical. A stool with parallel legs falls over, and reads
+    # as though it would.
+    for i in range(4):
+        a = math.radians(45 + i * 90)
+        r0, r1 = 0.055, 0.155
+        leg = cylinder(f"stool_leg_{i}", 0.012, h, (0, 0, h / 2), verts=8, bevel=0.002)
+        lean = math.atan2(r1 - r0, h)
+        leg.rotation_euler = (lean * math.sin(a), -lean * math.cos(a), 0)
+        leg.location = (math.cos(a) * (r0 + r1) / 2, math.sin(a) * (r0 + r1) / 2, h / 2)
+        parts.append(assign(leg, "bronze"))
+    # `swept_arc` takes a radial width and a height, not a section tuple.
+    ring = swept_arc("stool_ring", 0.14, 350, 0.020, 0.020, verts=24, corner=0.006)
+    ring.location = (0, 0, 0.24)
+    parts.append(assign(ring, "bronze"))
+    return parts
+
+
+def p_cinema_row():
+    """Four auditorium seats as one piece.
+
+    Modelled as a row rather than a seat because that is how they are placed:
+    an auditorium is rows, not a scatter, and one model per row is a quarter
+    of the instances for the same result.
+
+    Seats down rather than folded up. Two attempts at a folded row read as a
+    stack of loose cushions — the fold is a subtlety that needs the seat, the
+    pedestal and the back to describe each other, and at the size an
+    auditorium is ever seen from here none of that survives. A row of seats
+    in the down position reads as seating immediately, which is the whole job.
+    """
+    parts = []
+    pitch = 0.58
+    for i in range(4):
+        x = (i - 1.5) * pitch
+        # The pedestal each seat cantilevers off.
+        base = rounded_box(f"cin_base_{i}", (pitch - 0.20, 0.30, 0.38), (x, 0.06, 0.19), bevel=0.02)
+        parts.append(assign(base, "darkMetal"))
+        seat = rounded_box(f"cin_seat_{i}", (pitch - 0.07, 0.50, 0.13), (x, -0.02, 0.44),
+                           bevel=0.045, segments=3)
+        parts.append(assign(seat, "upholsteryDark"))
+        back = rounded_box(f"cin_back_{i}", (pitch - 0.07, 0.14, 0.62), (x, 0.27, 0.77),
+                           bevel=0.045, segments=3)
+        back.rotation_euler = (math.radians(11), 0, 0)
+        parts.append(assign(back, "upholsteryDark"))
+    # Arms between and either side — five for four seats, running the depth of
+    # the seat rather than of the whole row.
+    for i in range(5):
+        x = (i - 2) * pitch
+        arm = rounded_box(f"cin_arm_{i}", (0.08, 0.46, 0.09), (x, -0.02, 0.57), bevel=0.03)
+        parts.append(assign(arm, "joinery"))
+    return parts
+
+
+def p_pendant():
+    """A hanging shade on a drop, hung from the ceiling rather than standing.
+
+    The origin is at the CEILING, not the floor — the one piece in the library
+    where that is right. Everything else is placed by where it stands; a
+    pendant is placed by what it hangs from, and giving it a floor origin
+    would mean every call site subtracting a storey height it should not need
+    to know.
+    """
+    parts = []
+    drop = 0.9
+    cord = cylinder("pend_cord", 0.006, drop, (0, 0, -drop / 2), verts=6, bevel=0.001)
+    parts.append(assign(cord, "darkMetal"))
+    shade = lathe("pend_shade", [
+        (0.02, -drop), (0.10, -drop - 0.05), (0.17, -drop - 0.16),
+        (0.19, -drop - 0.26), (0.185, -drop - 0.30),
+    ], verts=24)
+    parts.append(assign(shade, "bronze"))
+    lamp = sphere("pend_lamp", 0.055, (0, 0, -drop - 0.28), segments=12, rings=8)
+    parts.append(assign(lamp, "glow"))
+    return parts
+
+
+def p_wall_light():
+    """A wall washer: a small bracket and a lit slot.
+
+    Authored facing +Y like everything else, so it applies to a wall whose
+    face points the way the piece does.
+    """
+    parts = []
+    plate = rounded_box("wall_plate", (0.16, 0.05, 0.30), (0, 0.025, 0), bevel=0.012)
+    parts.append(assign(plate, "bronze"))
+    slot = rounded_box("wall_slot", (0.10, 0.02, 0.22), (0, 0.05, 0), bevel=0.006)
+    parts.append(assign(slot, "glow"))
+    return parts
+
+
+def p_planter_trough():
+    """A long trough of planting — the mall's own landscape.
+
+    The soil is a separate part and sits below the rim, because a planter
+    filled level to its own edge reads as a box of paint. What grows out of
+    it is placed by the scene as foliage cards; this is the vessel and the
+    soil only.
+    """
+    parts = []
+    w, d, h, t = 2.2, 0.62, 0.52, 0.08
+    # Four walls and a floor, not a solid block. The first version buried the
+    # soil inside the body, where it was geometry nobody would ever see: a
+    # planter is a container, and the whole of what reads is the fact that
+    # you can see into it.
+    for name, size, loc in (
+        ("n", (w, t, h), (0, -(d - t) / 2, h / 2)),
+        ("s", (w, t, h), (0, (d - t) / 2, h / 2)),
+        ("w", (t, d - t * 2, h), (-(w - t) / 2, 0, h / 2)),
+        ("e", (t, d - t * 2, h), ((w - t) / 2, 0, h / 2)),
+        ("floor", (w - t * 2, d - t * 2, t), (0, 0, t / 2)),
+    ):
+        parts.append(assign(rounded_box(f"trough_{name}", size, loc, bevel=0.014), "travertine"))
+    soil = rounded_box("trough_soil", (w - t * 2, d - t * 2, 0.10), (0, 0, h - 0.13), bevel=0.01)
+    parts.append(assign(soil, "upholsteryDark"))
+    return parts
+
+
+def p_gym_rack():
+    """A dumbbell rack — two tiers, loaded.
+
+    Weights are spheres on a short bar rather than proper hex heads. At the
+    distance a gym is ever seen from here that reads correctly, and the
+    honest alternative costs eight hundred triangles a pair.
+    """
+    parts = []
+    w = 1.6
+    for tier, z in ((0, 0.36), (1, 0.78)):
+        shelf = rounded_box(f"gym_shelf_{tier}", (w, 0.34, 0.05), (0, 0, z), bevel=0.01)
+        parts.append(assign(shelf, "darkMetal"))
+        for i in range(6):
+            x = -w / 2 + 0.16 + (w - 0.32) * (i / 5)
+            r = 0.055 + wobble(77 + tier, i) * 0.02
+            bar = cylinder(f"gym_bar_{tier}_{i}", 0.014, 0.30, (x, 0, z + r + 0.02),
+                           verts=8, bevel=0.002)
+            bar.rotation_euler = (math.radians(90), 0, 0)
+            parts.append(assign(bar, "darkMetal"))
+            for side in (-1, 1):
+                head = sphere(f"gym_w_{tier}_{i}_{side}", r,
+                              (x, side * 0.12, z + r + 0.02), segments=10, rings=6)
+                parts.append(assign(head, "darkMetal"))
+    for side in (-1, 1):
+        leg = rounded_box(f"gym_leg_{side}", (0.06, 0.34, 0.82), (side * (w / 2 - 0.05), 0, 0.41),
+                          bevel=0.01)
+        parts.append(assign(leg, "darkMetal"))
+    return parts
+
+
 PIECES = {
     "sofa-3seat": (p_sofa_3seat, "MDL-01"),
     "lounge-chair": (p_lounge_chair, "MDL-02"),
@@ -1284,6 +1447,12 @@ PIECES = {
     "escalator": (p_escalator, "MDL-14"),
     "lift-doors": (p_lift_doors, "MDL-14"),
     "gym-bench": (p_gym_bench, "MDL-15"),
+    "gym-rack": (p_gym_rack, "MDL-15"),
+    "bar-stool": (p_bar_stool, "MDL-06"),
+    "cinema-row": (p_cinema_row, "MDL-13"),
+    "pendant": (p_pendant, "MDL-11"),
+    "wall-light": (p_wall_light, "MDL-11"),
+    "planter-trough": (p_planter_trough, "MDL-12"),
 }
 
 

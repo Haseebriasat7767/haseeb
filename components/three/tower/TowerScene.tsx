@@ -22,7 +22,7 @@ import { Shoreline } from './Shoreline';
 import { Tower } from './Tower';
 import { Apartment } from './Apartment';
 import { createApartment } from './ApartmentGeometry';
-import { Model } from '../models/ModelLibrary';
+import { InstancedModels } from '../models/InstancedModels';
 import { createParkLayout } from './Park';
 import { createRetailProps } from './RetailProps';
 import { createSiteProps } from './SiteProps';
@@ -239,12 +239,15 @@ export function TowerScene({
           emissiveIntensity={1.35}
         />
 
-        {/* What makes the site look inhabited. Each is its own draw call;
-            twenty of them against a budget of two hundred and fifty is
-            cheap for the difference between a place and a massing model. */}
-        {[...props, ...retail].map((p) => (
-          <Model key={p.key} name={p.name} position={p.position} rotationY={p.rotationY} />
-        ))}
+        {/* What makes the site look inhabited — the cars and people on the
+            plaza, and five storeys of shop fitting around the atrium.
+
+            Instanced, not cloned. Mounted one `Model` per placement this was
+            802 draw calls on its own: a clone shares geometry and materials
+            but not draw calls, and `retail-shelf` is nineteen primitives
+            standing in twenty places. Batched by piece it is a few dozen,
+            and the cost stops scaling with how many floors are furnished. */}
+        <InstancedModels name="site-props" placements={[...props, ...retail]} />
         <Apartment layout={apartment} detail={detail} />
         <Shoreline layout={shoreline} detail={detail} />
       </group>

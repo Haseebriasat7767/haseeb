@@ -8,7 +8,7 @@ import { createFoliageCards } from '../villa/landscape/FoliageGeometry';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../villa/VillaPrimitives';
 import type { DetailTier } from '../villa/VillaTypes';
 import { ArtworkPanels } from '../ArtworkPanels';
-import { Model } from '../models/ModelLibrary';
+import { InstancedModels } from '../models/InstancedModels';
 import type { ApartmentLayout } from './ApartmentGeometry';
 
 /**
@@ -56,13 +56,11 @@ export function Apartment({
       />
       <ArtworkPanels name="apt-artwork" works={artwork} />
 
-      {/* The Blender-authored pieces. Each is its own draw call rather than
-          merged, which is the price of real geometry — fourteen of them
-          against a budget of two hundred and fifty is a price worth paying
-          for furniture that has a silhouette. */}
-      {models.map((m) => (
-        <Model key={m.key} name={m.name} position={m.position} rotationY={m.rotationY} />
-      ))}
+      {/* The Blender-authored pieces, batched by piece rather than cloned
+          per placement — the same reason the retail fit-out is. A pair of
+          nightstands and a pair of table lamps are four placements of two
+          models, and should cost what two models cost. */}
+      <InstancedModels name="apt-models" placements={models} />
 
       <MergedBoxes name="apt-joinery" specs={parts.joinery} material={materials.joinery} />
       <MergedBoxes name="apt-plaster" specs={parts.plaster} material={materials.plaster} />

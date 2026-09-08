@@ -423,6 +423,18 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     );
   }
 
+  // The podium roof, as a plate like every other — punched for the atrium so
+  // the roof light still reaches the ground floor.
+  //
+  // Missing entirely until the cinema level was given a camera to be seen
+  // from. The plate loop above stops one short of the top, which is right for
+  // FLOORS — nobody stands on the podium roof from inside — but it left the
+  // uppermost retail level with no ceiling at all, so from the foyer you
+  // looked straight up past the parapet at the pool, the parasols and the
+  // palms on the deck. An empty level hides that; a furnished one with a
+  // camera in it does not.
+  plate('podium-roof', [podiumTopY - 0.35, podiumTopY]);
+
   // The roof light. Set into the amenity deck above, so the atrium is
   // daylit from the top for the whole five storeys — and so the deck has a
   // lantern glowing in it after dark.

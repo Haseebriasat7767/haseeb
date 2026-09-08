@@ -9,3 +9,7 @@ npm-debug.log*
 !.env.example
 .vercel
 *.tsbuildinfo
+
+# Contact sheets from `tools/blender/models.py --preview`. Build output for
+# looking at, not artefacts the site serves.
+/preview

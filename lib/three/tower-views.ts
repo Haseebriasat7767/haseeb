@@ -72,6 +72,28 @@ export const TOWER_VIEWS: readonly CameraView[] = [
     exposure: INTERIOR_EXPOSURE,
   },
   {
+    id: 'foodHall',
+    label: 'Food hall',
+    // Fourth retail level, standing in the circulation strip between the
+    // servery and the balustrade and looking along the run — which is where
+    // you would queue. Set behind the counter instead, as the first cut had
+    // it, the counter hides its own stools and the shot is of a worktop.
+    position: [8.1, 16.7, -18.2],
+    target: [7.4, 16.0, -8.8],
+    fov: 62,
+    exposure: INTERIOR_EXPOSURE,
+  },
+  {
+    id: 'cinema',
+    label: 'Cinema foyer',
+    // Top retail level. The box office on the void and the auditorium behind
+    // it — the one level in the podium that has no daylight to lose.
+    position: [3.4, 21.7, -16.2],
+    target: [8.6, 21.0, -9.4],
+    fov: 60,
+    exposure: INTERIOR_EXPOSURE,
+  },
+  {
     id: 'deck',
     label: 'Pool deck',
     // On the podium roof beside the pool, facing the water.
@@ -160,6 +182,10 @@ export const TOWER_VIEW_NOTES: Record<string, string> = {
     'The ocean entrance, under a deep soffit carried on stone columns — the point where the beach hands you over to the building.',
   atrium:
     'The void runs the full five retail levels to a roof light set into the pool deck above. Lit coves at every floor edge do most of the work after dark.',
+  foodHall:
+    'The food hall on the fourth retail level — a servery on the atrium with stools along it, communal tables behind, and pendants over both.',
+  cinema:
+    'The cinema foyer at the top of the podium: a box office facing the void and the auditorium seating behind it, on the one level that needs no daylight.',
   gallery:
     'Third retail level. Frameless glass at the balustrade with a bronze capping rail — the same detail the apartment balconies use, because it is the same condition.',
   deck: 'The amenity deck occupies the whole ocean half of the podium roof, twenty-five metres up, with the pool set back from the edge so a swimmer faces the water.',
