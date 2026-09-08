@@ -7,6 +7,7 @@ import { FoliageCards } from '../villa/landscape/FoliageCards';
 import { createFoliageCards } from '../villa/landscape/FoliageGeometry';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../villa/VillaPrimitives';
 import type { DetailTier } from '../villa/VillaTypes';
+import { ArtworkPanels } from '../ArtworkPanels';
 import { Model } from '../models/ModelLibrary';
 import type { ApartmentLayout } from './ApartmentGeometry';
 
@@ -26,14 +27,15 @@ export function Apartment({
   detail?: DetailTier;
 }) {
   const materials = getMaterials();
-  const { parts, forms, walls, soffit, models } = layout;
+  const { parts, forms, walls, soffit, models, artwork, artBodies } = layout;
 
   // Indoor trees share the outdoor cards, scaled well down: a crown outside
   // is mostly gaps and runs several times its own radius in card size,
   // where a potted tree is a dense little mass and cards that big would
   // fill the room.
   const plantCards = useMemo(
-    () => createFoliageCards(parts.foliageClusters, detail, { sizeScale: 0.6, cells: [0, 1, 2, 3] }),
+    () =>
+      createFoliageCards(parts.foliageClusters, detail, { sizeScale: 0.6, cells: [0, 1, 2, 3] }),
     [parts.foliageClusters, detail],
   );
 
@@ -44,17 +46,22 @@ export function Apartment({
 
       <FormRenderer name="apt-forms" forms={forms} />
 
+      {/* DEC-03. The stretchers are merged with the rest of the dark metal;
+          the faces cannot be, because each is a different image. */}
+      <MergedBoxes
+        name="apt-art-bodies"
+        specs={artBodies}
+        material={materials.darkMetal}
+        castShadow={false}
+      />
+      <ArtworkPanels name="apt-artwork" works={artwork} />
+
       {/* The Blender-authored pieces. Each is its own draw call rather than
           merged, which is the price of real geometry — fourteen of them
           against a budget of two hundred and fifty is a price worth paying
           for furniture that has a silhouette. */}
       {models.map((m) => (
-        <Model
-          key={m.key}
-          name={m.name}
-          position={m.position}
-          rotationY={m.rotationY}
-        />
+        <Model key={m.key} name={m.name} position={m.position} rotationY={m.rotationY} />
       ))}
 
       <MergedBoxes name="apt-joinery" specs={parts.joinery} material={materials.joinery} />

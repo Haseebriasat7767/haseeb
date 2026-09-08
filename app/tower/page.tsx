@@ -33,23 +33,21 @@ export default function TowerPage() {
             Twenty storeys, generated in code
           </h1>
           <p className="text-lede text-mist mt-6">
-            Five retail levels wrapped around an atrium that runs the full height of the
-            podium to a roof light, fifteen floors of apartments above it, and the amenity
-            deck on the roof between the two. Every balcony, fin, slab edge and shopfront
-            is a pure function of one configuration object — there is no model file and no
-            photograph anywhere in it.
+            Five retail levels wrapped around an atrium that runs the full height of the podium to a
+            roof light, fifteen floors of apartments above it, and the amenity deck on the roof
+            between the two. Every balcony, fin, slab edge and shopfront is a pure function of one
+            configuration object — there is no model file and no photograph anywhere in it.
           </p>
           <p className="text-lede text-mist mt-5">
-            It shares the residence&rsquo;s renderer completely: the same materials, the
-            same merged-geometry primitives, the same time-of-day rig and the same
-            finishing chain. What is new is only what a building on a beach actually
-            needs — an ocean written at swell scale rather than pool scale, a beach that
-            falls to the water, and palms.
+            It shares the residence&rsquo;s renderer completely: the same materials, the same
+            merged-geometry primitives, the same time-of-day rig and the same finishing chain. What
+            is new is only what a building on a beach actually needs — an ocean written at swell
+            scale rather than pool scale, a beach that falls to the water, and palms.
           </p>
           <p className="text-mist/70 mt-8 text-sm">
-            The site is fictional and unlocated. It is composed for the light rather than
-            surveyed: the sun at golden hour sits low over the water on the building&rsquo;s
-            ocean elevation, which is what puts the sunset in front of the balconies.
+            The site is fictional and unlocated. It is composed for the light rather than surveyed:
+            the sun at golden hour sits low over the water on the building&rsquo;s ocean elevation,
+            which is what puts the sunset in front of the balconies.
           </p>
         </div>
       </Container>

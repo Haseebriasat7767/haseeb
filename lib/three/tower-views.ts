@@ -155,8 +155,7 @@ export const DEFAULT_TOWER_VIEW: CameraView = TOWER_VIEWS[0]!;
 export const TOWER_VIEW_NOTES: Record<string, string> = {
   arrival:
     'Twenty storeys on a five-storey retail base. The podium carries the horizontal banding; the tower above it is glass, bronze fins and a balcony on every floor.',
-  park:
-    'Mown lawn and a coconut grove between the road and the boardwalk, with a path winding through it and beds of low planting either side.',
+  park: 'Mown lawn and a coconut grove between the road and the boardwalk, with a path winding through it and beds of low planting either side.',
   colonnade:
     'The ocean entrance, under a deep soffit carried on stone columns — the point where the beach hands you over to the building.',
   atrium:

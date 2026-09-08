@@ -59,11 +59,7 @@ export function createSkyline(): SkylineLayout {
   const groundZ: Range = [360, 1320];
   ground.push({
     key: 'city-ground',
-    position: [
-      (groundX[0] + groundX[1]) / 2,
-      0.4,
-      (groundZ[0] + groundZ[1]) / 2,
-    ],
+    position: [(groundX[0] + groundX[1]) / 2, 0.4, (groundZ[0] + groundZ[1]) / 2],
     scale: [groundX[1] - groundX[0], 2.4, groundZ[1] - groundZ[0]],
   });
 

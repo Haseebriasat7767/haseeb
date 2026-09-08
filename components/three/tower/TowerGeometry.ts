@@ -96,14 +96,7 @@ function box(key: string, x: Range, y: Range, z: Range): BoxSpec {
  * corners meet without overlapping, so the merged geometry has no z-fighting
  * seam where a chamfer would otherwise double up.
  */
-function ring(
-  out: BoxSpec[],
-  key: string,
-  x: Range,
-  y: Range,
-  z: Range,
-  thickness: number,
-): void {
+function ring(out: BoxSpec[], key: string, x: Range, y: Range, z: Range, thickness: number): void {
   const innerZ: Range = [z[0] + thickness, z[1] - thickness];
   out.push(box(`${key}-n`, x, y, [z[0], z[0] + thickness]));
   out.push(box(`${key}-s`, x, y, [z[1] - thickness, z[1]]));
@@ -139,7 +132,7 @@ function arcRun(
   const quarter = Math.PI / 2;
   const mid = radius - thickness / 2;
   // Overlapped a little so no seam opens between segments.
-  const len = ((quarter / steps) * mid) * 1.35;
+  const len = (quarter / steps) * mid * 1.35;
 
   for (let i = 0; i < steps; i += 1) {
     const t = startAngle + (quarter * (i + 0.5)) / steps;
@@ -169,10 +162,7 @@ function roundedRing(
   cornerR: number,
   steps = 5,
 ): void {
-  const r = Math.max(
-    0,
-    Math.min(cornerR, (x[1] - x[0]) / 2 - 0.01, (z[1] - z[0]) / 2 - 0.01),
-  );
+  const r = Math.max(0, Math.min(cornerR, (x[1] - x[0]) / 2 - 0.01, (z[1] - z[0]) / 2 - 0.01));
 
   if (r <= thickness) {
     ring(out, key, x, y, z, thickness);
@@ -388,7 +378,16 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   // retail levels are a real volume you can stand inside, and filling them
   // with stone would make the whole podium a prop that only works from
   // outside — which is exactly what a five-storey mall must not be.
-  roundedRing(mass, 'podium-shell', innerX, [0, podiumTopY], innerZ, 0.45, podiumCornerRadius - shopfrontInset, 7);
+  roundedRing(
+    mass,
+    'podium-shell',
+    innerX,
+    [0, podiumTopY],
+    innerZ,
+    0.45,
+    podiumCornerRadius - shopfrontInset,
+    7,
+  );
 
   // Ground floor, solid: the atrium void starts above it.
   floors.push(box('podium-floor-0', innerX, [-0.2, 0], innerZ));
@@ -409,14 +408,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     // detail the balconies use, because it is the same condition.
     const railY: Range = [y, y + atriumBalustradeHeight];
     ring(balustrades, `atrium-glass-${level}`, atriumX, railY, atriumZ, 0.05);
-    ring(
-      podiumRails,
-      `atrium-rail-${level}`,
-      atriumX,
-      [railY[1], railY[1] + 0.07],
-      atriumZ,
-      0.1,
-    );
+    ring(podiumRails, `atrium-rail-${level}`, atriumX, [railY[1], railY[1] + 0.07], atriumZ, 0.1);
 
     // A lit cove running the void edge on the underside of each plate. In a
     // real mall this is most of the light in the space, and it is what makes
@@ -596,17 +588,12 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     // ceiling is the polished underside of a stone floor, which is why the
     // first interior render came back as a marble slot.
     if (level > 0) {
-      ceilings.push(
-        box(`tower-ceiling-${level}`, lGlazedX, [y - 0.09, y], lz),
-      );
+      ceilings.push(box(`tower-ceiling-${level}`, lGlazedX, [y - 0.09, y], lz));
     }
 
     const glassY: Range = glazeY;
     const straightZ: Range = [lz[0] + cornerRadius, lz[1] - cornerRadius];
-    const straightX: Range = [
-      Math.max(lGlazedX[0], lx[0] + cornerRadius),
-      lx[1] - cornerRadius,
-    ];
+    const straightX: Range = [Math.max(lGlazedX[0], lx[0] + cornerRadius), lx[1] - cornerRadius];
 
     glazedWall(
       towerGlass,
@@ -672,12 +659,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     const balconyZ: Range = straightZ;
 
     balconySlabs.push(
-      box(
-        `balcony-slab-${level}`,
-        [lx[1], balconyOuterX],
-        [y, y + slabThickness],
-        balconyZ,
-      ),
+      box(`balcony-slab-${level}`, [lx[1], balconyOuterX], [y, y + slabThickness], balconyZ),
     );
 
     const railY: Range = [y + slabThickness, y + slabThickness + balustradeHeight];
@@ -686,20 +668,16 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
       box(`balcony-glass-e-${level}`, [balconyOuterX - 0.04, balconyOuterX], railY, balconyZ),
     );
     balconyGlass.push(
-      box(
-        `balcony-glass-n-${level}`,
-        [lx[1], balconyOuterX],
-        railY,
-        [balconyZ[0], balconyZ[0] + 0.04],
-      ),
+      box(`balcony-glass-n-${level}`, [lx[1], balconyOuterX], railY, [
+        balconyZ[0],
+        balconyZ[0] + 0.04,
+      ]),
     );
     balconyGlass.push(
-      box(
-        `balcony-glass-s-${level}`,
-        [lx[1], balconyOuterX],
-        railY,
-        [balconyZ[1] - 0.04, balconyZ[1]],
-      ),
+      box(`balcony-glass-s-${level}`, [lx[1], balconyOuterX], railY, [
+        balconyZ[1] - 0.04,
+        balconyZ[1],
+      ]),
     );
 
     // The capping rail, which is what stops frameless glass reading as a
@@ -717,8 +695,12 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   const topX: Range = [towerX[0] + topInset, towerX[1] - topInset];
   const topZ: Range = [towerZ[0] + topInset, towerZ[1] - topInset];
   plates.push(
-    box('tower-plate-roof', [Math.max(glazedX[0], topX[0]), topX[1]],
-        [towerTopY, towerTopY + slabThickness], topZ),
+    box(
+      'tower-plate-roof',
+      [Math.max(glazedX[0], topX[0]), topX[1]],
+      [towerTopY, towerTopY + slabThickness],
+      topZ,
+    ),
   );
   roundedRing(
     parapets,
@@ -777,7 +759,16 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   );
 
   // Parapet upstand plus frameless glass above it, all the way round.
-  roundedRing(deckParapet, 'deck-upstand', podiumX, [deckY, deckY + 0.42], podiumZ, 0.55, podiumCornerRadius, 7);
+  roundedRing(
+    deckParapet,
+    'deck-upstand',
+    podiumX,
+    [deckY, deckY + 0.42],
+    podiumZ,
+    0.55,
+    podiumCornerRadius,
+    7,
+  );
   roundedRing(
     deckGlass,
     'deck-balustrade',
@@ -866,10 +857,20 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     if (x < deckX[0] + margin || x > deckX[1] - margin) return false;
     if (z < deckZ[0] + margin || z > deckZ[1] - margin) return false;
     // Not through the roof light, and not in the water.
-    if (x > lightX[0] - margin && x < lightX[1] + margin &&
-        z > lightZ[0] - margin && z < lightZ[1] + margin) return false;
-    if (x > poolX[0] - margin && x < poolX[1] + margin &&
-        z > poolZ[0] - margin && z < poolZ[1] + margin) return false;
+    if (
+      x > lightX[0] - margin &&
+      x < lightX[1] + margin &&
+      z > lightZ[0] - margin &&
+      z < lightZ[1] + margin
+    )
+      return false;
+    if (
+      x > poolX[0] - margin &&
+      x < poolX[1] + margin &&
+      z > poolZ[0] - margin &&
+      z < poolZ[1] + margin
+    )
+      return false;
     return true;
   };
 
@@ -969,7 +970,9 @@ export function createShorelineLayout(plan: TowerPlan): ShorelineLayout {
     const z = -22 + (i % 7) * 7.5 + (r - 0.5) * 2;
     loungers.push(box(`beach-lounger-${i}`, [x, x + 1.9], [0.02, 0.4], [z - 0.36, z + 0.36]));
     if (i % 2 === 0) {
-      parasols.push(box(`beach-parasol-${i}`, [x + 2.2, x + 2.34], [0.02, 2.3], [z - 0.07, z + 0.07]));
+      parasols.push(
+        box(`beach-parasol-${i}`, [x + 2.2, x + 2.34], [0.02, 2.3], [z - 0.07, z + 0.07]),
+      );
       parasols.push(
         box(`beach-canopy-${i}`, [x + 0.1, x + 4.4], [2.3, 2.44], [z - 2.05, z + 2.05]),
       );

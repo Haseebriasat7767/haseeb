@@ -1,3 +1,4 @@
+import type { ArtworkPlacement } from '../ArtworkPanels';
 import type { BlobSpec } from '../villa/landscape/LandscapeTypes';
 import type { Form } from '../villa/furniture/FormTypes';
 import { createFloorVessel } from '../villa/furniture/Pieces';
@@ -54,14 +55,7 @@ function flutedPanel(
   const step = span(along) / count;
   for (let i = 0; i < count; i += 1) {
     const c = along[0] + step * (i + 0.5);
-    out.push(
-      box(
-        `${key}-${i}`,
-        [at, at + depth],
-        y,
-        [c - step * 0.36, c + step * 0.36],
-      ),
-    );
+    out.push(box(`${key}-${i}`, [at, at + depth], y, [c - step * 0.36, c + step * 0.36]));
   }
 }
 
@@ -94,6 +88,23 @@ export const FACE = {
   west: Math.PI / 2,
 } as const;
 
+/**
+ * Which way a hung canvas faces.
+ *
+ * Not the `FACE` table above. That one is for glTF pieces, which are authored
+ * facing Blender +Y and arrive facing −Z; a plane faces +Z. The two tables
+ * are a quarter turn apart in three of four directions, and using the wrong
+ * one hangs every picture flat against the inside of its own wall.
+ */
+export const PANEL_FACE = {
+  /** Outward normal +Z. */
+  south: 0,
+  north: Math.PI,
+  /** Outward normal +X. */
+  east: Math.PI / 2,
+  west: -Math.PI / 2,
+} as const;
+
 export type ApartmentLayout = {
   parts: Parts;
   forms: Form[];
@@ -103,6 +114,9 @@ export type ApartmentLayout = {
   soffit: BoxSpec[];
   /** Furniture loaded from glTF rather than generated. */
   models: ModelPlacement[];
+  /** DEC-03 — the pictures, and the canvas depth behind each. */
+  artwork: ArtworkPlacement[];
+  artBodies: BoxSpec[];
 };
 
 export function createApartment(
@@ -151,7 +165,12 @@ export function createApartment(
   // ── Partitions ────────────────────────────────────────────────────────
   walls.push(box('apt-wall-lounge', [loungeBackX, loungeBackX + 0.26], [floorY, ceilingY], z));
   walls.push(
-    box('apt-wall-bed', [westX, loungeBackX], [floorY, ceilingY], [bedroomZ[1], bedroomZ[1] + 0.24]),
+    box(
+      'apt-wall-bed',
+      [westX, loungeBackX],
+      [floorY, ceilingY],
+      [bedroomZ[1], bedroomZ[1] + 0.24],
+    ),
   );
 
   // ── Lounge: the millwork and media wall ───────────────────────────────
@@ -168,13 +187,20 @@ export function createApartment(
   ];
 
   for (const [bi, bay] of bays.entries()) {
-    parts.joinery.push(box(`apt-case-${bi}-back`, [wallFace, wallFace + 0.06], [floorY, shelfTop], bay));
+    parts.joinery.push(
+      box(`apt-case-${bi}-back`, [wallFace, wallFace + 0.06], [floorY, shelfTop], bay),
+    );
     // Verticals.
     const divisions = 3;
     for (let i = 0; i <= divisions; i += 1) {
       const c = bay[0] + (span(bay) / divisions) * i;
       parts.joinery.push(
-        box(`apt-case-${bi}-v${i}`, [wallFace, wallFace + 0.36], [floorY, shelfTop], [c - 0.025, c + 0.025]),
+        box(
+          `apt-case-${bi}-v${i}`,
+          [wallFace, wallFace + 0.36],
+          [floorY, shelfTop],
+          [c - 0.025, c + 0.025],
+        ),
       );
     }
     // Shelves, and a lit reveal under each one.
@@ -188,7 +214,12 @@ export function createApartment(
         box(`apt-case-${bi}-c${r}`, [wallFace + 0.02, wallFace + 0.1], [sy - 0.045, sy], bay),
       );
       parts.strip.push(
-        box(`apt-case-${bi}-l${r}`, [wallFace + 0.03, wallFace + 0.09], [sy - 0.038, sy - 0.008], bay),
+        box(
+          `apt-case-${bi}-l${r}`,
+          [wallFace + 0.03, wallFace + 0.09],
+          [sy - 0.038, sy - 0.008],
+          bay,
+        ),
       );
 
       // Objects on the shelves. Turned vessels and stacked books — the
@@ -222,7 +253,14 @@ export function createApartment(
 
   // The media panel: fluted timber, with a dark screen set proud of it.
   flutedPanel(parts.joinery, 'apt-flute', [-2.3, 2.3], wallFace, [floorY, shelfTop], 0.055);
-  parts.dark.push(box('apt-screen', [wallFace + 0.06, wallFace + 0.11], [floorY + 0.92, floorY + 1.86], [-1.55, 1.55]));
+  parts.dark.push(
+    box(
+      'apt-screen',
+      [wallFace + 0.06, wallFace + 0.11],
+      [floorY + 0.92, floorY + 1.86],
+      [-1.55, 1.55],
+    ),
+  );
 
   // ── Lounge: the dropped soffit ────────────────────────────────────────
   // A lowered plane over the seating with a cove around it. In a flat-slab
@@ -295,7 +333,11 @@ export function createApartment(
       const r = rand(seed + i * 17);
       parts.foliageClusters.push({
         key: `${key}-crown-${i}`,
-        position: [px + (r - 0.5) * 0.5, crownY + (rand(seed + i * 23) - 0.4) * 0.42, pz + (rand(seed + i * 31) - 0.5) * 0.5],
+        position: [
+          px + (r - 0.5) * 0.5,
+          crownY + (rand(seed + i * 23) - 0.4) * 0.42,
+          pz + (rand(seed + i * 31) - 0.5) * 0.5,
+        ],
         radius: 0.42 + r * 0.2,
         scale: [1, 0.86, 1],
         seed: seed + i,
@@ -311,8 +353,12 @@ export function createApartment(
   // ── Lounge: sheers at the glass ───────────────────────────────────────
   // Only the voile. A wall of glass on a private floor has no reason to
   // carry heavy curtains, and the sheer is what softens the light.
-  parts.sheer.push(box('apt-sheer-n', [glassX - 0.34, glassX - 0.28], [floorY, ceilingY], [z[0] + 0.4, -6.6]));
-  parts.sheer.push(box('apt-sheer-s', [glassX - 0.34, glassX - 0.28], [floorY, ceilingY], [6.6, z[1] - 0.4]));
+  parts.sheer.push(
+    box('apt-sheer-n', [glassX - 0.34, glassX - 0.28], [floorY, ceilingY], [z[0] + 0.4, -6.6]),
+  );
+  parts.sheer.push(
+    box('apt-sheer-s', [glassX - 0.34, glassX - 0.28], [floorY, ceilingY], [6.6, z[1] - 0.4]),
+  );
 
   // ── Bedroom ───────────────────────────────────────────────────────────
   const bedX = westX + 0.3;
@@ -331,7 +377,12 @@ export function createApartment(
   );
 
   parts.rugs.push(
-    box('apt-bed-rug', [bedX + 0.6, bedX + 5.4], [floorY, floorY + 0.022], [bedCentreZ - 2.6, bedCentreZ + 2.6]),
+    box(
+      'apt-bed-rug',
+      [bedX + 0.6, bedX + 5.4],
+      [floorY, floorY + 0.022],
+      [bedCentreZ - 2.6, bedCentreZ + 2.6],
+    ),
   );
 
   // The bed model carries its own headboard and pillows.
@@ -347,7 +398,12 @@ export function createApartment(
   plant('apt-bed-tree', bedX + 5.6, bedroomZ[0] + 1.0, 2.3, 839);
 
   parts.sheer.push(
-    box('apt-bed-sheer', [bedX + 3.4, loungeBackX - 0.4], [floorY, ceilingY], [z[0] + 0.28, z[0] + 0.34]),
+    box(
+      'apt-bed-sheer',
+      [bedX + 3.4, loungeBackX - 0.4],
+      [floorY, ceilingY],
+      [z[0] + 0.28, z[0] + 0.34],
+    ),
   );
 
   // Dining, between the kitchen and the lounge glazing.
@@ -355,8 +411,14 @@ export function createApartment(
   for (let i = 0; i < 6; i += 1) {
     const side = i < 3 ? -1 : 1;
     const z = -6.0 + ((i % 3) - 1) * 0.78;
-    put(`apt-dchair-${i}`, 'dining-chair', -12.6 + side * 0.86, z, floorY,
-        side < 0 ? 'east' : 'west');
+    put(
+      `apt-dchair-${i}`,
+      'dining-chair',
+      -12.6 + side * 0.86,
+      z,
+      floorY,
+      side < 0 ? 'east' : 'west',
+    );
   }
 
   // ── Kitchen and bathroom ──────────────────────────────────────────────
@@ -373,7 +435,9 @@ export function createApartment(
   walls.push(box('apt-wall-bath', [partX + 0.2, -9.4], [floorY, ceilingY], [bathZ, bathZ + 0.2]));
 
   // Honed stone underfoot in the wet rooms, as it would be.
-  parts.stone.push(box('apt-bath-floor', [partX + 0.2, -9.4], [floorY, floorY + 0.015], [bathZ + 0.2, 10.8]));
+  parts.stone.push(
+    box('apt-bath-floor', [partX + 0.2, -9.4], [floorY, floorY + 0.015], [bathZ + 0.2, 10.8]),
+  );
 
   // Kitchen: a run against the wall, an island parallel to it.
   put('apt-kitchen-run', 'kitchen-run', kitchenBackX + 0.33, 5.0, floorY, 'east');
@@ -385,7 +449,58 @@ export function createApartment(
   put('apt-wc', 'wc', -15.2, bathZ + 0.5, floorY, 'south');
   put('apt-shower', 'shower-screen', -10.6, 5.2, floorY, 'north');
 
-  return { parts, forms, walls, soffit, models };
+  // ── DEC-03 · the pictures ─────────────────────────────────────────────
+  //
+  // Hung where this plan actually has blank wall, which is less of it than a
+  // house would have: the lounge is glazed on three sides and its fourth is
+  // millwork, so the two lounge pieces go on the returns of that wall beyond
+  // the shelving bays rather than on the bays themselves.
+  const artwork: ArtworkPlacement[] = [];
+  const artBodies: BoxSpec[] = [];
+  const hang = (
+    key: string,
+    art: string,
+    px: number,
+    pz: number,
+    py: number,
+    w: number,
+    h: number,
+    facing: keyof typeof PANEL_FACE,
+  ) => {
+    artwork.push({ key, art, position: [px, py, pz], size: [w, h], rotationY: PANEL_FACE[facing] });
+    // A stretcher behind the face, so the canvas has a depth and an edge
+    // that catches the light. Without it these read as posters printed on
+    // the plaster — which is what a decal is, and what this must not be.
+    const normal = facing === 'east' || facing === 'west' ? 0 : 2;
+    const depth = 0.045;
+    // Clearance, not just an offset. Setting the body's centre at exactly
+    // half its own depth puts its front face ON the picture plane, and two
+    // coplanar surfaces z-fight — which rendered as a hard stair-stepped
+    // wedge of dark metal across the top two thirds of every canvas, and
+    // looked convincingly like a lighting bug for as long as it took to
+    // render one unlit.
+    const gap = 0.006;
+    const back = facing === 'east' || facing === 'south' ? -(depth / 2 + gap) : depth / 2 + gap;
+    artBodies.push({
+      key: `${key}-body`,
+      position: normal === 0 ? [px + back, py, pz] : [px, py, pz + back],
+      scale: normal === 0 ? [depth, h - 0.03, w - 0.03] : [w - 0.03, h - 0.03, depth],
+    });
+  };
+
+  const artY = floorY + 1.62;
+  // Lounge, on the millwork wall's two blank returns. The camera stands in
+  // the corner looking into the room, so these sit either side of frame.
+  hang('apt-art-lounge-s', 'art-01', wallFace + 0.03, 8.4, artY, 1.3, 1.3, 'east');
+  hang('apt-art-lounge-n', 'art-06', wallFace + 0.03, -8.5, artY, 1.6, 0.96, 'east');
+  // Bedroom, over the bed on the fluted headboard wall.
+  hang('apt-art-bed', 'art-04', bedX + 0.08, bedCentreZ, floorY + 1.95, 1.05, 1.4, 'east');
+  // The dining end, on the back of the lounge partition.
+  hang('apt-art-dining', 'art-02', loungeBackX - 0.03, -6.2, artY, 1.24, 1.24, 'west');
+  // And on the bedroom partition, facing the kitchen and dining side.
+  hang('apt-art-hall', 'art-03', -13.4, bedroomZ[1] + 0.27, artY, 1.34, 1.34, 'south');
+
+  return { parts, forms, walls, soffit, models, artwork, artBodies };
 }
 
 export type { BlobSpec };

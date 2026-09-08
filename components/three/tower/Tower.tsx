@@ -121,7 +121,11 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
         castShadow={false}
       />
       <MergedBoxes name="deck-planters" specs={deck.planters} material={materials.stone} />
-      <MergedBoxes name="deck-pool-shell" specs={deck.poolShell} material={materials.poolInterior} />
+      <MergedBoxes
+        name="deck-pool-shell"
+        specs={deck.poolShell}
+        material={materials.poolInterior}
+      />
       <MergedBoxes
         name="deck-pool-water"
         specs={deck.water}

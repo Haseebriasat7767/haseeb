@@ -7,6 +7,10 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
+import {
+  getImperfectionMask,
+  type ImperfectionMask,
+} from '@/components/three/textures/ImperfectionMaps';
 import { getSurfaceMaps, type SurfaceFamily } from '@/components/three/textures/SurfaceMaps';
 
 /**
@@ -1095,6 +1099,84 @@ function withMaps<T extends MeshStandardMaterial>(
 }
 
 /**
+ * DEC-05 — layers a weathering mask into a material's roughness and tone.
+ *
+ * ## Why this is not just another `roughnessMap`
+ *
+ * Because the slot is taken. Every material here already carries a roughness
+ * map from its surface family, describing what the material IS; this
+ * describes what has HAPPENED to it, and the two are different maps at
+ * different scales that have to multiply rather than replace. three offers
+ * one roughness slot, so the second one is sampled in the shader.
+ *
+ * ## What it does to the surface
+ *
+ * Dark mask raises roughness and drops tone slightly. That pairing is the
+ * whole effect: a rain run is matter AND darker than the wall it runs down,
+ * and doing only one of the two reads as a smudge rather than as water. The
+ * tone shift is deliberately a third of the roughness shift — weathering that
+ * darkens as much as it mattes is dirt, and this building is maintained.
+ *
+ * Wraps rather than replaces `onBeforeCompile`, so the surface variation and
+ * the ashlar pass both survive underneath it.
+ */
+function withImperfection<T extends MeshStandardMaterial>(
+  material: T,
+  mask: ImperfectionMask,
+  /** Real-world size of one tile of the mask, in metres. */
+  metres: number,
+  /** How much roughness the darkest part of the mask adds. */
+  strength: number,
+): T {
+  // Off wherever sampled maps are off. The low tier renders plain unit cubes
+  // whose UVs run 0-1 across a face of any size, so a mask tiled against
+  // metres would stretch one copy of itself over a whole elevation.
+  if (!surfaceMapsEnabled) return material;
+
+  const existing = material.onBeforeCompile;
+
+  material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
+    existing?.(shader, undefined as never);
+
+    shader.uniforms.uWear = { value: getImperfectionMask(mask) };
+    shader.uniforms.uWearScale = { value: 1 / metres };
+    shader.uniforms.uWearStrength = { value: strength };
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform sampler2D uWear;
+uniform float uWearScale;
+uniform float uWearStrength;`,
+      )
+      // Sampled at the map stage and used again at the roughness stage.
+      // Order matters and is not obvious: three emits `map_fragment` before
+      // `roughnessmap_fragment`, so declaring the sample in the second and
+      // reading it in the first does not compile.
+      .replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>
+  float aureliaWear = texture2D(uWear, vMapUv * uWearScale).r;
+  diffuseColor.rgb *= mix(1.0, aureliaWear, uWearStrength * 0.34);`,
+      )
+      // Layered over the family's own roughness rather than deciding it.
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+  roughnessFactor = clamp(
+    roughnessFactor + (1.0 - aureliaWear) * uWearStrength, 0.04, 1.0);`,
+      );
+  };
+
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : 'aurelia'}-wear-${mask}-${metres}`;
+
+  return material;
+}
+
+/**
  * Whether materials carry sampled maps at all.
  *
  * Off on the low tier, for a reason that is about correctness before cost:
@@ -1126,78 +1208,90 @@ function createMaterials() {
      * at close range and disappears into a flat premium surface from the
      * hero camera distance.
      */
-    concrete: withAshlar(
-      withMaps(
-        withVariation(
-          standard({ color: '#c7bfae', roughness: 0.62, metalness: 0.01, envMapIntensity: 0.62 }),
-          {
-            // Wide, soft mottling at roughly the scale a block of limestone
-            // varies over — this is the bedding, and the ashlar pass on top
-            // supplies the pieces it is cut into.
-            scale: 0.42,
-            colorVariation: 0.07,
-            roughnessVariation: 0.1,
-            seed: 11,
-            // Slightly stretched along the bedding plane, as quarried stone
-            // is, rather than isotropic like aggregate.
-            anisotropy: [1, 0.55, 1],
-            normalStrength: 0.011,
-            normalScale: 2.4,
-          },
+    concrete: withImperfection(
+      withAshlar(
+        withMaps(
+          withVariation(
+            standard({ color: '#c7bfae', roughness: 0.62, metalness: 0.01, envMapIntensity: 0.62 }),
+            {
+              // Wide, soft mottling at roughly the scale a block of limestone
+              // varies over — this is the bedding, and the ashlar pass on top
+              // supplies the pieces it is cut into.
+              scale: 0.42,
+              colorVariation: 0.07,
+              roughnessVariation: 0.1,
+              seed: 11,
+              // Slightly stretched along the bedding plane, as quarried stone
+              // is, rather than isotropic like aggregate.
+              anisotropy: [1, 0.55, 1],
+              normalStrength: 0.011,
+              normalScale: 2.4,
+            },
+          ),
+          'stone',
+          0.9,
         ),
-        'stone',
-        0.9,
+        {
+          // Large-format cladding: a metre and a half by three-quarters is
+          // the size these elevations are actually detailed at, and it keeps
+          // the joint grid reading as architecture rather than as tiling.
+          course: [2.4, 1.2],
+          paver: 1.2,
+          joint: 0.007,
+          jointDepth: 0.13,
+          jointRelief: 0.28,
+          slabVariation: 0.019,
+          slabRoughness: 0.05,
+          seed: 3,
+        },
       ),
-      {
-        // Large-format cladding: a metre and a half by three-quarters is
-        // the size these elevations are actually detailed at, and it keeps
-        // the joint grid reading as architecture rather than as tiling.
-        course: [2.4, 1.2],
-        paver: 1.2,
-        joint: 0.007,
-        jointDepth: 0.13,
-        jointRelief: 0.28,
-        slabVariation: 0.019,
-        slabRoughness: 0.05,
-        seed: 3,
-      },
+      // Rain runs. Concrete is the material this happens to most visibly, and
+      'streaks',
+      6.0,
+      0.16,
     ),
     /**
      * Honed limestone / travertine — warm off-white, restrained natural
      * irregularity. Coarser noise cells than concrete so it reads as large
      * quarried slabs, not aggregate.
      */
-    stone: withAshlar(
-      withMaps(
-        withVariation(
-          standard({ color: '#cbc3b1', roughness: 0.66, metalness: 0, envMapIntensity: 0.68 }),
-          {
-            scale: 0.45,
-            colorVariation: 0.06,
-            roughnessVariation: 0.12,
-            seed: 23,
-            anisotropy: [1, 0.6, 1],
-            // The open grain and shallow pitting of honed limestone.
-            normalStrength: 0.0112,
-            normalScale: 2.1,
-          },
+    stone: withImperfection(
+      withAshlar(
+        withMaps(
+          withVariation(
+            standard({ color: '#cbc3b1', roughness: 0.66, metalness: 0, envMapIntensity: 0.68 }),
+            {
+              scale: 0.45,
+              colorVariation: 0.06,
+              roughnessVariation: 0.12,
+              seed: 23,
+              anisotropy: [1, 0.6, 1],
+              // The open grain and shallow pitting of honed limestone.
+              normalStrength: 0.0112,
+              normalScale: 2.1,
+            },
+          ),
+          'stone',
+          1.0,
         ),
-        'stone',
-        1.0,
+        {
+          // Heavier pieces than the cladding — a plinth, a coping and a
+          // retaining wall are all built from thicker stone than a facade
+          // panel, and the coursing shows it.
+          course: [1.8, 0.85],
+          paver: 1.0,
+          joint: 0.008,
+          jointDepth: 0.15,
+          jointRelief: 0.3,
+          slabVariation: 0.022,
+          slabRoughness: 0.055,
+          seed: 7,
+        },
       ),
-      {
-        // Heavier pieces than the cladding — a plinth, a coping and a
-        // retaining wall are all built from thicker stone than a facade
-        // panel, and the coursing shows it.
-        course: [1.8, 0.85],
-        paver: 1.0,
-        joint: 0.008,
-        jointDepth: 0.15,
-        jointRelief: 0.3,
-        slabVariation: 0.022,
-        slabRoughness: 0.055,
-        seed: 7,
-      },
+      // Water staining, kept low: this is a maintained building, not a ruin.
+      'staining',
+      5.0,
+      0.12,
     ),
     /**
      * The surrounding ground. Previously a near-black plane, which is what
@@ -1239,20 +1333,26 @@ function createMaterials() {
      * facade reads as a plinth extending outward rather than as ground the
      * building sits on.
      */
-    paving: withMaps(
-      withVariation(
-        standard({ color: '#8f887c', roughness: 0.82, metalness: 0, envMapIntensity: 0.5 }),
-        {
-          scale: 0.42,
-          colorVariation: 0.07,
-          roughnessVariation: 0.12,
-          seed: 137,
-          normalStrength: 0.0105,
-          normalScale: 2.6,
-        },
+    paving: withImperfection(
+      withMaps(
+        withVariation(
+          standard({ color: '#8f887c', roughness: 0.82, metalness: 0, envMapIntensity: 0.5 }),
+          {
+            scale: 0.42,
+            colorVariation: 0.07,
+            roughnessVariation: 0.12,
+            seed: 137,
+            normalStrength: 0.0105,
+            normalScale: 2.6,
+          },
+        ),
+        'paving',
+        1.0,
       ),
-      'paving',
-      1.0,
+      // Abrasion. A plaza is walked on, and the polish goes first at the
+      'edgewear',
+      2.6,
+      0.14,
     ),
     /**
      * Outdoor teak — the warm, silvered timber of terrace furniture, and
@@ -1289,18 +1389,24 @@ function createMaterials() {
      * generated environment map, this behaves as real metal — it reflects
      * the sky rather than resolving to a flat fill.
      */
-    bronze: withMaps(
-      withVariation(standard({ color: '#b08e5c', roughness: 0.26, metalness: 0.95 }), {
-      scale: 3,
-      colorVariation: 0.02,
-      roughnessVariation: 0.04,
-      seed: 3,
-      // Brushed bronze: barely there, but enough to break the highlight.
-      normalStrength: 0.015,
-      normalScale: 2.0,
-      }),
-      'bronze',
-      0.6,
+    bronze: withImperfection(
+      withMaps(
+        withVariation(standard({ color: '#b08e5c', roughness: 0.26, metalness: 0.95 }), {
+          scale: 3,
+          colorVariation: 0.02,
+          roughnessVariation: 0.04,
+          seed: 3,
+          // Brushed bronze: barely there, but enough to break the highlight.
+          normalStrength: 0.015,
+          normalScale: 2.0,
+        }),
+        'bronze',
+        0.6,
+      ),
+      // Handling. A bronze rail is touched, and a rail with no wear on it
+      'edgewear',
+      0.9,
+      0.1,
     ),
     /**
      * Reveals, trim, soffits, slab shadow lines — satin dark anodized
@@ -1516,13 +1622,13 @@ function createMaterials() {
      */
     sand: withMaps(
       withVariation(standard({ color: '#d9cbae', roughness: 0.94, metalness: 0 }), {
-      scale: 3.2,
-      colorVariation: 0.05,
-      roughnessVariation: 0.04,
-      seed: 61,
-      anisotropy: [1, 1, 2.6],
-      normalStrength: 0.05,
-      normalScale: 22,
+        scale: 3.2,
+        colorVariation: 0.05,
+        roughnessVariation: 0.04,
+        seed: 61,
+        anisotropy: [1, 1, 2.6],
+        normalStrength: 0.05,
+        normalScale: 22,
       }),
       'sand',
     ),

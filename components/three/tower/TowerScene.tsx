@@ -8,6 +8,15 @@ import { disposeVillaGeometries } from '../villa/VillaPrimitiveCache';
 import type { BoxSpec, DetailTier } from '../villa/VillaTypes';
 import { FoliageCards } from '../villa/landscape/FoliageCards';
 import { createFoliageCards } from '../villa/landscape/FoliageGeometry';
+import { DecalPlanes } from '../DecalPlanes';
+import {
+  IDENTITY_SHEET,
+  SIGNAGE_SHEET,
+  WAYFINDING_SHEET,
+  disposeDecalSheets,
+} from '../textures/DecalMaps';
+import { disposeImperfectionMasks } from '../textures/ImperfectionMaps';
+import { createIdentityDecals, createSignageDecals, createWayfindingDecals } from './DecalGeometry';
 import { Palms } from './Palms';
 import { Shoreline } from './Shoreline';
 import { Tower } from './Tower';
@@ -63,6 +72,12 @@ export function TowerScene({
   // The retail fit-out, on every level around the atrium.
   const retail = useMemo(() => createRetailProps(layout.plan), [layout.plan]);
 
+  // Tier 4. Three sheets, three draw calls, and the difference between a
+  // podium that is let and one that is not.
+  const signage = useMemo(() => createSignageDecals(layout.plan), [layout.plan]);
+  const wayfinding = useMemo(() => createWayfindingDecals(layout.plan), [layout.plan]);
+  const identity = useMemo(() => createIdentityDecals(layout), [layout]);
+
   // Broadleaf crowns reuse the villa's card technique — a tree's outline is
   // decided by a texture with leaves and gaps in it, not by geometry.
   const parkCanopy = useMemo(
@@ -115,6 +130,8 @@ export function TowerScene({
     () => () => {
       disposeVillaGeometries();
       disposeSurfaceMaps();
+      disposeDecalSheets();
+      disposeImperfectionMasks();
     },
     [],
   );
@@ -176,7 +193,12 @@ export function TowerScene({
         <group name="Park">
           <MergedBoxes name="park-beds" specs={park.beds} material={materials.foliageMid} />
           <MergedBoxes name="park-edging" specs={park.edging} material={materials.stone} />
-          <MergedBoxes name="park-path" specs={park.path} material={materials.paving} castShadow={false} />
+          <MergedBoxes
+            name="park-path"
+            specs={park.path}
+            material={materials.paving}
+            castShadow={false}
+          />
           <MergedBoxes name="park-benches" specs={park.benches} material={materials.teak} />
           <MergedBoxes name="park-trunks" specs={park.trees.trunks} material={materials.bark} />
           <FoliageCards name="park-canopy" cards={parkCanopy} castShadow={detail === 'high'} />
@@ -184,6 +206,38 @@ export function TowerScene({
         </group>
 
         <Tower layout={layout} detail={detail} />
+
+        {/* ── Tier 4 ───────────────────────────────────────────────────
+            Signage, wayfinding and the building's own name. Three sheets,
+            three draw calls, and the cheapest realism in the schedule: a
+            retail podium with no tenant names on it does not read as a
+            quiet podium, it reads as an unlet one. */}
+        <DecalPlanes
+          name="tenant-signage"
+          sheet={SIGNAGE_SHEET}
+          decals={signage}
+          emissiveIntensity={0.62}
+        />
+        {/* Painted, not illuminated. A level number is a graphic on a wall. */}
+        <DecalPlanes
+          name="wayfinding"
+          sheet={WAYFINDING_SHEET}
+          decals={wayfinding}
+          emissiveIntensity={0.14}
+        />
+        {/* The crown lettering is the one sign on this building that is
+            genuinely a light, and it is what the tower is read by after
+            dark from a mile up the beach. */}
+        <DecalPlanes
+          name="identity"
+          sheet={IDENTITY_SHEET}
+          decals={identity}
+          // Dark by day, lit by night — which is what a channel letter on a
+          // parapet actually is, and the only way a wordmark reads against
+          // stone this pale at golden hour.
+          tint="#4a3a26"
+          emissiveIntensity={1.35}
+        />
 
         {/* What makes the site look inhabited. Each is its own draw call;
             twenty of them against a budget of two hundred and fifty is

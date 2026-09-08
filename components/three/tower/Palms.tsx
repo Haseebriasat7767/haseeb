@@ -29,7 +29,11 @@ function rand(seed: number): number {
  * is that some fronds stand up, some sit level, and the older ones hang
  * well below horizontal.
  */
-function buildPalm(spec: PalmSpec, sides: number, frondsPerTree: number): {
+function buildPalm(
+  spec: PalmSpec,
+  sides: number,
+  frondsPerTree: number,
+): {
   trunk: BufferGeometry;
   fronds: BufferGeometry[];
 } {
@@ -47,9 +51,7 @@ function buildPalm(spec: PalmSpec, sides: number, frondsPerTree: number): {
   trunk.translate(ox, oy, oz);
 
   // Where the crown actually sits once the trunk has leaned over.
-  const head = new Vector3(0, trunkHeight, 0)
-    .applyQuaternion(tilt)
-    .add(new Vector3(ox, oy, oz));
+  const head = new Vector3(0, trunkHeight, 0).applyQuaternion(tilt).add(new Vector3(ox, oy, oz));
 
   const fronds: BufferGeometry[] = [];
   for (let i = 0; i < frondsPerTree; i += 1) {
@@ -70,9 +72,7 @@ function buildPalm(spec: PalmSpec, sides: number, frondsPerTree: number): {
     // Authored from the origin outward, so the rotation swings it about the
     // crown rather than about its own middle.
     blade.translate(length / 2, 0, 0);
-    blade.applyMatrix4(
-      new Matrix4().makeRotationFromEuler(new Euler(0, yaw, -pitch, 'YZX')),
-    );
+    blade.applyMatrix4(new Matrix4().makeRotationFromEuler(new Euler(0, yaw, -pitch, 'YZX')));
     blade.translate(head.x, head.y, head.z);
     fronds.push(blade);
   }

@@ -52,10 +52,7 @@ export function TowerWalkthrough() {
   const note = TOWER_VIEW_NOTES[view.id] ?? '';
   const last = TOWER_VIEWS.length - 1;
 
-  const go = useCallback(
-    (next: number) => setStep(Math.min(last, Math.max(0, next))),
-    [last],
-  );
+  const go = useCallback((next: number) => setStep(Math.min(last, Math.max(0, next))), [last]);
 
   const scrim = useMemo(
     () => ({
@@ -121,9 +118,7 @@ export function TowerWalkthrough() {
                       aria-hidden="true"
                       className={cn(
                         'ease-luxe h-px transition-all duration-500',
-                        current
-                          ? 'bg-gold w-8'
-                          : 'bg-alabaster/40 group-hover:bg-alabaster w-4',
+                        current ? 'bg-gold w-8' : 'bg-alabaster/40 group-hover:bg-alabaster w-4',
                       )}
                     />
                   </button>
@@ -135,12 +130,10 @@ export function TowerWalkthrough() {
 
         {/* Caption and step controls. */}
         <div className="px-gutter absolute inset-x-0 bottom-0 z-10 pb-6 lg:pb-10">
-          <div className="mx-auto flex max-w-wide flex-col gap-4 lg:pl-[7.5rem]">
+          <div className="max-w-wide mx-auto flex flex-col gap-4 lg:pl-[7.5rem]">
             <div className="max-w-[56ch]">
               <p className="text-eyebrow text-bone/70 flex items-center gap-4 uppercase">
-                <span className="text-gold tabular-nums">
-                  {String(step + 1).padStart(2, '0')}
-                </span>
+                <span className="text-gold tabular-nums">{String(step + 1).padStart(2, '0')}</span>
                 <span aria-hidden="true" className="bg-gold-dim h-px w-8" />
                 {view.label}
               </p>
@@ -168,7 +161,7 @@ export function TowerWalkthrough() {
               >
                 {step === last ? 'End of walkthrough' : 'Continue'}
               </button>
-              <span className="text-eyebrow text-stone tabular-nums uppercase">
+              <span className="text-eyebrow text-stone uppercase tabular-nums">
                 {step + 1} / {TOWER_VIEWS.length}
               </span>
             </div>

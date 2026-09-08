@@ -1,3 +1,7 @@
 .next
 node_modules
 package-lock.json
+
+# Vendored, and not ours to format — ESLint already ignores it for the
+# same reason.
+public/assets/draco

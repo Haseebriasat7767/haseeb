@@ -28,24 +28,24 @@ replaced:
 
 ## Audit
 
-| Family | Files | Res | Tile | Source | Licence |
-| --- | --- | --- | --- | --- | --- |
-| `plaster` | albedo / roughness / normal | 1K | 1.60 m | `tools/blender/surfaces.py` | Project-authored |
-| `stone` | albedo / roughness / normal | 1K | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
-| `oak` | albedo / roughness / normal | 2K | 1.44 m | `tools/blender/surfaces.py` | Project-authored |
-| `marble` | albedo / roughness / normal | 2K | 2.00 m | `tools/blender/surfaces.py` | Project-authored |
-| `linen` | albedo / roughness / normal | 1K | 0.10 m | `tools/blender/surfaces.py` | Project-authored |
-| `wool` | albedo / roughness / normal | 1K | 0.32 m | `tools/blender/surfaces.py` | Project-authored |
-| `leather` | albedo / roughness / normal | 1K | 0.35 m | `tools/blender/surfaces.py` | Project-authored |
-| `paving` | albedo / roughness / normal | 1K | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
-| `concrete` | albedo / roughness / normal | 1K | 2.40 m | `tools/blender/surfaces.py` | Project-authored |
-| `terrazzo` | albedo / roughness / normal | 1K | 1.80 m | `tools/blender/surfaces.py` | Project-authored |
-| `teak` | albedo / roughness / normal | 1K | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
-| `bronze` | albedo / roughness / normal | 1K | 0.60 m | `tools/blender/surfaces.py` | Project-authored |
-| `tile` | albedo / roughness / normal | 1K | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
-| `sand` | albedo / roughness / normal | 1K | 3.00 m | `tools/blender/surfaces.py` | Project-authored |
-| `boucle` | albedo / roughness / normal | 1K | 0.12 m | `tools/blender/surfaces.py` | Project-authored |
-| `glassGrime` | albedo / roughness / normal | 1K | 4.00 m | `tools/blender/surfaces.py` | Project-authored |
+| Family       | Files                       | Res | Tile   | Source                      | Licence          |
+| ------------ | --------------------------- | --- | ------ | --------------------------- | ---------------- |
+| `plaster`    | albedo / roughness / normal | 1K  | 1.60 m | `tools/blender/surfaces.py` | Project-authored |
+| `stone`      | albedo / roughness / normal | 1K  | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
+| `oak`        | albedo / roughness / normal | 2K  | 1.44 m | `tools/blender/surfaces.py` | Project-authored |
+| `marble`     | albedo / roughness / normal | 2K  | 2.00 m | `tools/blender/surfaces.py` | Project-authored |
+| `linen`      | albedo / roughness / normal | 1K  | 0.10 m | `tools/blender/surfaces.py` | Project-authored |
+| `wool`       | albedo / roughness / normal | 1K  | 0.32 m | `tools/blender/surfaces.py` | Project-authored |
+| `leather`    | albedo / roughness / normal | 1K  | 0.35 m | `tools/blender/surfaces.py` | Project-authored |
+| `paving`     | albedo / roughness / normal | 1K  | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
+| `concrete`   | albedo / roughness / normal | 1K  | 2.40 m | `tools/blender/surfaces.py` | Project-authored |
+| `terrazzo`   | albedo / roughness / normal | 1K  | 1.80 m | `tools/blender/surfaces.py` | Project-authored |
+| `teak`       | albedo / roughness / normal | 1K  | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
+| `bronze`     | albedo / roughness / normal | 1K  | 0.60 m | `tools/blender/surfaces.py` | Project-authored |
+| `tile`       | albedo / roughness / normal | 1K  | 1.20 m | `tools/blender/surfaces.py` | Project-authored |
+| `sand`       | albedo / roughness / normal | 1K  | 3.00 m | `tools/blender/surfaces.py` | Project-authored |
+| `boucle`     | albedo / roughness / normal | 1K  | 0.12 m | `tools/blender/surfaces.py` | Project-authored |
+| `glassGrime` | albedo / roughness / normal | 1K  | 4.00 m | `tools/blender/surfaces.py` | Project-authored |
 
 Total on disk: about 15 MB. All sixteen are wired. All project-authored, so there is no third-party
 licence to honour and nothing here restricts commercial use or
@@ -84,53 +84,53 @@ table above with its true source and licence.
 `tools/blender/models.py` and loaded by
 `components/three/models/ModelLibrary.tsx`.
 
-| Piece | Ref | Tris | Size |
-| --- | --- | --- | --- |
-| `sofa-3seat` | MDL-01 | 7,804 | 79 KB |
-| `lounge-chair` | MDL-02 | 3,076 | 22 KB |
-| `ottoman` | MDL-02 | 360 | 2 KB |
-| `low-table` | MDL-03 | 1,132 | 10 KB |
-| `side-drum` | MDL-03 | 504 | 2 KB |
-| `bed` | MDL-04 | 7,452 | 77 KB |
-| `nightstand` | MDL-05 | 740 | 13 KB |
-| `table-lamp` | MDL-05 | 472 | 4 KB |
-| `floor-lamp` | MDL-11 | 472 | 4 KB |
-| `vessel-tall` | MDL-10 | 864 | 4 KB |
-| `vessel-round` | MDL-10 | 792 | 4 KB |
-| `bowl` | MDL-10 | 504 | 3 KB |
+| Piece              | Ref    | Tris  | Size  |
+| ------------------ | ------ | ----- | ----- |
+| `sofa-3seat`       | MDL-01 | 7,804 | 79 KB |
+| `lounge-chair`     | MDL-02 | 3,076 | 22 KB |
+| `ottoman`          | MDL-02 | 360   | 2 KB  |
+| `low-table`        | MDL-03 | 1,132 | 10 KB |
+| `side-drum`        | MDL-03 | 504   | 2 KB  |
+| `bed`              | MDL-04 | 7,452 | 77 KB |
+| `nightstand`       | MDL-05 | 740   | 13 KB |
+| `table-lamp`       | MDL-05 | 472   | 4 KB  |
+| `floor-lamp`       | MDL-11 | 472   | 4 KB  |
+| `vessel-tall`      | MDL-10 | 864   | 4 KB  |
+| `vessel-round`     | MDL-10 | 792   | 4 KB  |
+| `bowl`             | MDL-10 | 504   | 3 KB  |
 | `organic-table-lg` | MDL-03 | 2,040 | 20 KB |
 | `organic-table-sm` | MDL-03 | 2,104 | 21 KB |
-| `stone-lounger` | MDL-12 | 552 | 7 KB |
-| `wingback` | MDL-02 | 3,036 | 22 KB |
-| `planter-cyl` | MDL-10 | 640 | 3 KB |
-| `tray` | MDL-10 | 2,040 | 19 KB |
-| `book-stack` | MDL-10 | 564 | 9 KB |
-| `candle-cluster` | MDL-10 | 720 | 15 KB |
-| `ceiling-soffit` | MDL-09 | 2,040 | 20 KB |
-| `kitchen-island` | MDL-07 | 1,264 | 18 KB |
-| `kitchen-run` | MDL-07 | 1,316 | 18 KB |
-| `vanity` | MDL-08 | 1,216 | 12 KB |
-| `bath` | MDL-08 | 868 | 6 KB |
-| `wc` | MDL-08 | 1,576 | 21 KB |
-| `shower-screen` | MDL-08 | 516 | 8 KB |
-| `person-standing` | MDL-16 | 1,392 | 14 KB |
-| `person-seated` | MDL-16 | 1,592 | 16 KB |
-| `car-saloon` | MDL-17 | 1,928 | 28 KB |
-| `car-suv` | MDL-17 | 1,928 | 28 KB |
-| `boat-tender` | MDL-18 | 928 | 13 KB |
-| `dining-table` | MDL-06 | 668 | 5 KB |
-| `dining-chair` | MDL-06 | 1,924 | 14 KB |
-| `parasol` | MDL-12 | 340 | 3 KB |
-| `outdoor-sofa` | MDL-12 | 2,588 | 30 KB |
-| `cabana` | MDL-12 | 2,136 | 28 KB |
-| `retail-counter` | MDL-13 | 564 | 9 KB |
-| `retail-rack` | MDL-13 | 2,992 | 48 KB |
-| `retail-shelf` | MDL-13 | 3,572 | 52 KB |
-| `vitrine` | MDL-13 | 1,684 | 23 KB |
-| `mannequin` | MDL-13 | 592 | 4 KB |
-| `escalator` | MDL-14 | 1,128 | 16 KB |
-| `lift-doors` | MDL-14 | 752 | 11 KB |
-| `gym-bench` | MDL-15 | 1,144 | 16 KB |
+| `stone-lounger`    | MDL-12 | 552   | 7 KB  |
+| `wingback`         | MDL-02 | 3,036 | 22 KB |
+| `planter-cyl`      | MDL-10 | 640   | 3 KB  |
+| `tray`             | MDL-10 | 2,040 | 19 KB |
+| `book-stack`       | MDL-10 | 564   | 9 KB  |
+| `candle-cluster`   | MDL-10 | 720   | 15 KB |
+| `ceiling-soffit`   | MDL-09 | 2,040 | 20 KB |
+| `kitchen-island`   | MDL-07 | 1,264 | 18 KB |
+| `kitchen-run`      | MDL-07 | 1,316 | 18 KB |
+| `vanity`           | MDL-08 | 1,216 | 12 KB |
+| `bath`             | MDL-08 | 868   | 6 KB  |
+| `wc`               | MDL-08 | 1,576 | 21 KB |
+| `shower-screen`    | MDL-08 | 516   | 8 KB  |
+| `person-standing`  | MDL-16 | 1,392 | 14 KB |
+| `person-seated`    | MDL-16 | 1,592 | 16 KB |
+| `car-saloon`       | MDL-17 | 1,928 | 28 KB |
+| `car-suv`          | MDL-17 | 1,928 | 28 KB |
+| `boat-tender`      | MDL-18 | 928   | 13 KB |
+| `dining-table`     | MDL-06 | 668   | 5 KB  |
+| `dining-chair`     | MDL-06 | 1,924 | 14 KB |
+| `parasol`          | MDL-12 | 340   | 3 KB  |
+| `outdoor-sofa`     | MDL-12 | 2,588 | 30 KB |
+| `cabana`           | MDL-12 | 2,136 | 28 KB |
+| `retail-counter`   | MDL-13 | 564   | 9 KB  |
+| `retail-rack`      | MDL-13 | 2,992 | 48 KB |
+| `retail-shelf`     | MDL-13 | 3,572 | 52 KB |
+| `vitrine`          | MDL-13 | 1,684 | 23 KB |
+| `mannequin`        | MDL-13 | 592   | 4 KB  |
+| `escalator`        | MDL-14 | 1,128 | 16 KB |
+| `lift-doors`       | MDL-14 | 752   | 11 KB |
+| `gym-bench`        | MDL-15 | 1,144 | 16 KB |
 
 **72,516 triangles and 822 KB for the whole library**, Draco-compressed.
 All project-authored; no third-party licence applies.
@@ -166,7 +166,6 @@ python3 tools/blender/models.py sofa-3seat bed     # or just some
 python3 tools/blender/models.py --preview          # render contact sheets
 ```
 
-
 # Foliage atlas
 
 `foliage/atlas.png` — 2048 px, RGBA, 2058 KB. One sheet, four cells in a
@@ -175,12 +174,12 @@ whole canopy of the site is a single draw call.
 
 ## Audit
 
-| cell | UV offset | leaves | opaque coverage |
-| --- | --- | --- | --- |
-| top left | 0.0, 0.5 | 1451 | 19% |
-| top right | 0.5, 0.5 | 1283 | 18% |
-| bottom left | 0.0, 0.0 | 781 | 17% |
-| bottom right | 0.5, 0.0 | 1008 | 18% |
+| cell         | UV offset | leaves | opaque coverage |
+| ------------ | --------- | ------ | --------------- |
+| top left     | 0.0, 0.5  | 1451   | 19%             |
+| top right    | 0.5, 0.5  | 1283   | 18%             |
+| bottom left  | 0.0, 0.0  | 781    | 17%             |
+| bottom right | 0.5, 0.0  | 1008   | 18%             |
 
 Coverage is the number that matters. A foliage card is mostly hole: the
 material is opaque with `alphaTest`, so what is not cut away is what gets
@@ -212,4 +211,103 @@ has to move with it.
 
 ```
 python3 tools/blender/foliage.py
+```
+
+# Decals, signage and 2D — Tier 4
+
+Everything under `decals/`. 1276 KB in total, which is the cheapest
+realism in the whole asset schedule and close to the most effective: a retail
+podium with no tenant names on it does not read as a quiet podium, it reads as
+an unlet one, and the eye gets there long before the mind does.
+
+## Audit
+
+| Ref    | File                            | Size            | What it is                                                        |
+| ------ | ------------------------------- | --------------- | ----------------------------------------------------------------- |
+| DEC-01 | `signage.png`                   | 2048², 184 KB   | 16 fascia signs, 2×8 grid of 4:1 cells                            |
+| DEC-02 | `wayfinding.png`                | 2048², 152 KB   | 20 cells, 4×5 of 2:1 — numerals, arrows, pictograms, destinations |
+| DEC-02 | `wayfinding/level-0*.svg`       | 5 files, 38 KB  | The numerals as vector                                            |
+| DEC-04 | `identity.png`                  | 2048×512, 38 KB | Wordmark, and the wordmark over a rule with its descriptor        |
+| DEC-04 | `identity/aurelia-wordmark.svg` | 45 KB           | The wordmark as vector                                            |
+| DEC-03 | `artwork/art-0*.jpg`            | 6 files, 310 KB | Original abstract compositions                                    |
+| DEC-05 | `imperfection/*.png`            | 3 files, 502 KB | Tiling greyscale weathering masks                                 |
+
+Three sheets, three draw calls: `DecalPlanes` instances every sign on a sheet
+into one `InstancedMesh` and redirects the texture lookup through a
+per-instance atlas rect, the same technique `FoliageCards` uses. The artwork
+is the exception and cannot be — six images are six textures, and a painting
+is the one decal a viewer stops in front of.
+
+## Where each one lands
+
+|                |                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Tenant signage | Shopfront fascias on levels 0–1, all four elevations; and on the atrium balustrades at every upper retail level              |
+| Wayfinding     | Level numerals on the atrium balustrades, destinations at the void's south wall, entrance signs on the podium                |
+| Identity       | Cut into the crown parapet on three elevations, and the lockup on the lobby wall                                             |
+| Artwork        | Five works: two on the lounge's millwork returns, one over the bed, one at the dining end, one on the bedroom partition      |
+| Imperfection   | Layered into `concrete` (rain runs, 6 m), `stone` (staining, 5 m), `paving` (abrasion, 2.6 m) and `bronze` (handling, 0.9 m) |
+
+## Typefaces, and the licence position
+
+Vendored under `tools/blender/fonts/` with their licence files. Both are SIL
+Open Font License 1.1, which permits redistribution and places no restriction
+at all on rendered output.
+
+| Face                      | Used for                          | Source                        | Licence                               |
+| ------------------------- | --------------------------------- | ----------------------------- | ------------------------------------- |
+| Cormorant Garamond Light  | Serif tenant names                | Google Fonts / CatharsisFonts | OFL 1.1 (`CormorantGaramond-OFL.txt`) |
+| Cormorant Garamond Medium | Crown and lobby identity          | as above                      | as above                              |
+| Inter Regular / Medium    | Sans tenant names, all wayfinding | Google Fonts / rsms           | OFL 1.1 (`Inter-LICENSE.txt`)         |
+
+These are the site's own two faces — its headings are set in Cormorant Light
+and its body in Inter — so lettering cut into the crown is the same lettering
+as the page around it.
+
+**Every tenant name is invented.** MARENNE, CASA VELA, OSSIA and the rest are
+not real marks and are not based on any. Reproducing a real retailer's
+wordmark on a building that is not theirs is a trademark problem no amount of
+"it is only a render" survives. The artwork is authored here for the same
+reason: the schedule's line on DEC-03 is "must be licensed to you", and
+authoring is the only way to satisfy that with certainty.
+
+## Why type is rasterised rather than meshed
+
+Blender is the wrong tool for setting type and `tools/blender/decals.py`
+carries the evidence. `convert(target="MESH")` on a text object fills every
+counter bounded by straight strokes solid — A, M, N, V, K and W all block in,
+while O, D and R come out fine; extrude, fill mode, curve resolution and
+tracking were each tried and each reproduces it. Triangulating the contours by
+hand with `tessellate_polygon` gets further and then fails for the real reason:
+a TrueType glyph is filled by **nonzero winding** and is free to be a single
+self-intersecting contour, which Cormorant's capital A is. No triangulator
+resolves that, because the filled region is not a polygon.
+
+So the outlines come from Blender — `convert(target="CURVE")` yields the
+typeface's own Beziers exactly — and are filled by a scanline rasteriser that
+implements the winding rule the format actually specifies. The SVGs are written
+from the same contours with `fill-rule="nonzero"`, so the vector and the raster
+are the same shape by construction.
+
+## Deviations from the schedule, stated
+
+- **Artwork is 1024 px, not the 2K the schedule asks for.** These hang at about
+  1.2 m across and the nearest camera stops 2.4 m away, so on a 1280 px viewport
+  a canvas covers roughly 260 px. 1024 is already four times what the framing
+  resolves, and six 2K JPEGs would spend 2.5 MB of the streamed budget to be
+  visible at no framing in the walkthrough.
+- **The crown is set in the Medium, not the Light the site's headings use.**
+  A weight decision, not a brand inconsistency: nobody cuts a hairline serif
+  into a parapet, and at 1.2 m cap height read from the beach a Light's thin
+  stroke is under half a pixel and simply is not there.
+- **Exterior tenant signage is on levels 0 and 1 only.** Real malls do not sign
+  their upper levels externally; those tenants are read from inside the atrium,
+  which is where the rest of these go. Signing all five would also turn a banded
+  podium into a billboard, and the bands are the facade.
+
+## Regenerating
+
+```
+python3 tools/blender/decals.py                 # everything
+python3 tools/blender/decals.py signage masks   # or just some
 ```

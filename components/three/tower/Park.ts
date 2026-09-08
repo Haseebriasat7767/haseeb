@@ -48,7 +48,10 @@ export type ParkLayout = {
   beds: BoxSpec[];
   palms: PalmSpec[];
   /** Broadleaf trees, as trunk plus canopy clusters for the card renderer. */
-  trees: { trunks: BoxSpec[]; canopy: { key: string; position: [number, number, number]; radius: number; seed: number }[] };
+  trees: {
+    trunks: BoxSpec[];
+    canopy: { key: string; position: [number, number, number]; radius: number; seed: number }[];
+  };
   /** Benches along the path. */
   benches: BoxSpec[];
 };
@@ -157,7 +160,11 @@ export function createParkLayout(
       const rc = rand(1300 + i * 13 + c * 5);
       canopy.push({
         key: `park-canopy-${i}-${c}`,
-        position: [x + (rc - 0.5) * 4.4, h + 0.6 + (rand(1500 + i + c) - 0.5) * 2.2, z + (rand(1700 + i + c) - 0.5) * 4.4],
+        position: [
+          x + (rc - 0.5) * 4.4,
+          h + 0.6 + (rand(1500 + i + c) - 0.5) * 2.2,
+          z + (rand(1700 + i + c) - 0.5) * 4.4,
+        ],
         radius: 2.4 + rc * 1.5,
         seed: 1900 + i * 7 + c,
       });
@@ -173,7 +180,14 @@ export function createParkLayout(
     const w = 3.2 + rand(2500 + i * 11) * 5;
     const d = 2.4 + rand(2700 + i * 13) * 4;
     beds.push(box(`park-bed-${i}`, [x - w / 2, x + w / 2], [0.06, 0.5], [z - d / 2, z + d / 2]));
-    edging.push(box(`park-edge-${i}`, [x - w / 2 - 0.12, x + w / 2 + 0.12], [0.05, 0.2], [z - d / 2 - 0.12, z + d / 2 + 0.12]));
+    edging.push(
+      box(
+        `park-edge-${i}`,
+        [x - w / 2 - 0.12, x + w / 2 + 0.12],
+        [0.05, 0.2],
+        [z - d / 2 - 0.12, z + d / 2 + 0.12],
+      ),
+    );
   }
 
   return { lawn, path, edging, beds, palms, trees: { trunks, canopy }, benches };
