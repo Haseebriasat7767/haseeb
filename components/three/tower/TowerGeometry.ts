@@ -360,6 +360,10 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     // The plaster soffit under the plate above, not the plate itself.
     furnishedCeilingY: towerBaseY + (furnishedLevel + 1) * towerLevelHeight - 0.09,
     glazedX: [towerX[0] + coreWidth, towerX[1]],
+    atriumX,
+    atriumZ,
+    podiumLevels,
+    podiumLevelHeight,
     levelY: (level: number) => towerBaseY + level * towerLevelHeight,
   };
 

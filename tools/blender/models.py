@@ -51,6 +51,20 @@ def reset():
     bpy.context.scene.unit_settings.length_unit = "METERS"
 
 
+def wobble(seed, index):
+    """
+    Deterministic jitter in [0, 1).
+
+    Named to match the helper the TypeScript furniture uses, and present for
+    the same reason: a rail of evenly spaced garments reads as a comb, and a
+    shelf whose stock sits on a grid reads as a diagram. The variation has
+    to be repeatable, though — a shop that rearranges itself on every mount
+    is worse than one that never moves.
+    """
+    x = math.sin(seed * 127.1 + index * 311.7) * 43758.5453
+    return x - math.floor(x)
+
+
 # ── materials ─────────────────────────────────────────────────────────────
 #
 # Colours track the project's own material library so a loaded model sits in
@@ -1055,6 +1069,175 @@ def p_cabana():
     return parts
 
 
+def p_retail_counter():
+    """A cash desk: solid body, stone top, lit toe recess."""
+    parts = []
+    w, d, h = 2.4, 0.72, 0.98
+    body = rounded_box("counter_body", (w, d, h - 0.06), (0, 0, (h - 0.06) / 2 + 0.06), bevel=0.01)
+    parts.append(assign(body, "joinery"))
+    top = rounded_box("counter_top", (w + 0.06, d + 0.06, 0.05), (0, 0, h), bevel=0.012)
+    parts.append(assign(top, "marble"))
+    # The toe recess, which is what stops joinery reading as a crate.
+    toe = rounded_box("counter_toe", (w - 0.16, d - 0.14, 0.07), (0, 0, 0.035), bevel=0.006)
+    parts.append(assign(toe, "darkMetal"))
+    return parts
+
+
+def p_retail_rack():
+    """A hanging rail with garments on it."""
+    parts = []
+    L = 1.9
+    for x in (-1, 1):
+        post = cylinder(f"rack_post_{x}", 0.022, 1.5, (x * L / 2, 0, 0.75), verts=12, bevel=0.004)
+        parts.append(assign(post, "bronze"))
+        foot = rounded_box(f"rack_foot_{x}", (0.06, 0.5, 0.03), (x * L / 2, 0, 0.015), bevel=0.006)
+        parts.append(assign(foot, "bronze"))
+    rail = cylinder("rack_rail", 0.016, L, (0, 0, 1.46), verts=12, bevel=0.003)
+    rail.rotation_euler = (0, math.radians(90), 0)
+    parts.append(assign(rail, "bronze"))
+
+    # Garments: thin tapered slabs at irregular spacing. Evenly spaced they
+    # read as a comb; a rail nobody has touched is the giveaway.
+    for i in range(11):
+        r = wobble(41, i)
+        x = -L / 2 + 0.1 + (L - 0.2) * (i / 10) + (r - 0.5) * 0.05
+        g = rounded_box(f"rack_gmt_{i}", (0.05 + r * 0.02, 0.34, 0.86 + r * 0.2),
+                        (x, 0, 1.46 - (0.86 + r * 0.2) / 2 - 0.03), bevel=0.02, segments=3)
+        g.rotation_euler = (0, 0, (r - 0.5) * 0.18)
+        parts.append(assign(g, "linen" if i % 3 else "upholsteryDark"))
+    return parts
+
+
+def p_retail_shelf():
+    """Open display shelving — the wall side of a shop."""
+    parts = []
+    w, d, h = 2.0, 0.4, 2.3
+    for x in (-1, 1):
+        side = rounded_box(f"shelf_side_{x}", (0.05, d, h), (x * (w / 2), 0, h / 2), bevel=0.006)
+        parts.append(assign(side, "joinery"))
+    for i in range(5):
+        z = 0.28 + i * 0.48
+        sh = rounded_box(f"shelf_{i}", (w, d, 0.035), (0, 0, z), bevel=0.006)
+        parts.append(assign(sh, "joinery"))
+        strip = rounded_box(f"shelf_light_{i}", (w - 0.12, 0.05, 0.018), (0, -d / 2 + 0.05, z - 0.03),
+                            bevel=0.004)
+        parts.append(assign(strip, "glow"))
+        # Stock: a few objects per shelf, never a full row.
+        for j in range(3):
+            r = wobble(97 + i, j)
+            if r < 0.35:
+                continue
+            ox = -w / 2 + 0.3 + (w - 0.6) * (j / 2) + (r - 0.5) * 0.16
+            box_h = 0.14 + r * 0.16
+            item = rounded_box(f"shelf_item_{i}_{j}", (0.16 + r * 0.1, 0.2, box_h),
+                               (ox, 0.02, z + box_h / 2 + 0.018), bevel=0.012)
+            parts.append(assign(item, "ceramic" if j % 2 else "stone"))
+    return parts
+
+
+def p_vitrine():
+    """A glass display case on a plinth."""
+    parts = []
+    w, d = 0.9, 0.9
+    plinth = rounded_box("vit_plinth", (w, d, 0.85), (0, 0, 0.425), bevel=0.01)
+    parts.append(assign(plinth, "joinery"))
+    for x in (-1, 1):
+        for y in (-1, 1):
+            post = cylinder(f"vit_post_{x}_{y}", 0.012, 0.8,
+                            (x * (w / 2 - 0.02), y * (d / 2 - 0.02), 1.25), verts=8, bevel=0.002)
+            parts.append(assign(post, "bronze"))
+    cap = rounded_box("vit_cap", (w, d, 0.03), (0, 0, 1.665), bevel=0.006)
+    parts.append(assign(cap, "bronze"))
+    glassed = rounded_box("vit_glass", (w - 0.05, d - 0.05, 0.78), (0, 0, 1.25), bevel=0.004)
+    parts.append(assign(glassed, "marble"))
+    piece = lathe("vit_object",
+                  [(0.0, 0.0), (0.09, 0.0), (0.12, 0.05), (0.10, 0.22), (0.06, 0.3), (0.0, 0.31)],
+                  verts=24)
+    piece.location = (0, 0, 0.86)
+    parts.append(assign(piece, "ceramic"))
+    return parts
+
+
+def p_mannequin():
+    """A headless torso on a stem — a shop form, not a person."""
+    parts = []
+    stand = lathe("mq_stand",
+                  [(0.0, 0.0), (0.20, 0.0), (0.20, 0.02), (0.03, 0.05), (0.028, 0.78), (0.0, 0.78)],
+                  verts=20)
+    parts.append(assign(stand, "darkMetal"))
+    torso = lathe("mq_torso",
+                  [(0.0, 0.74), (0.10, 0.76), (0.155, 0.92), (0.13, 1.10), (0.16, 1.26),
+                   (0.145, 1.38), (0.09, 1.44), (0.0, 1.45)],
+                  verts=28)
+    parts.append(assign(torso, "ceramic"))
+    return parts
+
+
+def p_escalator():
+    """
+    One escalator run, rising a single retail storey.
+
+    Thirty degrees is the standard, and it is not an arbitrary choice: it
+    fixes the run from the rise, so a 5 m floor-to-floor needs 8.66 m of
+    floor. Getting that wrong is how an atrium ends up with an escalator
+    that lands in a wall.
+    """
+    parts = []
+    rise, angle = 5.0, math.radians(30)
+    run = rise / math.tan(angle)
+    length = math.hypot(rise, run)
+    w = 1.05
+
+    truss = rounded_box("esc_truss", (w, length, 0.72), (0, 0, 0), bevel=0.02)
+    truss.rotation_euler = (angle, 0, 0)
+    truss.location = (0, run / 2, rise / 2 - 0.1)
+    # Stone, not blackened steel. A dark truss reads as a solid slab from
+    # below, and the underside of an escalator is the thing an atrium
+    # camera looking up sees most of.
+    parts.append(assign(truss, "stone"))
+
+    steps = rounded_box("esc_steps", (w - 0.14, length, 0.06), (0, 0, 0), bevel=0.008)
+    steps.rotation_euler = (angle, 0, 0)
+    steps.location = (0, run / 2, rise / 2 + 0.30)
+    parts.append(assign(steps, "stone"))
+
+    for x in (-1, 1):
+        bal = rounded_box(f"esc_bal_{x}", (0.03, length, 0.95), (0, 0, 0), bevel=0.006)
+        bal.rotation_euler = (angle, 0, 0)
+        bal.location = (x * (w / 2 - 0.02), run / 2, rise / 2 + 0.78)
+        parts.append(assign(bal, "marble"))
+        rail = rounded_box(f"esc_rail_{x}", (0.075, length, 0.05), (0, 0, 0), bevel=0.02)
+        rail.rotation_euler = (angle, 0, 0)
+        rail.location = (x * (w / 2 - 0.02), run / 2, rise / 2 + 1.27)
+        parts.append(assign(rail, "darkMetal"))
+    return parts
+
+
+def p_lift_doors():
+    """A lift entrance: bronze architrave, two leaves, a call plate."""
+    parts = []
+    w, h = 1.15, 2.35
+    frame = rounded_box("lift_frame", (w + 0.34, 0.09, h + 0.17), (0, 0, (h + 0.17) / 2), bevel=0.01)
+    parts.append(assign(frame, "bronze"))
+    for x in (-1, 1):
+        leaf = rounded_box(f"lift_leaf_{x}", (w / 2 - 0.01, 0.04, h),
+                           (x * w / 4, -0.05, h / 2), bevel=0.006)
+        parts.append(assign(leaf, "darkMetal"))
+    plate = rounded_box("lift_plate", (0.11, 0.02, 0.2), (w / 2 + 0.24, -0.06, 1.15), bevel=0.004)
+    parts.append(assign(plate, "bronze"))
+    return parts
+
+
+def p_gym_bench():
+    parts = []
+    for x in (-1, 1):
+        foot = rounded_box(f"gym_foot_{x}", (0.07, 0.62, 0.42), (x * 0.5, 0, 0.21), bevel=0.012)
+        parts.append(assign(foot, "darkMetal"))
+    pad = rounded_box("gym_pad", (1.3, 0.32, 0.11), (0, 0, 0.48), bevel=0.05, segments=3, subsurf=1)
+    parts.append(assign(pad, "upholsteryDark"))
+    return parts
+
+
 PIECES = {
     "sofa-3seat": (p_sofa_3seat, "MDL-01"),
     "lounge-chair": (p_lounge_chair, "MDL-02"),
@@ -1093,6 +1276,14 @@ PIECES = {
     "parasol": (p_parasol, "MDL-12"),
     "outdoor-sofa": (p_outdoor_sofa, "MDL-12"),
     "cabana": (p_cabana, "MDL-12"),
+    "retail-counter": (p_retail_counter, "MDL-13"),
+    "retail-rack": (p_retail_rack, "MDL-13"),
+    "retail-shelf": (p_retail_shelf, "MDL-13"),
+    "vitrine": (p_vitrine, "MDL-13"),
+    "mannequin": (p_mannequin, "MDL-13"),
+    "escalator": (p_escalator, "MDL-14"),
+    "lift-doors": (p_lift_doors, "MDL-14"),
+    "gym-bench": (p_gym_bench, "MDL-15"),
 }
 
 

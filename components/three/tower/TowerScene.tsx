@@ -15,6 +15,7 @@ import { Apartment } from './Apartment';
 import { createApartment } from './ApartmentGeometry';
 import { Model } from '../models/ModelLibrary';
 import { createParkLayout } from './Park';
+import { createRetailProps } from './RetailProps';
 import { createSiteProps } from './SiteProps';
 import { createSkyline } from './Skyline';
 import { createShorelineLayout, createTowerLayout, TOWER_CONFIG } from './TowerGeometry';
@@ -58,6 +59,9 @@ export function TowerScene({
 
   // People, cars, a boat, and the loose furniture on the deck.
   const props = useMemo(() => createSiteProps(layout.plan, parkBackX), [layout.plan, parkBackX]);
+
+  // The retail fit-out, on every level around the atrium.
+  const retail = useMemo(() => createRetailProps(layout.plan), [layout.plan]);
 
   // Broadleaf crowns reuse the villa's card technique — a tree's outline is
   // decided by a texture with leaves and gaps in it, not by geometry.
@@ -184,7 +188,7 @@ export function TowerScene({
         {/* What makes the site look inhabited. Each is its own draw call;
             twenty of them against a budget of two hundred and fifty is
             cheap for the difference between a place and a massing model. */}
-        {props.map((p) => (
+        {[...props, ...retail].map((p) => (
           <Model key={p.key} name={p.name} position={p.position} rotationY={p.rotationY} />
         ))}
         <Apartment layout={apartment} detail={detail} />

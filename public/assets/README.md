@@ -80,7 +80,7 @@ table above with its true source and licence.
 
 # Model library
 
-Thirty-seven pieces in `models/*.glb`, authored by
+45 pieces in `models/*.glb`, authored by
 `tools/blender/models.py` and loaded by
 `components/three/models/ModelLibrary.tsx`.
 
@@ -123,10 +123,17 @@ Thirty-seven pieces in `models/*.glb`, authored by
 | `parasol` | MDL-12 | 340 | 3 KB |
 | `outdoor-sofa` | MDL-12 | 2,588 | 30 KB |
 | `cabana` | MDL-12 | 2,136 | 28 KB |
+| `retail-counter` | MDL-13 | 564 | 9 KB |
+| `retail-rack` | MDL-13 | 2,992 | 48 KB |
+| `retail-shelf` | MDL-13 | 3,572 | 52 KB |
+| `vitrine` | MDL-13 | 1,684 | 23 KB |
+| `mannequin` | MDL-13 | 592 | 4 KB |
+| `escalator` | MDL-14 | 1,128 | 16 KB |
+| `lift-doors` | MDL-14 | 752 | 11 KB |
+| `gym-bench` | MDL-15 | 1,144 | 16 KB |
 
-**60,088 triangles and 639 KB for the whole library**, Draco-compressed —
-less than a single texture map. All project-authored; no third-party
-licence applies.
+**72,516 triangles and 822 KB for the whole library**, Draco-compressed.
+All project-authored; no third-party licence applies.
 
 ## The export contract
 

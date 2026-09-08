@@ -73,7 +73,15 @@ export type ModelName =
   | 'dining-chair'
   | 'parasol'
   | 'outdoor-sofa'
-  | 'cabana';
+  | 'cabana'
+  | 'retail-counter'
+  | 'retail-rack'
+  | 'retail-shelf'
+  | 'vitrine'
+  | 'mannequin'
+  | 'escalator'
+  | 'lift-doors'
+  | 'gym-bench';
 
 export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
@@ -113,6 +121,14 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'parasol',
   'outdoor-sofa',
   'cabana',
+  'retail-counter',
+  'retail-rack',
+  'retail-shelf',
+  'vitrine',
+  'mannequin',
+  'escalator',
+  'lift-doors',
+  'gym-bench',
 ];
 
 function url(name: ModelName): string {

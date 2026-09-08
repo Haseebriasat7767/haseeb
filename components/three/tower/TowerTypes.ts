@@ -117,6 +117,12 @@ export type TowerPlan = {
   furnishedCeilingY: number;
   /** Bounds of the glazed floor plate, inside the service core. */
   glazedX: Range;
+  /** The retail atrium void, so the fit-out can be laid out around it. */
+  atriumX: Range;
+  atriumZ: Range;
+  /** Floor-to-floor of the retail levels, and how many there are. */
+  podiumLevels: number;
+  podiumLevelHeight: number;
   /** World Y of the floor slab for a given residential level, 0-indexed. */
   levelY: (level: number) => number;
 };
