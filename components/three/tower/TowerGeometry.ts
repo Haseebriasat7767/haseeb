@@ -744,6 +744,74 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     })),
   ];
 
+  // ── The blade's elevation ─────────────────────────────────────────────
+  //
+  // The service core is the one part of this building with no window in it,
+  // and it was drawn as a single stone box fifty-five metres tall. From the
+  // arrival camera that is a blank grey slab beside a glass tower — the
+  // building's worst elevation by a distance, and the reason the whole thing
+  // read as a massing study from the west.
+  //
+  // A stone elevation of this size is never one plane. It is panelised, and
+  // what you actually see at two hundred metres is the shadow in the joints:
+  // a vertical rhythm that gives the blade a grain, and a horizontal one at
+  // every floor that ties it to the glass beside it. Both are shallow
+  // reveals, which is what a real drained-and-backventilated stone facade
+  // gives you, and neither costs more than a thin box.
+  // Concrete, not bronze. The first version put these in `fins`, which is the
+  // bronze mesh, and a joint grid in polished metal on a stone blade reads as
+  // a cage bolted to the building rather than as the way the stone is hung.
+  const REVEAL = 0.05;
+  /** How far a joint stands off the face. Enough to throw a line of shadow. */
+  const PROUD = 0.035;
+  const bladeTop = crownTopY;
+  // Vertical joints down the west face, at a panel width that divides the
+  // blade evenly rather than a round number that leaves a sliver at one end.
+  const bladePanels = 7;
+  for (let i = 1; i < bladePanels; i += 1) {
+    const z = coreZ[0] + (span(coreZ) / bladePanels) * i;
+    spandrels.push(
+      box(
+        `blade-joint-v-${i}`,
+        [towerX[0] - PROUD, towerX[0] + 0.01],
+        [towerBaseY, bladeTop],
+        [z - REVEAL / 2, z + REVEAL / 2],
+      ),
+    );
+  }
+  // And the same on the two return faces, so the blade reads as one panelised
+  // object turning a corner rather than a decorated front with plain sides.
+  for (const [tag, zr] of [
+    ['n', [coreZ[0] - PROUD, coreZ[0] + 0.01]],
+    ['s', [coreZ[1] - 0.01, coreZ[1] + PROUD]],
+  ] as const) {
+    for (let i = 1; i < 3; i += 1) {
+      const x = coreX[0] + (coreWidth / 3) * i;
+      spandrels.push(
+        box(
+          `blade-joint-${tag}-${i}`,
+          [x - REVEAL / 2, x + REVEAL / 2],
+          [towerBaseY, bladeTop],
+          zr,
+        ),
+      );
+    }
+  }
+  // A horizontal joint at every floor line, carried round all three faces.
+  for (let level = 1; level < towerLevels; level += 1) {
+    const y = plan.levelY(level);
+    const jointY: Range = [y - REVEAL / 2, y + REVEAL / 2];
+    spandrels.push(
+      box(`blade-joint-h-w-${level}`, [towerX[0] - PROUD, towerX[0] + 0.01], jointY, coreZ),
+    );
+    spandrels.push(
+      box(`blade-joint-h-n-${level}`, coreX, jointY, [coreZ[0] - PROUD, coreZ[0] + 0.01]),
+    );
+    spandrels.push(
+      box(`blade-joint-h-s-${level}`, coreX, jointY, [coreZ[1] - 0.01, coreZ[1] + PROUD]),
+    );
+  }
+
   /** How far the tower has stepped in by a given level. */
   const insetAt = (level: number) =>
     setbacks.reduce((sum, s) => (level >= s.level ? sum + s.inset : sum), 0);
