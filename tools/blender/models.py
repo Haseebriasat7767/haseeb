@@ -287,6 +287,110 @@ def swept_arc(name, radius, arc_deg, section, height, verts=40, corner=0.05):
     return obj
 
 
+def chaikin(points, rounds=3, closed=False):
+    """
+    Corner-cutting. Turns a handful of control points into a smooth path.
+
+    Used instead of a Bezier or a NURBS curve because the whole file places
+    vertices explicitly — see `swept_arc` on what happened the one time a
+    modifier was trusted to do geometry headless.
+    """
+    pts = [Vector((p[0], p[1])) for p in points]
+    for _ in range(rounds):
+        out = [] if closed else [pts[0]]
+        n = len(pts)
+        span = n if closed else n - 1
+        for i in range(span):
+            a, b = pts[i], pts[(i + 1) % n]
+            out.append(a * 0.75 + b * 0.25)
+            out.append(a * 0.25 + b * 0.75)
+        if not closed:
+            out.append(pts[-1])
+        pts = out
+    return pts
+
+
+def smoothstep(edge0, edge1, x):
+    if edge1 <= edge0:
+        return 0.0 if x < edge0 else 1.0
+    t = max(0.0, min(1.0, (x - edge0) / (edge1 - edge0)))
+    return t * t * (3 - 2 * t)
+
+
+def swept_path(name, control, section, rounds=3, corner=0.06, steps=4, closed=False):
+    """
+    A rounded section swept along a smooth path in plan, varying as it goes.
+
+    `swept_arc` sweeps ONE cross-section along ONE circular arc, which is
+    exactly a sofa back and exactly nothing else. A real sofa's back and its
+    arms are the same piece of upholstery: the back is tall, it drops as it
+    turns the corner, and it runs forward as an arm. Built as an arc plus two
+    separate lozenges — which is what the first sofa was — the arc floats with
+    daylight under it and the arms sit beside it like luggage.
+
+    `section(t)` returns `(half_width, bottom_z, top_z)` for the path
+    parameter t in [0, 1]. Width is measured along the path's normal in plan,
+    so the piece keeps its thickness round a corner instead of pinching.
+    """
+    pts = chaikin(control, rounds=rounds, closed=closed)
+    n = len(pts)
+
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new()
+
+    rings = []
+    for i, p in enumerate(pts):
+        t = i / (n - 1) if not closed else i / n
+        # Tangent from the neighbours, so the normal is continuous.
+        prev = pts[(i - 1) % n] if (closed or i > 0) else pts[0]
+        nxt = pts[(i + 1) % n] if (closed or i < n - 1) else pts[-1]
+        tangent = (nxt - prev)
+        if tangent.length < 1e-9:
+            tangent = Vector((1.0, 0.0))
+        tangent.normalize()
+        normal = Vector((-tangent.y, tangent.x))
+
+        hw, z0, z1 = section(t)
+        hh = (z1 - z0) / 2
+        cz = (z1 + z0) / 2
+        c = min(corner, hw * 0.9, hh * 0.9)
+
+        ring = []
+        for cx, cy, a0 in ((hw - c, hh - c, 0.0), (-(hw - c), hh - c, math.pi / 2),
+                           (-(hw - c), -(hh - c), math.pi), (hw - c, -(hh - c), 3 * math.pi / 2)):
+            for k in range(steps + 1):
+                a = a0 + (math.pi / 2) * (k / steps)
+                px = cx + math.cos(a) * c
+                pz = cy + math.sin(a) * c
+                v = bm.verts.new((p.x + normal.x * px, p.y + normal.y * px, cz + pz))
+                ring.append(v)
+        rings.append(ring)
+
+    bm.verts.ensure_lookup_table()
+    count = len(rings[0])
+    span = n if closed else n - 1
+    for i in range(span):
+        a, b = rings[i], rings[(i + 1) % n]
+        for j in range(count):
+            k = (j + 1) % count
+            bm.faces.new((a[j], a[k], b[k], b[j]))
+    if not closed:
+        bm.faces.new(tuple(reversed(rings[0])))
+        bm.faces.new(tuple(rings[-1]))
+
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.shade_smooth()
+    obj.select_set(False)
+    return obj
+
+
 def organic_slab(name, radius, height, lobes=3, wobble=0.22, verts=64,
                  phase=0.0, squash=1.0, bevel=0.02):
     """
@@ -383,66 +487,118 @@ def join(name, objs, mat_name):
 # from timber is what lets the loader swap a fabric later.
 
 def p_sofa_3seat():
-    """Curved three-seat sofa — the reference piece for the lounge."""
+    """
+    Curved three-seat sofa — the reference piece for the lounge.
+
+    Rebuilt. The first one was a swept arc for the back plus two rounded
+    boxes for the arms, and a Cycles preview showed exactly what that is: a
+    curved slab standing behind the seat with daylight under it and two
+    lozenges parked either side. It read as a bathtub. Back and arms are one
+    continuous upholstered shell here, because on a real sofa they are one
+    piece — the back drops as it turns the corner and runs forward as the arm.
+    """
     parts = []
     w, d = 2.9, 1.02
+    hw = w / 2
 
-    plinth = rounded_box("sofa_plinth", (w - 0.34, d - 0.22, 0.13), (0, 0, 0.075), bevel=0.02)
+    # The plinth is recessed under the seat, not proud of it. A base you can
+    # see the edge of reads as a pallet; a base you cannot reads as a shadow
+    # gap, which is what these sofas actually have.
+    plinth = rounded_box("sofa_plinth", (w - 0.5, d - 0.34, 0.11), (0, 0, 0.055), bevel=0.02)
     parts.append(assign(plinth, "joinery"))
 
-    seat = rounded_box("sofa_seat", (w - 0.16, d, 0.2), (0, 0, 0.24), bevel=0.07, segments=4)
+    # The seat platform the cushions sit on.
+    seat = rounded_box("sofa_seat", (w - 0.2, d - 0.06, 0.2), (0, 0.03, 0.2), bevel=0.05, segments=3)
     parts.append(assign(seat, "upholstery"))
 
-    # Three cushions, each a little different — identical cushions are the
+    # Back and arms, one shell. Control points run left-arm-front, round the
+    # back, out to right-arm-front; the back bows away from the seat so the
+    # arms come forward of it, which is what "wrap-around" means.
+    front_y, back_y = 0.40, -0.50
+    arm_x = hw - 0.15
+    control = [
+        (-arm_x, front_y),
+        (-arm_x, -0.24),
+        (-arm_x + 0.26, back_y + 0.06),
+        (0.0, back_y),
+        (arm_x - 0.26, back_y + 0.06),
+        (arm_x, -0.24),
+        (arm_x, front_y),
+    ]
+
+    def section(t):
+        # Tall across the back, dropping to arm height at both ends. The
+        # bottom runs down into the seat platform so no light gets under it.
+        near_end = min(t, 1 - t)
+        rise = smoothstep(0.08, 0.30, near_end)
+        return (0.14, 0.16, 0.44 + 0.34 * rise)
+
+    shell = swept_path("sofa_shell", control, section, rounds=4, corner=0.09)
+    parts.append(assign(shell, "upholstery"))
+
+    # Seat cushions, each a little different — identical cushions are the
     # fastest way to make a sofa read as extruded.
-    for i, off in enumerate((-0.92, 0.0, 0.92)):
+    for i, off in enumerate((-0.86, 0.0, 0.86)):
         c = rounded_box(
             f"sofa_cushion_{i}",
-            (0.86, d - 0.13, 0.17 + i * 0.004),
-            (off, 0.02, 0.42),
-            bevel=0.075, segments=4, subsurf=1,
+            (0.82, d - 0.30, 0.16 + i * 0.004),
+            (off, 0.10, 0.38),
+            bevel=0.07, segments=4, subsurf=1,
         )
         parts.append(assign(c, "upholstery"))
 
-    # The back wraps around the seat rather than standing behind it.
-    # Radius 3.2 over 50 degrees gives a 2.7 m chord — a gentle wrap across
-    # a 2.9 m sofa, not a horseshoe.
-    back_r = 3.2
-    # Carried down far enough to meet the seat platform at the arc's
-    # midpoint: the back stands 0.19 m proud of the seat there, and a back
-    # that starts above the cushion line leaves daylight under it.
-    back = swept_arc("sofa_back", radius=back_r, arc_deg=50, section=0.26, height=0.74, verts=32)
-    back.location = (0, -0.42 + back_r, 0.66)
-    parts.append(assign(back, "upholstery"))
-
-    for side, x in (("l", -1), ("r", 1)):
-        arm = rounded_box(
-            f"sofa_arm_{side}",
-            (0.24, d - 0.08, 0.42),
-            (x * (w / 2 - 0.12), -0.02, 0.47),
-            bevel=0.1, segments=4, subsurf=1,
+    # Back cushions, leaning into the shell.
+    for i, off in enumerate((-0.84, 0.0, 0.84)):
+        b = rounded_box(
+            f"sofa_back_cushion_{i}",
+            (0.78, 0.19, 0.36),
+            (off, -0.24 - abs(off) * 0.04, 0.57),
+            bevel=0.08, segments=4, subsurf=1,
         )
-        parts.append(assign(arm, "upholstery"))
+        b.rotation_euler = (math.radians(-9), 0, 0)
+        parts.append(assign(b, "upholstery"))
 
     return parts
 
 
 def p_lounge_chair():
-    """A legless tub chair — low, wide, and round in plan."""
+    """
+    A legless tub chair — low, wide, and round in plan.
+
+    Rebuilt for the same reason the sofa was: the back was a swept arc
+    floating above a lathed drum, its two ends stopping in mid-air a hand's
+    width clear of the seat. From the front — which is the view the preview
+    camera was pointing away from — it read as a piece of pipe balanced on a
+    bucket. The back and arms are one shell that runs down into the base.
+    """
     parts = []
-    shell = lathe(
-        "chair_shell",
-        [(0.0, 0.0), (0.5, 0.0), (0.52, 0.12), (0.50, 0.34), (0.47, 0.40), (0.40, 0.41), (0.0, 0.41)],
+
+    base = lathe(
+        "chair_base",
+        [(0.0, 0.0), (0.48, 0.0), (0.50, 0.10), (0.48, 0.33), (0.42, 0.38), (0.0, 0.38)],
         verts=40,
     )
+    parts.append(assign(base, "upholstery"))
+
+    control = [
+        (-0.40, 0.30),
+        (-0.46, -0.02),
+        (-0.30, -0.36),
+        (0.0, -0.44),
+        (0.30, -0.36),
+        (0.46, -0.02),
+        (0.40, 0.30),
+    ]
+
+    def section(t):
+        near_end = min(t, 1 - t)
+        rise = smoothstep(0.06, 0.34, near_end)
+        return (0.10, 0.26, 0.50 + 0.32 * rise)
+
+    shell = swept_path("chair_shell", control, section, rounds=4, corner=0.08)
     parts.append(assign(shell, "upholstery"))
 
-    chair_r = 0.46
-    back = swept_arc("chair_back", radius=chair_r, arc_deg=210, section=0.15, height=0.42, verts=34)
-    back.location = (0, chair_r, 0.6)
-    parts.append(assign(back, "upholstery"))
-
-    cushion = rounded_box("chair_cushion", (0.78, 0.7, 0.14), (0, 0.03, 0.47),
+    cushion = rounded_box("chair_cushion", (0.74, 0.66, 0.14), (0, 0.04, 0.44),
                           bevel=0.06, segments=4, subsurf=1)
     parts.append(assign(cushion, "upholstery"))
     return parts
@@ -488,10 +644,14 @@ def p_side_drum():
 
 def p_bed():
     parts = []
-    base = rounded_box("bed_base", (1.98, 2.12, 0.28), (0, 0, 0.16), bevel=0.03)
-    parts.append(assign(base, "joinery"))
+    # A recessed plinth under an upholstered base rail, so the bed reads as
+    # floating rather than standing on a crate. It was one brown box.
+    plinth = rounded_box("bed_plinth", (1.80, 1.94, 0.09), (0, 0, 0.045), bevel=0.006)
+    parts.append(assign(plinth, "darkMetal"))
+    base = rounded_box("bed_base", (1.98, 2.12, 0.20), (0, 0, 0.19), bevel=0.02)
+    parts.append(assign(base, "upholstery"))
 
-    mattress = rounded_box("bed_mattress", (1.94, 2.08, 0.3), (0, 0, 0.45),
+    mattress = rounded_box("bed_mattress", (1.94, 2.08, 0.3), (0, 0, 0.44),
                            bevel=0.06, segments=4, subsurf=1)
     parts.append(assign(mattress, "linen"))
 
@@ -512,13 +672,44 @@ def p_bed():
 
 
 def p_nightstand():
+    """
+    Two drawers on a recessed plinth.
+
+    Was a single bevelled cube with two pulls stuck to it, which at a metre
+    from a bed reads as a cardboard box. There is one of these either side of
+    every bed in the building and another as the console in every lift lobby,
+    so it is the piece the walkthrough passes closest to more often than any
+    other.
+    """
     parts = []
-    body = rounded_box("night_body", (0.56, 0.44, 0.44), (0, 0, 0.3), bevel=0.012)
+    w, d, h = 0.56, 0.44, 0.46
+    plinth_h, top_t = 0.06, 0.022
+
+    # Recessed on all four sides so the carcass reads as floating on a shadow.
+    plinth = rounded_box("night_plinth", (w - 0.10, d - 0.10, plinth_h),
+                         (0, 0, plinth_h / 2), bevel=0.004)
+    parts.append(assign(plinth, "darkMetal"))
+
+    body_h = h - plinth_h - top_t
+    body = rounded_box("night_body", (w, d, body_h),
+                       (0, 0, plinth_h + body_h / 2), bevel=0.008)
     parts.append(assign(body, "joinery"))
-    for i, z in enumerate((0.18, 0.38)):
-        pull = cylinder(f"night_pull_{i}", 0.012, 0.16, (0, -0.225, z), verts=10, bevel=0.003)
+
+    # Two drawer fronts, proud of the carcass with a shadow gap between them.
+    front_h = (body_h - 0.024) / 2
+    for i in range(2):
+        z = plinth_h + 0.008 + front_h / 2 + i * (front_h + 0.008)
+        face = rounded_box(f"night_front_{i}", (w - 0.02, 0.016, front_h - 0.006),
+                           (0, -d / 2 - 0.006, z), bevel=0.004)
+        parts.append(assign(face, "joinery"))
+        pull = cylinder(f"night_pull_{i}", 0.011, 0.17, (0, -d / 2 - 0.03, z),
+                        verts=12, bevel=0.003)
         pull.rotation_euler = (0, math.radians(90), 0)
         parts.append(assign(pull, "bronze"))
+
+    top = rounded_box("night_top", (w + 0.016, d + 0.016, top_t),
+                      (0, 0, h - top_t / 2), bevel=0.005)
+    parts.append(assign(top, "marble"))
     return parts
 
 
@@ -637,21 +828,52 @@ def p_stone_lounger():
 
 
 def p_wingback():
-    """A tall enveloping chair — the one beside the bed in the reference."""
+    """
+    A tall enveloping chair — the one beside the bed in the reference.
+
+    Rebuilt: the back was an arc hanging over a drum with clear daylight
+    between the two. Here the wings and the back are one shell, deep enough
+    at the front to be wings rather than a collar, standing on a recessed
+    plinth.
+    """
     parts = []
-    shell = lathe(
-        "wing_shell",
-        [(0.0, 0.0), (0.42, 0.0), (0.44, 0.1), (0.42, 0.36), (0.38, 0.42), (0.0, 0.42)],
+
+    plinth = lathe(
+        "wing_plinth",
+        [(0.0, 0.0), (0.34, 0.0), (0.36, 0.06), (0.34, 0.14), (0.0, 0.14)],
+        verts=28,
+    )
+    parts.append(assign(plinth, "joinery"))
+
+    seat = lathe(
+        "wing_seat",
+        [(0.0, 0.0), (0.44, 0.0), (0.46, 0.10), (0.44, 0.28), (0.0, 0.30)],
         verts=36,
     )
+    seat.location = (0, 0, 0.13)
+    parts.append(assign(seat, "upholstery"))
+
+    # Wings come well forward of the back — that is what makes it a wingback
+    # rather than a tub.
+    control = [
+        (-0.40, 0.30),
+        (-0.46, 0.02),
+        (-0.32, -0.34),
+        (0.0, -0.42),
+        (0.32, -0.34),
+        (0.46, 0.02),
+        (0.40, 0.30),
+    ]
+
+    def section(t):
+        near_end = min(t, 1 - t)
+        rise = smoothstep(0.04, 0.40, near_end)
+        return (0.10, 0.34, 0.62 + 0.46 * rise)
+
+    shell = swept_path("wing_shell", control, section, rounds=4, corner=0.075)
     parts.append(assign(shell, "upholstery"))
 
-    r = 0.42
-    back = swept_arc("wing_back", radius=r, arc_deg=232, section=0.16, height=0.86, verts=36)
-    back.location = (0, r, 0.85)
-    parts.append(assign(back, "upholstery"))
-
-    cushion = rounded_box("wing_cushion", (0.66, 0.6, 0.13), (0, 0.02, 0.48),
+    cushion = rounded_box("wing_cushion", (0.64, 0.58, 0.14), (0, 0.03, 0.50),
                           bevel=0.055, segments=4, subsurf=1)
     parts.append(assign(cushion, "upholstery"))
     return parts
@@ -770,29 +992,76 @@ def p_kitchen_island():
 
 
 def p_kitchen_run():
-    """Tall units with a worktop and a splashback — the wall side."""
+    """
+    The wall side: base units, worktop, splashback, wall units over.
+
+    Was a single 2.4m slab of timber with a worktop buried inside it at
+    925mm, so it rendered as a brown monolith with a marble line across it.
+    A kitchen run is two bands of joinery with a lit gap between them, and
+    the gap is most of what you actually see.
+
+    It was also authored back-to-front — splashback on +Y, doors on -Y —
+    against the convention every rotation in the app is derived from, so in
+    the apartment it stood with its doors in the wall and its splashback
+    facing the room. Same bug the treadmill and the lockers had. Fixed in
+    the model rather than compensated for at the call site, for the same
+    reason: the next piece placed against a wall should not have to know.
+    """
     parts = []
-    w, d = 3.6, 0.66
+    w = 3.6
+    base_d, wall_d = 0.64, 0.36
+    plinth_h, top_h, top_t = 0.11, 0.90, 0.04
+    wall_z0, wall_z1 = 1.42, 2.30
 
-    tall = rounded_box("run_tall", (w, d, 2.4), (0, 0, 1.2), bevel=0.006)
-    parts.append(assign(tall, "joinery"))
+    plinth = rounded_box("run_plinth", (w, base_d - 0.09, plinth_h),
+                         (0, -0.045, plinth_h / 2), bevel=0.004)
+    parts.append(assign(plinth, "darkMetal"))
 
-    # Shadow gaps between the door leaves, which is what stops a run of
-    # units reading as one slab of timber.
+    base_h = top_h - plinth_h
+    base = rounded_box("run_base", (w, base_d, base_h),
+                       (0, 0, plinth_h + base_h / 2), bevel=0.006)
+    parts.append(assign(base, "joinery"))
+
+    worktop = rounded_box("run_worktop", (w + 0.02, base_d + 0.03, top_t),
+                          (0, 0.015, top_h + top_t / 2), bevel=0.006)
+    parts.append(assign(worktop, "marble"))
+
+    # The splashback runs the full height of the gap. In a kitchen of this
+    # class it is the same slab as the worktop, which is the detail.
+    splash = rounded_box("run_splash", (w, 0.02, wall_z0 - top_h - top_t),
+                         (0, -(base_d / 2 - 0.01), (top_h + top_t + wall_z0) / 2), bevel=0.003)
+    parts.append(assign(splash, "marble"))
+
+    wall = rounded_box("run_wall", (w, wall_d, wall_z1 - wall_z0),
+                       (0, -(base_d - wall_d) / 2, (wall_z0 + wall_z1) / 2), bevel=0.006)
+    parts.append(assign(wall, "joinery"))
+
+    # A lit reveal under the wall units — the light every one of these has.
+    strip = rounded_box("run_strip", (w - 0.08, 0.10, 0.014),
+                        (0, -((base_d - wall_d) / 2 - wall_d / 2 + 0.09), wall_z0 - 0.012), bevel=0.003)
+    parts.append(assign(strip, "glow"))
+
+    # Shadow gaps between the leaves, top and bottom, which is what stops a
+    # run of units reading as one slab of timber.
     for i in range(1, 5):
         x = -w / 2 + (w / 5) * i
-        gap = rounded_box(f"run_gap_{i}", (0.014, 0.02, 2.3), (x, -d / 2, 1.2), bevel=0.002)
-        parts.append(assign(gap, "darkMetal"))
-
-    worktop = rounded_box("run_worktop", (w, d + 0.04, 0.05), (0, -0.02, 0.925), bevel=0.008)
-    parts.append(assign(worktop, "marble"))
-    splash = rounded_box("run_splash", (w, 0.02, 0.5), (0, d / 2 - 0.02, 1.2), bevel=0.004)
-    parts.append(assign(splash, "marble"))
+        g0 = rounded_box(f"run_gap_b{i}", (0.012, 0.02, base_h - 0.03),
+                         (x, base_d / 2, plinth_h + base_h / 2), bevel=0.002)
+        parts.append(assign(g0, "darkMetal"))
+        g1 = rounded_box(f"run_gap_w{i}", (0.012, 0.02, wall_z1 - wall_z0 - 0.03),
+                         (x, -((base_d - wall_d) / 2 - wall_d / 2), (wall_z0 + wall_z1) / 2), bevel=0.002)
+        parts.append(assign(g1, "darkMetal"))
     return parts
 
 
 def p_vanity():
-    """A hung vanity with a countertop basin."""
+    """
+    A hung vanity with a countertop basin.
+
+    Authored facing +Y like everything else. It was the other way round —
+    mirror and tap on +Y, drawer face on -Y — so placed against the bathroom
+    wall it turned its basin into the wall and its mirror into the room.
+    """
     parts = []
     w, d = 1.5, 0.52
 
@@ -811,10 +1080,10 @@ def p_vanity():
     tap = lathe("vanity_tap",
                 [(0.0, 0.0), (0.026, 0.0), (0.026, 0.015), (0.014, 0.04), (0.014, 0.26), (0.0, 0.26)],
                 verts=14)
-    tap.location = (0, 0.19, 0.975)
+    tap.location = (0, -0.19, 0.975)
     parts.append(assign(tap, "bronze"))
 
-    mirror = rounded_box("vanity_mirror", (w - 0.2, 0.02, 1.0), (0, d / 2 - 0.01, 1.62), bevel=0.006)
+    mirror = rounded_box("vanity_mirror", (w - 0.2, 0.02, 1.0), (0, -(d / 2 - 0.01), 1.62), bevel=0.006)
     parts.append(assign(mirror, "darkMetal"))
     return parts
 
@@ -1668,7 +1937,13 @@ def preview(name, outdir):
     centre = (lo + hi) / 2
     reach = max((hi - lo).length, 0.6)
 
-    bpy.ops.object.camera_add(location=(centre.x + reach * 1.15, centre.y - reach * 1.35, centre.z + reach * 0.72))
+    # In FRONT of the piece. Every model here is authored facing +Y — that is
+    # the one fact the whole rotation table is derived from — and this camera
+    # sat at -Y, so every preview ever rendered from this tool showed the back
+    # of the furniture. A sofa photographed from behind is a wall.
+    bpy.ops.object.camera_add(
+        location=(centre.x - reach * 1.15, centre.y + reach * 1.35, centre.z + reach * 0.72)
+    )
     cam = bpy.context.active_object
     cam.data.lens = 60
     direction = centre - cam.location
