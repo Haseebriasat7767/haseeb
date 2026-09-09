@@ -566,6 +566,82 @@ def m_glass_grime(g, bsdf):
 
 
 # family -> (builder, resolution, tile in metres, note)
+def m_grass(g, bsdf):
+    """
+    Mown lawn.
+
+    ## Why this family had to exist
+
+    The lawn is the largest single surface in the project — it fills the
+    bottom half of the arrival and park framings — and it was the one thing
+    with no maps at all: a flat green with a little tint drift, which reads as
+    billiard felt. Every hard surface in the building had albedo, roughness
+    and normals baked from displacement; the ground they stand on had none.
+
+    ## What is authored, and at what scale
+
+    The first attempt put nearly all its detail at blade scale and baked out
+    almost flat, because at a tile of 0.85 m a blade is three pixels and three
+    pixels of high-frequency noise average to their own mean. What actually
+    reads on a lawn from ten metres is not blades at all: it is patchiness at
+    a hand's width and larger — clumps growing at different rates, wear where
+    people walk, damp in the hollows, dry on the crowns. So most of the
+    contrast lives there, with the blade speckle sitting on top for anyone
+    standing on it.
+
+    Colour runs bleached yellow-green to deep blue-green rather than light to
+    dark of one hue. That hue shift is most of what separates turf from a
+    green surface: dry blades go yellow, shaded ones go blue, and a lawn is
+    always some of each.
+
+    Nothing here is directional at mower scale. The runtime lays its own mown
+    bands over this and two periodic patterns at similar scales would moire.
+    """
+    blade = noise(g, 220.0, detail=8.0, rough=0.8)
+    clump = voronoi(g, 21.0, feature="F1", randomness=1.0)
+    patch = noise(g, 7.0, detail=6.0, rough=0.62, distortion=0.8)
+    wear = noise(g, 2.4, detail=4.0, rough=0.5)
+
+    # The patch tone does most of the work, and it is a wide range.
+    base = g.ramp(patch, [
+        (0.24, (0.20, 0.27, 0.10, 1)),
+        (0.44, (0.28, 0.37, 0.15, 1)),
+        (0.62, (0.38, 0.46, 0.20, 1)),
+        (0.80, (0.50, 0.55, 0.26, 1)),
+    ])
+    # Clump boundaries are the shadow between tufts — genuinely dark.
+    gaps = g.ramp(clump, [(0.0, (0.42, 0.46, 0.38, 1)), (0.22, (1, 1, 1, 1))])
+    clumped = g.new("ShaderNodeMix", data_type="RGBA", blend_type="MULTIPLY")
+    clumped.inputs[0].default_value = 0.85
+    g.l.new(O(base), clumped.inputs[6])
+    g.l.new(O(gaps), clumped.inputs[7])
+
+    # Blade speckle, for anybody standing on it.
+    speck = g.ramp(blade, [(0.34, (0.72, 0.76, 0.66, 1)), (0.70, (1.12, 1.10, 1.02, 1))])
+    bladed = g.new("ShaderNodeMix", data_type="RGBA", blend_type="MULTIPLY")
+    bladed.inputs[0].default_value = 0.55
+    g.l.new(O(clumped), bladed.inputs[6])
+    g.l.new(O(speck), bladed.inputs[7])
+
+    # Broad dry patches over the top of all of it.
+    dry = g.ramp(wear, [(0.34, (0.86, 0.84, 0.62, 1)), (0.70, (1.0, 1.0, 0.96, 1))])
+    tinted = g.new("ShaderNodeMix", data_type="RGBA", blend_type="MULTIPLY")
+    tinted.inputs[0].default_value = 0.6
+    g.l.new(O(bladed), tinted.inputs[6])
+    g.l.new(O(dry), tinted.inputs[7])
+    g.l.new(O(tinted), bsdf.inputs["Base Color"])
+
+    # Matte everywhere; the worn patches are the shiniest thing on a lawn,
+    # which is not saying much.
+    r = g.ramp(wear, [(0.3, (0.84,) * 3 + (1,)), (0.8, (0.97,) * 3 + (1,))])
+    g.l.new(O(r), bsdf.inputs["Roughness"])
+
+    # Relief from the clumps first, blades second: a lawn's silhouette against
+    # raking light is tufts, not individual leaves.
+    h = g.mixrgb(0.4, clump, blade)
+    return h, 0.75
+
+
 FAMILIES = {
     "plaster":  (m_plaster,  1024, 1.60, "Fine lime render"),
     "stone":    (m_stone,    1024, 1.20, "Honed travertine"),
@@ -583,6 +659,7 @@ FAMILIES = {
     "sand":       (m_sand,       1024, 3.00, "Wind-combed beach sand"),
     "boucle":     (m_boucle,     1024, 0.12, "Looped boucle upholstery"),
     "glassGrime": (m_glass_grime, 1024, 4.00, "Salt film and dust on glass"),
+    "grass":      (m_grass,      1024, 0.85, "Mown lawn at blade scale"),
 }
 
 

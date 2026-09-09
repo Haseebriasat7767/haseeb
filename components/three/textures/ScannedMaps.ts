@@ -97,6 +97,7 @@ export const SCANNED_FAMILIES: readonly SurfaceFamily[] = [
   'sand',
   'boucle',
   'glassGrime',
+  'grass',
 ];
 
 export function hasScannedMaps(family: SurfaceFamily): boolean {

@@ -1304,16 +1304,23 @@ function createMaterials() {
      */
     terrain: withAerialPerspective(
       withMownBands(
-        withVariation(
-          standard({ color: '#7c8354', roughness: 0.96, metalness: 0, envMapIntensity: 0.7 }),
-          {
-            scale: 0.045,
-            colorVariation: 0.42,
-            roughnessVariation: 0.12,
-            seed: 131,
-            normalStrength: 0.1,
-            normalScale: 0.35,
-          },
+        withMaps(
+          withVariation(
+            standard({ color: '#8f9a68', roughness: 0.96, metalness: 0, envMapIntensity: 0.7 }),
+            {
+              scale: 0.045,
+              colorVariation: 0.42,
+              roughnessVariation: 0.12,
+              seed: 131,
+              normalStrength: 0.1,
+              normalScale: 0.35,
+            },
+          ),
+          'grass',
+          // Softer than the beds get. This plane runs to the horizon, and a
+          // normal map at full strength on a surface seen at a one-degree
+          // grazing angle for most of its area is a field of aliasing.
+          0.55,
         ),
         { width: 3.6, strength: 0.055, angle: 0.42 },
       ),
@@ -1749,15 +1756,26 @@ function createMaterials() {
     // Mown subtropical lawn, not a temperate meadow. The old olive read as
     // dry grass in every frame; irrigated turf in this light is a much
     // greener, more saturated colour, and the park is largely made of it.
-    grass: withVariation(standard({ color: '#6d9440', roughness: 0.84, metalness: 0 }), {
-      scale: 1.3,
-      colorVariation: 0.05,
-      roughnessVariation: 0.04,
-      seed: 67,
-      // Blade clumping in ornamental grass.
-      normalStrength: 0.05,
-      normalScale: 1.8,
-    }),
+    /**
+     * Mown lawn.
+     *
+     * The largest single surface in the project and, until now, the only one
+     * with no maps on it at all — a flat green with a little tint drift over
+     * it, which is billiard felt. Every wall it runs up to had albedo,
+     * roughness and normals baked from displacement; the ground did not.
+     */
+    grass: withMaps(
+      withVariation(standard({ color: '#8a9a63', roughness: 0.9, metalness: 0 }), {
+        scale: 1.3,
+        colorVariation: 0.05,
+        roughnessVariation: 0.04,
+        seed: 67,
+        // Blade clumping in ornamental grass.
+        normalStrength: 0.05,
+        normalScale: 1.8,
+      }),
+      'grass',
+    ),
     /**
      * The mown lawn's blades. Deliberately *not* the ornamental `grass`
      * above: that one is a warm dry olive chosen to contrast with planting,

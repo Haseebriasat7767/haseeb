@@ -85,7 +85,8 @@ export type SurfaceFamily =
   | 'tile'
   | 'sand'
   | 'boucle'
-  | 'glassGrime';
+  | 'glassGrime'
+  | 'grass';
 
 export type SurfaceMaps = {
   // `Texture` rather than `CanvasTexture`: the procedural path bakes into a
@@ -218,6 +219,9 @@ function makeRecipes(): Record<SurfaceFamily, Recipe> {
     sand: plain([219, 203, 176], 3.0, 0.4, 0.94, 5.0),
     boucle: plain([222, 216, 205], 0.12, 0.7, 0.94, 6.0),
     glassGrime: plain([245, 245, 245], 4.0, 0.02, 0.1, 1.5),
+    // The lawn. A tile under a metre: any larger and the mid-scale patchiness
+    // that makes turf read as turf repeats visibly across an open lawn.
+    grass: plain([104, 118, 62], 0.85, 0.86, 0.98, 5.0),
 
     /**
      * Polished plaster: micro variation only. The brief is explicit that
