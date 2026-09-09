@@ -1,11 +1,13 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { HourDial } from '@/components/experience/HourDial';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import { hourTheme } from '@/lib/experience/hour-theme';
+import { getWalkFloors, subscribeWalkFloors, travelTo } from '@/lib/three/walk-floors';
+import type { WalkFloor } from '@/lib/three/walk-floors';
 import { DEFAULT_TOWER_VIEW, TOWER_VIEWS, TOWER_VIEW_NOTES } from '@/lib/three/tower-views';
 import { cn } from '@/lib/utils/cn';
 import type { TimeOfDay } from '@/types';
@@ -17,6 +19,14 @@ import type { TimeOfDay } from '@/types';
  * for rather than make the visitor go and find it.
  */
 const OPENING_HOUR: TimeOfDay = 'goldenHour';
+
+/**
+ * The server snapshot. Stable identity matters: returning a fresh array each
+ * render makes `useSyncExternalStore` decide the store changed, every render,
+ * forever. There are no floors during SSR because there is no scene yet.
+ */
+const NO_FLOORS: readonly WalkFloor[] = [];
+const serverFloors = () => NO_FLOORS;
 
 /**
  * The walkthrough.
@@ -46,6 +56,12 @@ export function TowerWalkthrough() {
   const [step, setStep] = useState(initial);
   const [hour, setHour] = useState<TimeOfDay>(OPENING_HOUR);
   const [walking, setWalking] = useState(false);
+
+  // The floors come from the scene, not from a list kept here — see
+  // `lib/three/walk-floors`. Empty until the 3D layer has mounted and built
+  // the building, which is why the picker appears a moment after the toggle.
+  const floors = useSyncExternalStore(subscribeWalkFloors, getWalkFloors, serverFloors);
+  const [floorId, setFloorId] = useState<string | null>(null);
   const webgl = useWebGLSupport();
 
   const view = TOWER_VIEWS[step] ?? DEFAULT_TOWER_VIEW;
@@ -101,6 +117,43 @@ export function TowerWalkthrough() {
         {walking ? (
           <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
             Click to look · W A S D to walk · Shift to run
+          </div>
+        ) : null}
+
+        {/* The lift. Twenty storeys is four minutes of stairwell at walking
+            pace, and nobody wants to see the stair twenty times to reach the
+            top — so the stair is there to be walked and this is there to be
+            used. It sets you down in the lift lobby of the floor you pick,
+            which is where a lift leaves you. */}
+        {walking && floors.length > 0 ? (
+          <div className="absolute top-24 left-6 z-20 max-h-[68%] w-52 overflow-y-auto">
+            <p className="text-eyebrow text-mist/70 bg-obsidian/60 px-3 py-2 uppercase backdrop-blur-sm">
+              Take the lift
+            </p>
+            <ul className="bg-obsidian/50 backdrop-blur-sm">
+              {[...floors].reverse().map((floor) => {
+                const current = floor.id === floorId;
+                return (
+                  <li key={floor.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFloorId(floor.id);
+                        travelTo(floor);
+                      }}
+                      className={cn(
+                        'text-eyebrow ease-luxe block w-full px-3 py-2 text-left uppercase transition-colors duration-300',
+                        current
+                          ? 'text-gold bg-alabaster/10'
+                          : 'text-mist hover:text-alabaster hover:bg-alabaster/5',
+                      )}
+                    >
+                      {floor.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ) : null}
 

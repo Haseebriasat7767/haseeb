@@ -1,3 +1,4 @@
+import type { WalkFloor } from '@/lib/three/walk-floors';
 import type { Vector3Tuple } from 'three';
 import type { BoxSpec, ColumnSpec, Range } from '../villa/VillaTypes';
 
@@ -150,6 +151,10 @@ export type TowerLayout = {
     coves: BoxSpec[];
   };
   columns: ColumnSpec[];
+  /** The escape stair and its shaft, the full height of the building. */
+  stair: { steps: BoxSpec[]; walls: BoxSpec[]; doorX: Range };
+  /** Every floor the stair serves, and where the lift sets you down on it. */
+  walkFloors: WalkFloor[];
   tower: {
     core: BoxSpec[];
     /** The expressed slab edge, wrapping all four elevations. */

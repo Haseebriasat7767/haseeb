@@ -2,7 +2,8 @@
 
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { Box3, Line3, Matrix4, Vector2, Vector3 } from 'three';
+import { Box3, Line3, Vector3 } from 'three';
+import { onTravel } from '@/lib/three/walk-floors';
 import type { WalkCollider } from './tower/WalkCollider';
 
 /**
@@ -38,8 +39,26 @@ const RADIUS = 0.32;
 const GRAVITY = -22;
 const WALK_SPEED = 3.4;
 const RUN_SPEED = 7.0;
-/** Steps taller than this stop you; anything less you walk up. */
-const STEP_UP = 0.42;
+/**
+ * Furthest the capsule may move before collision is resolved again.
+ *
+ * ## Why this is not just the frame's displacement
+ *
+ * Because a capsule can be swallowed whole. Solid collider boxes are fattened
+ * past the capsule's diameter so that a thin pane cannot produce two opposed
+ * contacts that cancel — but that means a 700mm wall has a 60mm band down the
+ * middle where every face is further away than the 320mm radius, and a capsule
+ * that lands in it detects nothing at all and walks out the far side.
+ *
+ * Measured: running at 7 m/s with the frame delta clamped to 0.05s is a 350mm
+ * step, and a probe inside the stair shaft's back wall returned zero contacts.
+ * The visitor walked through it and out into the retail floor beyond.
+ *
+ * Substepping is the fix rather than a thinner wall or a smaller clamp,
+ * because it is the only one that does not depend on the frame rate: on a slow
+ * device the step gets bigger and every geometric tolerance stops holding.
+ */
+const MAX_SUBSTEP = 0.12;
 
 export type WalkControlsProps = {
   collider: WalkCollider;
@@ -85,11 +104,26 @@ export function WalkControls({
       forward: new Vector3(),
       right: new Vector3(),
       wish: new Vector3(),
-      inverse: new Matrix4(),
       before: new Vector3(),
       resolved: new Vector3(),
-      look: new Vector2(),
+      motion: new Vector3(),
     }),
+    [],
+  );
+
+  // The lift. A destination arrives from the floor picker outside the canvas
+  // and the visitor is standing there on the next frame — vertical travel is
+  // the one part of a walkthrough nobody wants in real time, and twenty
+  // storeys at 3.4 metres a flight is four minutes of stairwell.
+  useEffect(
+    () =>
+      onTravel(({ position, heading: yaw }) => {
+        const s = state.current;
+        s.position.set(position[0], position[1] + EYE, position[2]);
+        s.velocity.set(0, 0, 0);
+        s.yaw = yaw;
+        s.pitch = 0;
+      }),
     [],
   );
 
@@ -168,43 +202,53 @@ export function WalkControls({
     s.velocity.y += GRAVITY * delta;
     if (s.grounded && (k.has('Space') || false)) s.velocity.y = 6.2;
 
-    s.position.addScaledVector(wish, delta);
-    s.position.addScaledVector(s.velocity, delta);
+    // ── Move and resolve ──────────────────────────────────────────────────
+    //
+    // In substeps small enough that the capsule cannot pass through anything
+    // between two resolutions. One step per frame is the common case; a
+    // sprint on a slow frame is three or four.
+    const { segment, box, triPoint, capsulePoint, delta: push, before, resolved, motion } = scratch;
+    motion.copy(wish).addScaledVector(s.velocity, 1).multiplyScalar(delta);
+    const substeps = Math.max(1, Math.ceil(motion.length() / MAX_SUBSTEP));
+    motion.divideScalar(substeps);
 
-    // ── Resolve ───────────────────────────────────────────────────────────
-    const { segment, box, triPoint, capsulePoint, delta: push, before, resolved } = scratch;
-    before.copy(s.position);
+    let lift = 0;
+    for (let step = 0; step < substeps; step += 1) {
+      s.position.add(motion);
+      before.copy(s.position);
 
-    // The capsule, from the feet-sphere centre to the head-sphere centre.
-    segment.start.set(s.position.x, s.position.y - EYE + RADIUS, s.position.z);
-    segment.end.set(s.position.x, s.position.y - RADIUS, s.position.z);
+      // The capsule, from the feet-sphere centre to the head-sphere centre.
+      segment.start.set(s.position.x, s.position.y - EYE + RADIUS, s.position.z);
+      segment.end.set(s.position.x, s.position.y - RADIUS, s.position.z);
 
-    box.makeEmpty();
-    box.expandByPoint(segment.start);
-    box.expandByPoint(segment.end);
-    box.min.addScalar(-RADIUS);
-    box.max.addScalar(RADIUS);
+      box.makeEmpty();
+      box.expandByPoint(segment.start);
+      box.expandByPoint(segment.end);
+      box.min.addScalar(-RADIUS);
+      box.max.addScalar(RADIUS);
 
-    collider.bvh.shapecast({
-      intersectsBounds: (nodeBox) => nodeBox.intersectsBox(box),
-      intersectsTriangle: (tri) => {
-        const distance = tri.closestPointToSegment(segment, triPoint, capsulePoint);
-        if (distance < RADIUS) {
-          const depth = RADIUS - distance;
-          push.copy(capsulePoint).sub(triPoint).normalize();
-          segment.start.addScaledVector(push, depth);
-          segment.end.addScaledVector(push, depth);
-        }
-        return false;
-      },
-    });
+      collider.bvh.shapecast({
+        intersectsBounds: (nodeBox) => nodeBox.intersectsBox(box),
+        intersectsTriangle: (tri) => {
+          const distance = tri.closestPointToSegment(segment, triPoint, capsulePoint);
+          if (distance < RADIUS) {
+            const depth = RADIUS - distance;
+            push.copy(capsulePoint).sub(triPoint).normalize();
+            segment.start.addScaledVector(push, depth);
+            segment.end.addScaledVector(push, depth);
+          }
+          return false;
+        },
+      });
 
-    // Where the capsule ended up after being pushed out of everything. The
-    // eye sits a radius above the head sphere's centre.
-    resolved.copy(segment.end).y += RADIUS;
-    push.copy(resolved).sub(before);
+      // Where the capsule ended up after being pushed out of everything. The
+      // eye sits a radius above the head sphere's centre.
+      resolved.copy(segment.end).y += RADIUS;
+      push.copy(resolved).sub(before);
+      lift += push.y;
 
-    s.position.copy(resolved);
+      s.position.copy(resolved);
+    }
 
     // Grounded whenever anything pushed us up at all.
     //
@@ -216,7 +260,7 @@ export function WalkControls({
     // they drop at whatever speed had built up. Every surface here is
     // axis-aligned, so there are no slopes to be fooled by: an upward
     // component means a floor is under us.
-    s.grounded = push.y > 1e-4;
+    s.grounded = lift > 1e-4;
     if (s.grounded) s.velocity.y = 0;
     // Fell out of the world: put them back rather than let them drop forever.
     if (s.position.y < -60) {
@@ -232,5 +276,5 @@ export function WalkControls({
   return null;
 }
 
-export { EYE as WALK_EYE_HEIGHT, STEP_UP as WALK_STEP_UP };
+export { EYE as WALK_EYE_HEIGHT };
 export default WalkControls;

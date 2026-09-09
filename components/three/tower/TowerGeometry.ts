@@ -1,3 +1,5 @@
+import { createStair } from './StairGeometry';
+import type { WalkFloor } from '@/lib/three/walk-floors';
 import type { BoxSpec, ColumnSpec, Range } from '../villa/VillaTypes';
 import type { PalmSpec, ShorelineLayout, TowerConfig, TowerLayout, TowerPlan } from './TowerTypes';
 
@@ -415,6 +417,14 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   const innerX: Range = [podiumX[0] + shopfrontInset, podiumX[1] - shopfrontInset];
   const innerZ: Range = [podiumZ[0] + shopfrontInset, podiumZ[1] - shopfrontInset];
 
+  // The stair shaft, declared here because both halves of the building have
+  // to agree about it: the podium plates are punched around it and the
+  // tower's service blade is hollowed out to become it. One shaft from the
+  // pavement to the top floor, which is what a fire stair is.
+  const coreXFull: Range = [towerX[0], towerX[0] + coreWidth];
+  const stairZ: Range = [3.2, towerZ[1] - 0.6];
+  const stairX: Range = coreXFull;
+
   // The shell behind the shopfronts. A ring rather than a solid block: the
   // retail levels are a real volume you can stand inside, and filling them
   // with stone would make the whole podium a prop that only works from
@@ -447,11 +457,17 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
 
   // Ground floor, solid: the atrium void starts above it.
   floors.push(box('podium-floor-0', innerX, [-0.2, 0], innerZ));
+  // The ground slab is solid — the stair starts on it rather than through it.
 
   /** A floor plate with the atrium punched out of it. */
   const plate = (key: string, y: Range): void => {
     floors.push(box(`${key}-n`, innerX, y, [innerZ[0], atriumZ[0]]));
-    floors.push(box(`${key}-s`, innerX, y, [atriumZ[1], innerZ[1]]));
+    // The southern band carries the stair shaft, so it is split around it as
+    // well. A plate with no hole in it is a stair that arrives at a ceiling.
+    floors.push(box(`${key}-s0`, innerX, y, [atriumZ[1], stairZ[0]]));
+    floors.push(box(`${key}-s1`, innerX, y, [stairZ[1], innerZ[1]]));
+    floors.push(box(`${key}-s2`, [innerX[0], stairX[0]], y, stairZ));
+    floors.push(box(`${key}-s3`, [stairX[1], innerX[1]], y, stairZ));
     floors.push(box(`${key}-w`, [innerX[0], atriumX[0]], y, atriumZ));
     floors.push(box(`${key}-e`, [atriumX[1], innerX[1]], y, atriumZ));
   };
@@ -628,10 +644,59 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   const lobbyZ: Range = [-3.2, 3.2];
   const coreWall = 0.35;
   core.push(box('tower-core-n', coreX, [towerBaseY, crownTopY], [coreZ[0], lobbyZ[0]]));
-  core.push(box('tower-core-s', coreX, [towerBaseY, crownTopY], [lobbyZ[1], coreZ[1]]));
+  // The south end of the blade is no longer solid: it is the stair shaft, and
+  // it now starts at the pavement rather than at the podium roof. `createStair`
+  // supplies its walls, so pushing a box here as well would fill it back in.
   core.push(box('tower-core-w', [coreX[0], coreX[0] + coreWall], [towerBaseY, crownTopY], lobbyZ));
   // The wall between the lobby and the apartment beyond it.
   core.push(box('tower-core-e', [coreX[1] - coreWall, coreX[1]], [towerBaseY, crownTopY], lobbyZ));
+
+  // The stair. Every floor a person can stand on, from the pavement to the
+  // top residential level: five podium storeys at 5m, then fifteen at 3.4m.
+  // The podium's finished floors sit at the top of their plates and the
+  // tower's at the top of their slabs, which is why these are two lists.
+  const stairLevels = [
+    ...Array.from({ length: podiumLevels }, (_, level) => level * podiumLevelHeight),
+    ...Array.from({ length: towerLevels }, (_, level) => plan.levelY(level) + slabThickness),
+  ];
+  const stair = createStair({
+    key: 'stair',
+    x: stairX,
+    z: stairZ,
+    wall: coreWall,
+    levels: stairLevels,
+    topY: crownTopY,
+    // The doors open north, into the lift lobby on every residential level
+    // and into the retail floor on every podium one.
+    doorEnd: 'min',
+  });
+
+  // Where the lift will put you. Derived from the same numbers the stair is,
+  // so the picker can never offer a floor the building does not have.
+  const shaftCentreX = mid(stair.doorX);
+  const lobbyCentreX = mid([coreX[0] + coreWall, coreX[1] - coreWall] as Range);
+  const walkFloors: WalkFloor[] = [
+    ...Array.from({ length: podiumLevels }, (_, level) => ({
+      id: `podium-${level}`,
+      label: level === 0 ? 'Ground floor' : `Retail level ${level + 1}`,
+      // On the retail floors there is no lift lobby, so you arrive on the
+      // shop floor a stride outside the stair door, facing it.
+      position: [shaftCentreX, level * podiumLevelHeight, stairZ[0] - 1.3] as const,
+      heading: Math.PI,
+    })),
+    ...Array.from({ length: towerLevels }, (_, level) => ({
+      id: `tower-${level}`,
+      label:
+        level === 0
+          ? 'Amenity deck'
+          : level === furnishedLevel
+            ? `Residence ${level} — the fitted home`
+            : `Residence ${level}`,
+      // In the lift lobby, facing the lifts, which is where a lift leaves you.
+      position: [lobbyCentreX, plan.levelY(level) + slabThickness, 0] as const,
+      heading: 0,
+    })),
+  ];
 
   /** How far the tower has stepped in by a given level. */
   const insetAt = (level: number) =>
@@ -1105,6 +1170,8 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     },
     columns,
     tower: { core, slabs, plates, ceilings, glazing: towerGlass, fins, spandrels },
+    stair,
+    walkFloors,
     balconies: { slabs: balconySlabs, glass: balconyGlass, rails: balconyRails },
     crown: { parapets, glow: crownGlow },
     deck: {

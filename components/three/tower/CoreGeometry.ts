@@ -62,8 +62,10 @@ function box(key: string, x: Range, y: Range, z: Range): BoxSpec {
 /** Matches the hollow cut through the service blade in `TowerGeometry`. */
 const LOBBY_Z: Range = [-3.2, 3.2];
 const CORE_WALL = 0.35;
+/** Head height of the stair door, matching `createStair`. */
+const STAIR_DOOR_HEIGHT = 2.2;
 
-export function createCore(plan: TowerPlan, levels: number): CoreLayout {
+export function createCore(plan: TowerPlan, levels: number, stairDoorX: Range): CoreLayout {
   const joinery: BoxSpec[] = [];
   const coves: BoxSpec[] = [];
   const screens: BoxSpec[] = [];
@@ -98,15 +100,18 @@ export function createCore(plan: TowerPlan, levels: number): CoreLayout {
     put('core-lift-a', 'lift-doors', inner[0] + 1.3, LOBBY_Z[0] + 0.06, 'south');
     put('core-lift-b', 'lift-doors', inner[1] - 1.3, LOBBY_Z[0] + 0.06, 'south');
 
-    // The escape stair behind a glazed screen in the south blade, so the
-    // lobby reads as having somewhere else to go.
+    // The screen to the escape stair in the south blade. Split around the
+    // stair door: the stair is real now and walked, so a screen across the
+    // whole opening is a pane of glass in a doorway.
+    const screenX: Range = [inner[0] + 0.9, inner[1] - 0.9];
+    // The stair's own opening, not a guess at where it is.
+    const doorX = stairDoorX;
+    const screenZ: Range = [LOBBY_Z[1] - 0.06, LOBBY_Z[1]];
+    const screenY: Range = [floorY, ceilingY - 0.35];
+    screens.push(box(`core-stair-screen-w-${level}`, [screenX[0], doorX[0]], screenY, screenZ));
+    screens.push(box(`core-stair-screen-e-${level}`, [doorX[1], screenX[1]], screenY, screenZ));
     screens.push(
-      box(
-        `core-stair-screen-${level}`,
-        [inner[0] + 0.9, inner[1] - 0.9],
-        [floorY, ceilingY - 0.35],
-        [LOBBY_Z[1] - 0.06, LOBBY_Z[1]],
-      ),
+      box(`core-stair-screen-t-${level}`, doorX, [floorY + STAIR_DOOR_HEIGHT, screenY[1]], screenZ),
     );
 
     // The apartment door. A leaf on a wall, not a way through — see the note

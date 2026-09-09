@@ -60,6 +60,19 @@ const UNIT = new BoxGeometry(1, 1, 1);
  */
 const MIN_PLAN_THICKNESS = 0.7;
 
+/**
+ * How tall a box has to be before it counts as a wall.
+ *
+ * The fattening above is for walls, and applying it to everything ruins the
+ * one thing that most needs to be exact: a stair. A tread is 300mm deep, and
+ * grown to 700mm it swallows its neighbours and the flight becomes a lumpy
+ * ramp. So only box-like-a-wall gets fattened. 0.9m clears every tread and
+ * floor plate in the building while still catching the balcony balustrades
+ * at 1.12m — which must be solid, because the alternative is walking through
+ * a guard rail seventy metres up.
+ */
+const MIN_WALL_HEIGHT = 0.9;
+
 function boxesToGeometry(specs: readonly BoxSpec[]): BufferGeometry[] {
   const matrix = new Matrix4();
   const position = new Vector3();
@@ -71,8 +84,10 @@ function boxesToGeometry(specs: readonly BoxSpec[]): BufferGeometry[] {
     position.set(...spec.position);
     quaternion.setFromAxisAngle(new Vector3(0, 1, 0), spec.rotationY ?? 0);
     scale.set(...spec.scale);
-    scale.x = Math.max(scale.x, MIN_PLAN_THICKNESS);
-    scale.z = Math.max(scale.z, MIN_PLAN_THICKNESS);
+    if (scale.y >= MIN_WALL_HEIGHT) {
+      scale.x = Math.max(scale.x, MIN_PLAN_THICKNESS);
+      scale.z = Math.max(scale.z, MIN_PLAN_THICKNESS);
+    }
     matrix.compose(position, quaternion, scale);
     part.applyMatrix4(matrix);
     return part;
@@ -106,6 +121,9 @@ export function createWalkCollider(
     layout.podium.floors,
     layout.podium.glazing,
     layout.podium.balustrades,
+    // The stair, which is the only way between floors on foot.
+    layout.stair.steps,
+    layout.stair.walls,
     // Tower: core, plates, glazing, and the balcony edge.
     layout.tower.core,
     layout.tower.plates,

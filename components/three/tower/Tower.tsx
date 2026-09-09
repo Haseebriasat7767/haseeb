@@ -18,7 +18,7 @@ import type { TowerLayout } from './TowerTypes';
  */
 export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail?: DetailTier }) {
   const materials = getMaterials();
-  const { podium, tower, balconies, crown, deck, columns, palms } = layout;
+  const { podium, tower, stair, balconies, crown, deck, columns, palms } = layout;
 
   return (
     <group name="Tower">
@@ -69,6 +69,14 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
         material={materials.glazing}
         castShadow={false}
       />
+
+      {/* ── The stair ─────────────────────────────────────────────────── */}
+      {/* Runs the whole height of the building, so it is neither podium nor
+          tower and is drawn once rather than in both. Concrete treads in a
+          stone shaft: this is the back of house, and dressing it in the
+          lobby's marble would be a lie about what it is. */}
+      <MergedBoxes name="stair-shaft" specs={stair.walls} material={materials.stone} />
+      <MergedBoxes name="stair-steps" specs={stair.steps} material={materials.concrete} />
 
       {/* ── Residential tower ─────────────────────────────────────────── */}
       <MergedBoxes name="tower-core" specs={tower.core} material={materials.stone} />

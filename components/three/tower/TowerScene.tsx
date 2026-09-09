@@ -24,6 +24,7 @@ import { Amenity } from './Amenity';
 import { Apartment } from './Apartment';
 import { createAmenity } from './AmenityGeometry';
 import { createCore } from './CoreGeometry';
+import { setWalkFloors } from '@/lib/three/walk-floors';
 import { createWalkCollider } from './WalkCollider';
 import { WalkControls } from '../WalkControls';
 import { createApartment } from './ApartmentGeometry';
@@ -86,7 +87,10 @@ export function TowerScene({
 
   // The lift lobby, on every residential level. One arrangement repeated,
   // which is what a core is.
-  const core = useMemo(() => createCore(layout.plan, TOWER_CONFIG.towerLevels), [layout.plan]);
+  const core = useMemo(
+    () => createCore(layout.plan, TOWER_CONFIG.towerLevels, layout.stair.doorX),
+    [layout.plan, layout.stair.doorX],
+  );
 
   // Tier 4. Three sheets, three draw calls, and the difference between a
   // podium that is let and one that is not.
@@ -151,6 +155,16 @@ export function TowerScene({
   );
 
   useEffect(() => () => collider?.geometry.dispose(), [collider]);
+
+  // Hand the page the floors this building actually has, so the picker over
+  // the canvas is a reading of the model rather than a list kept in step by
+  // hand. Cleared on unmount: a stale list would offer to take the visitor
+  // into a scene that is no longer mounted.
+  useEffect(() => {
+    if (!walk) return;
+    setWalkFloors(layout.walkFloors);
+    return () => setWalkFloors([]);
+  }, [walk, layout.walkFloors]);
 
   useEffect(
     () => () => {
