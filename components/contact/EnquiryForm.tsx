@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { SITE } from '@/lib/constants/site';
 import {
@@ -19,19 +19,29 @@ type Status =
   | { kind: 'sent' }
   | { kind: 'unconfigured'; mailto: string }
   | { kind: 'undeliverable'; body: string }
+  | { kind: 'rateLimited' }
   | { kind: 'failed' };
 
 /**
- * The enquiry form. Validation, error, loading, and success states are all
- * real; delivery is the one thing this repository cannot do on its own,
- * because it has no backend. Rather than fake a submission, an unconfigured
- * build hands the completed enquiry to the visitor's mail client and says
- * so — see `lib/contact/enquiry.ts` for the single integration point.
+ * The enquiry form.
+ *
+ * Delivery is real: it posts to `app/api/enquiry`, which validates again,
+ * rate-limits, sends the enquiry and acknowledges it to the sender. A build
+ * with no mail credentials configured still refuses to pretend — the route
+ * answers 503 and the form falls back to handing the completed enquiry to
+ * the visitor's mail client, which is what it always did.
+ *
+ * Two of the fields below are not for the visitor. `company` is a honeypot,
+ * hidden from sight and from the tab order, and the mount time is compared
+ * against the submit time. Between them they cost a real person nothing and
+ * stop the traffic that finds a public form within a day of it going up.
  */
 export function EnquiryForm() {
   const [values, setValues] = useState<Enquiry>(EMPTY);
   const [errors, setErrors] = useState<EnquiryErrors>({});
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  const [company, setCompany] = useState('');
+  const openedAt = useRef(Date.now());
 
   const set = (key: keyof Enquiry) => (event: { target: { value: string } }) => {
     setValues((current) => ({ ...current, [key]: event.target.value }));
@@ -48,13 +58,18 @@ export function EnquiryForm() {
     setStatus({ kind: 'sending' });
 
     try {
-      const result = await submitEnquiry(values, SITE.contact.email);
+      const result = await submitEnquiry(values, SITE.contact.email, {
+        company,
+        elapsed: Date.now() - openedAt.current,
+      });
       setStatus(
         result.status === 'sent'
           ? { kind: 'sent' }
-          : result.status === 'unconfigured'
-            ? { kind: 'unconfigured', mailto: result.mailto }
-            : { kind: 'undeliverable', body: result.body },
+          : result.status === 'rateLimited'
+            ? { kind: 'rateLimited' }
+            : result.status === 'unconfigured'
+              ? { kind: 'unconfigured', mailto: result.mailto }
+              : { kind: 'undeliverable', body: result.body },
       );
     } catch {
       setStatus({ kind: 'failed' });
@@ -69,6 +84,28 @@ export function EnquiryForm() {
         <p className="text-mist text-sm leading-relaxed">
           A member of the team will respond with the full architectural dossier and a proposed
           viewing time.
+        </p>
+      </div>
+    );
+  }
+
+  if (status.kind === 'rateLimited') {
+    return (
+      <div role="status" className="border-alabaster/10 flex flex-col gap-4 border p-8">
+        <p className="text-eyebrow text-gold uppercase">Already received</p>
+        <p className="text-mist text-sm leading-relaxed">
+          We have your enquiry — several, in fact. There is no need to send another; the team will
+          be in touch shortly.
+          {SITE.contact.email ? (
+            <>
+              {' '}
+              If it is urgent, write to{' '}
+              <a href={`mailto:${SITE.contact.email}`} className="text-gold underline">
+                {SITE.contact.email}
+              </a>
+              .
+            </>
+          ) : null}
         </p>
       </div>
     );
@@ -124,6 +161,22 @@ export function EnquiryForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-8">
+      {/* The honeypot. Off-screen rather than `display: none`, because some
+          bots skip anything a browser would not render at all; out of the tab
+          order and hidden from assistive technology, so no real visitor ever
+          meets it. */}
+      <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
+        <label htmlFor="company-ref">Company</label>
+        <input
+          id="company-ref"
+          name="company"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={company}
+          onChange={(event) => setCompany(event.target.value)}
+        />
+      </div>
       <div className="grid gap-8 sm:grid-cols-2">
         <Field
           label="Name"

@@ -10,15 +10,23 @@ export type Enquiry = {
 export type EnquiryErrors = Partial<Record<keyof Enquiry, string>>;
 
 /**
- * Where enquiries are posted. Left unset in this repository — the project
- * has no backend, and inventing one would be worse than saying so. Set
- * `NEXT_PUBLIC_ENQUIRY_ENDPOINT` to a URL that accepts a JSON POST and the
- * form below starts using it with no other change.
+ * Where enquiries are posted.
  *
- * It is deliberately a public variable: it is a form action URL, not a
- * secret, and no key of any kind is read on the client.
+ * The project's own route by default — `app/api/enquiry/route.ts`, which
+ * validates, rate-limits and delivers. `NEXT_PUBLIC_ENQUIRY_ENDPOINT`
+ * overrides it for a client who already has a forms provider or a CRM
+ * webhook they would rather use.
+ *
+ * Deliberately a public variable: it is a form action URL, not a secret. The
+ * mail credentials live on the server and are never read on the client.
  */
-const ENDPOINT = process.env.NEXT_PUBLIC_ENQUIRY_ENDPOINT ?? '';
+const ENDPOINT = process.env.NEXT_PUBLIC_ENQUIRY_ENDPOINT || '/api/enquiry';
+
+/**
+ * Shortest a human takes to fill this form in, matching the route's own
+ * threshold. Used as the default when a caller supplies no timing.
+ */
+export const MIN_HUMAN_MS = 3000;
 
 /** Pragmatic address check: shape only, since the real test is delivery. */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -37,6 +45,8 @@ export function validateEnquiry(enquiry: Enquiry): EnquiryErrors {
 
 export type EnquiryResult =
   | { status: 'sent' }
+  /** Too many enquiries from this address in a short window. */
+  | { status: 'rateLimited' }
   /** No endpoint is configured, so the enquiry is handed to the mail client. */
   | { status: 'unconfigured'; mailto: string }
   /**
@@ -64,26 +74,36 @@ function composeMailto(enquiry: Enquiry, to: string): string {
 }
 
 /**
- * Submits an enquiry. With an endpoint configured this is a plain JSON
- * POST; without one it returns the composed mail draft instead of
- * pretending a message was delivered.
+ * Submits an enquiry.
+ *
+ * A JSON POST to the route, which answers with a status rather than a bare
+ * code so the form can tell apart the three things a visitor needs told
+ * differently: it went, it is not set up yet, or you have sent enough for now.
+ *
+ * A 503 means the server has no mail credentials. That is not a failure to
+ * hide — the enquiry still exists and the visitor still wants to send it — so
+ * it falls back to the mail draft rather than reporting a delivery that did
+ * not happen.
  */
 export async function submitEnquiry(
   enquiry: Enquiry,
   fallbackTo: string | null,
+  /** Anti-spam signals, gathered by the form. */
+  guard: { company: string; elapsed: number } = { company: '', elapsed: MIN_HUMAN_MS },
 ): Promise<EnquiryResult> {
-  if (!ENDPOINT) {
-    return fallbackTo
+  const unsent = (): EnquiryResult =>
+    fallbackTo
       ? { status: 'unconfigured', mailto: composeMailto(enquiry, fallbackTo) }
       : { status: 'undeliverable', body: composeBody(enquiry) };
-  }
 
   const response = await fetch(ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(enquiry),
+    body: JSON.stringify({ ...enquiry, ...guard }),
   });
 
+  if (response.status === 503) return unsent();
+  if (response.status === 429) return { status: 'rateLimited' };
   if (!response.ok) throw new Error(`Enquiry failed with status ${response.status}`);
   return { status: 'sent' };
 }
