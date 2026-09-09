@@ -1,5 +1,6 @@
 import type { PropPlacement } from './SiteProps';
 import type { BoxSpec, Range } from '../villa/VillaTypes';
+import { APT_DOOR_HEIGHT, APT_DOOR_Z } from './TowerGeometry';
 import type { TowerPlan } from './TowerTypes';
 
 /**
@@ -21,16 +22,19 @@ import type { TowerPlan } from './TowerTypes';
  * lowest level straight into a living room on the twelfth with nothing in
  * between. A building is largely the parts of it nobody photographs.
  *
- * ## What it does not do
+ * ## The front door
  *
- * It does not connect to the apartment. The fit-out on the furnished level
- * plans the whole plate as one dwelling, with a bed against the wall this
- * lobby would open through, so the door here is a leaf on a wall rather than a
- * way in. Re-planning the residential floors around a real entrance hall is a
- * question about how many apartments are on a floor and where their front
- * doors go, and that is `DAT-01` — the floor plans, which have to come from
- * the client. Everything else here is honest; this one thing is a placeholder
- * and is marked as one.
+ * It used to be a leaf painted on a solid wall, marked here as a placeholder,
+ * because with the camera on rails nobody could ever try it. Once the lift
+ * would take a visitor to any of fourteen floors, arriving in a sealed lobby
+ * became the most obvious thing wrong with the building. The opening is cut
+ * in `TowerGeometry` and lined here, and it lands in the hall between the
+ * bedroom and the kitchen — which is where the plan already had circulation,
+ * so nothing had to move to make room for it.
+ *
+ * How many flats share a floor and where each front door goes is still
+ * `DAT-01`, the floor plans, which have to come from the client. One flat per
+ * plate with its door off the lift lobby is an assumption, and a normal one.
  */
 
 const FACE = {
@@ -114,14 +118,29 @@ export function createCore(plan: TowerPlan, levels: number, stairDoorX: Range): 
       box(`core-stair-screen-t-${level}`, doorX, [floorY + STAIR_DOOR_HEIGHT, screenY[1]], screenZ),
     );
 
-    // The apartment door. A leaf on a wall, not a way through — see the note
-    // at the top of this file.
+    // The front door, standing open against the wall inside the flat, and
+    // the head over the opening.
+    //
+    // Open rather than shut, and hung on the apartment side: a walkthrough
+    // that stops at a closed door is a walkthrough of a corridor. The leaf is
+    // parked clear of the reveal on purpose — the collider gives thin, tall
+    // volumes a wall's thickness so that a pane of glass can stop somebody,
+    // and a leaf swung across the opening would be a 700mm plug in a 1200mm
+    // doorway.
     joinery.push(
       box(
-        `core-apt-door-${level}`,
-        [coreX[1] - CORE_WALL - 0.05, coreX[1] - CORE_WALL],
-        [floorY, floorY + 2.25],
-        [-0.55, 0.55],
+        `core-apt-leaf-${level}`,
+        [coreX[1] - 0.05, coreX[1]],
+        [floorY, floorY + APT_DOOR_HEIGHT],
+        [APT_DOOR_Z[1] + 0.15, APT_DOOR_Z[1] + 1.25],
+      ),
+    );
+    joinery.push(
+      box(
+        `core-apt-head-${level}`,
+        [coreX[1] - CORE_WALL, coreX[1]],
+        [floorY + APT_DOOR_HEIGHT, floorY + APT_DOOR_HEIGHT + 0.04],
+        APT_DOOR_Z,
       ),
     );
 

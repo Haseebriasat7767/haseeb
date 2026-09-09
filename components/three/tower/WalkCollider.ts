@@ -140,7 +140,10 @@ export function createWalkCollider(
     amenity.tiling,
     amenity.joinery,
     amenity.plungeShell,
-    core.joinery,
+    // Not `core.joinery`: that is the front-door leaf and the head over it,
+    // millimetres thick and standing in an opening. Everything here gets a
+    // wall's thickness in plan so a pane of glass can stop somebody, and a
+    // door leaf given that treatment fills its own doorway.
     core.screens,
     apartment.walls,
     // Outside.

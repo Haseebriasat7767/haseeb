@@ -1,7 +1,14 @@
 import { createStair } from './StairGeometry';
 import type { WalkFloor } from '@/lib/three/walk-floors';
 import type { BoxSpec, ColumnSpec, Range } from '../villa/VillaTypes';
-import type { PalmSpec, ShorelineLayout, TowerConfig, TowerLayout, TowerPlan } from './TowerTypes';
+import type {
+  PalmSpec,
+  ResidentialPlate,
+  ShorelineLayout,
+  TowerConfig,
+  TowerLayout,
+  TowerPlan,
+} from './TowerTypes';
 
 /**
  * The default tower, in metres.
@@ -24,6 +31,15 @@ import type { PalmSpec, ShorelineLayout, TowerConfig, TowerLayout, TowerPlan } f
  */
 export const ENTRANCE_Z: Range = [-2.6, 2.6];
 export const ENTRANCE_HEAD = 2.7;
+
+/**
+ * The front door of each apartment, in the wall between it and the lobby.
+ *
+ * Shared with `CoreGeometry`, which hangs the leaf and lines the reveal, so
+ * the opening and the joinery in it cannot drift apart.
+ */
+export const APT_DOOR_Z: Range = [-0.6, 0.6];
+export const APT_DOOR_HEIGHT = 2.25;
 
 export const TOWER_CONFIG: TowerConfig = {
   podiumWidth: 64,
@@ -624,6 +640,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   const towerGlass: BoxSpec[] = [];
   const fins: BoxSpec[] = [];
   const spandrels: BoxSpec[] = [];
+  const residentialPlates: ResidentialPlate[] = [];
   const balconySlabs: BoxSpec[] = [];
   const balconyGlass: BoxSpec[] = [];
   const balconyRails: BoxSpec[] = [];
@@ -648,8 +665,29 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
   // it now starts at the pavement rather than at the podium roof. `createStair`
   // supplies its walls, so pushing a box here as well would fill it back in.
   core.push(box('tower-core-w', [coreX[0], coreX[0] + coreWall], [towerBaseY, crownTopY], lobbyZ));
-  // The wall between the lobby and the apartment beyond it.
-  core.push(box('tower-core-e', [coreX[1] - coreWall, coreX[1]], [towerBaseY, crownTopY], lobbyZ));
+  // The wall between the lobby and the apartment beyond it, with a front
+  // door in it on every residential level.
+  //
+  // It was solid. The lift lobby was built to fix exactly this on the
+  // vertical axis — fifteen floors with no way between them — and left the
+  // horizontal one alone, which was invisible while the camera was on rails
+  // and became the whole problem the moment the lift would take a visitor to
+  // any floor: you arrived in a lobby with two lift doors, a rug, and no way
+  // into the flat you had come to see.
+  const eastWallX: Range = [coreX[1] - coreWall, coreX[1]];
+  core.push(box('tower-core-e-n', eastWallX, [towerBaseY, crownTopY], [lobbyZ[0], APT_DOOR_Z[0]]));
+  core.push(box('tower-core-e-s', eastWallX, [towerBaseY, crownTopY], [APT_DOOR_Z[1], lobbyZ[1]]));
+  {
+    // The strip of wall the doors are cut out of: over each opening and under
+    // the next, all the way up.
+    let y = towerBaseY;
+    for (let level = 0; level < towerLevels; level += 1) {
+      const floor = plan.levelY(level) + slabThickness;
+      if (floor > y) core.push(box(`tower-core-e-u${level}`, eastWallX, [y, floor], APT_DOOR_Z));
+      y = floor + APT_DOOR_HEIGHT;
+    }
+    if (crownTopY > y) core.push(box('tower-core-e-top', eastWallX, [y, crownTopY], APT_DOOR_Z));
+  }
 
   // The stair. Every floor a person can stand on, from the pavement to the
   // top residential level: five podium storeys at 5m, then fifteen at 3.4m.
@@ -692,9 +730,14 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
           : level === furnishedLevel
             ? `Residence ${level} — the fitted home`
             : `Residence ${level}`,
-      // In the lift lobby, facing the lifts, which is where a lift leaves you.
+      // In the lift lobby, facing the flat's own front door.
+      //
+      // Facing the lift doors is what a lift actually does to you and it is
+      // the wrong thing here: you arrive looking at the inside of the doors
+      // you came out of, and the flat you pressed the button for is behind
+      // you. Turned east, the first thing in frame is the way in.
       position: [lobbyCentreX, plan.levelY(level) + slabThickness, 0] as const,
-      heading: 0,
+      heading: -Math.PI / 2,
     })),
   ];
 
@@ -742,6 +785,17 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     // shell with nothing to stand on, which is exactly what the interior
     // camera on level twelve would have looked down into.
     plates.push(box(`tower-plate-${level}`, lGlazedX, [y, y + slabThickness], lz));
+    // The dimensions a fit-out has to live inside, published rather than
+    // recomputed. The tower steps in twice on the way up, so the top three
+    // plates are smaller than the rest, and an apartment laid out to the
+    // full plate would have its kitchen hanging in mid air.
+    residentialPlates.push({
+      level,
+      x: lGlazedX,
+      z: lz,
+      floorY: y + slabThickness,
+      ceilingY: nextY - 0.09,
+    });
     // And the lobby's own floor, inside the hollowed core. The plate above
     // spans the apartment only, so without this the lift lobby is a shaft.
     plates.push(
@@ -1172,6 +1226,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     tower: { core, slabs, plates, ceilings, glazing: towerGlass, fins, spandrels },
     stair,
     walkFloors,
+    residentialPlates,
     balconies: { slabs: balconySlabs, glass: balconyGlass, rails: balconyRails },
     crown: { parapets, glow: crownGlow },
     deck: {

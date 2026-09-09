@@ -27,7 +27,7 @@ import { createCore } from './CoreGeometry';
 import { setWalkFloors } from '@/lib/three/walk-floors';
 import { createWalkCollider } from './WalkCollider';
 import { WalkControls } from '../WalkControls';
-import { createApartment } from './ApartmentGeometry';
+import { createApartment, mergeApartments } from './ApartmentGeometry';
 import { InstancedModels } from '../models/InstancedModels';
 import { createParkLayout } from './Park';
 import { createRetailProps } from './RetailProps';
@@ -117,16 +117,35 @@ export function TowerScene({
     [park.trees.canopy, detail],
   );
 
-  // The one fitted apartment, built to the level the walkthrough enters.
+  // Every residential floor, fitted out.
+  //
+  // It used to be one — the level the walkthrough's interior framings stand
+  // in — which was right while the camera was on rails and could only ever
+  // be in one apartment. Once the lift will take a visitor to any of the
+  // fourteen, thirteen of them being empty glazed plates is worse than not
+  // offering the floors at all.
+  //
+  // Level 0 is the amenity deck and is fitted out by `createAmenity`, so the
+  // flats start at 1. Each is built to its own plate, which matters above
+  // the setbacks where the plate is shorter and narrower than the plan the
+  // fit-out was first written for.
   const apartment = useMemo(
     () =>
-      createApartment(
-        layout.plan.glazedX,
-        layout.plan.towerZ,
-        layout.plan.furnishedFloorY,
-        layout.plan.furnishedCeilingY,
+      mergeApartments(
+        layout.residentialPlates
+          .filter((plate) => plate.level > 0)
+          .map((plate) =>
+            createApartment(plate.x, plate.z, plate.floorY, plate.ceilingY, {
+              variant: plate.level,
+              prefix: `apt${plate.level}`,
+              // On a phone, the shelf objects and the coffee-table dressing
+              // come out of every flat but the one the tour actually stands
+              // in. See `ApartmentOptions.dressed` for the measurements.
+              dressed: detail !== 'low' || plate.level === TOWER_CONFIG.furnishedLevel,
+            }),
+          ),
       ),
-    [layout.plan],
+    [layout.residentialPlates, detail],
   );
 
   const materials = getMaterials();

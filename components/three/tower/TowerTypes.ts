@@ -128,6 +128,17 @@ export type TowerPlan = {
   levelY: (level: number) => number;
 };
 
+/** One residential floor plate, as the thing a fit-out has to fit inside. */
+export type ResidentialPlate = {
+  level: number;
+  /** Bounds of the plate itself — already reduced by any setback above. */
+  x: Range;
+  z: Range;
+  /** Finished floor, and the underside of the soffit above it. */
+  floorY: number;
+  ceilingY: number;
+};
+
 /** The fully resolved building, grouped by material rather than by storey. */
 export type TowerLayout = {
   plan: TowerPlan;
@@ -155,6 +166,8 @@ export type TowerLayout = {
   stair: { steps: BoxSpec[]; walls: BoxSpec[]; doorX: Range };
   /** Every floor the stair serves, and where the lift sets you down on it. */
   walkFloors: WalkFloor[];
+  /** Every residential plate, in level order, for the fit-out to build on. */
+  residentialPlates: ResidentialPlate[];
   tower: {
     core: BoxSpec[];
     /** The expressed slab edge, wrapping all four elevations. */
