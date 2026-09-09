@@ -100,7 +100,16 @@ PALETTE = {
     "linen": (srgb(0.93, 0.91, 0.87), 0.90, 0.0),
     "paper": (srgb(0.80, 0.76, 0.70), 0.88, 0.0),
     "glow": (srgb(1.0, 0.94, 0.82), 0.5, 0.0),
+    # Balustrade glass. Alpha rather than transmission: these are exported to
+    # glTF and read by a rasterizer, which has no refraction to give, and a
+    # transmissive material would arrive as an opaque white slab. The
+    # escalator was built with `marble` for want of this and its balustrades
+    # hid the steps they are there to let you see.
+    "glass": (srgb(0.78, 0.84, 0.86), 0.06, 0.0),
 }
+
+# Materials that export with an alpha below one.
+GLASS_ALPHA = {"glass": 0.22}
 
 
 def material(name):
@@ -113,6 +122,9 @@ def material(name):
     bsdf.inputs["Base Color"].default_value = color
     bsdf.inputs["Roughness"].default_value = rough
     bsdf.inputs["Metallic"].default_value = metal
+    if name in GLASS_ALPHA:
+        bsdf.inputs["Alpha"].default_value = GLASS_ALPHA[name]
+        mat.blend_method = "BLEND"
     if name == "glow":
         bsdf.inputs["Emission Color"].default_value = color
         bsdf.inputs["Emission Strength"].default_value = 1.4
@@ -1126,7 +1138,7 @@ def p_shower_screen():
     """Frameless glass on a bronze channel."""
     parts = []
     glass = rounded_box("screen_glass", (1.1, 0.012, 2.1), (0, 0, 1.06), bevel=0.004)
-    parts.append(assign(glass, "marble"))
+    parts.append(assign(glass, "glass"))
     channel = rounded_box("screen_channel", (1.14, 0.05, 0.03), (0, 0, 0.015), bevel=0.004)
     parts.append(assign(channel, "bronze"))
     post = cylinder("screen_post", 0.018, 2.12, (0.56, 0, 1.06), verts=12, bevel=0.004)
@@ -1200,48 +1212,104 @@ def p_person_seated():
 
 
 def _wheel(name, x, y, r, w):
-    tyre = cylinder(name, r, w, (x, y, r), verts=16, bevel=0.012)
+    """A tyre with a rim in it, so a wheel reads as a wheel and not a puck."""
+    parts = []
+    tyre = cylinder(name, r, w, (x, y, r), verts=20, bevel=0.02)
     tyre.rotation_euler = (0, math.radians(90), 0)
-    return assign(tyre, "darkMetal")
+    parts.append(assign(tyre, "darkMetal"))
+    for side in (-1, 1):
+        rim = cylinder(f"{name}_rim_{side}", r * 0.66, 0.02,
+                       (x + side * (w / 2 + 0.005), y, r), verts=18, bevel=0.004)
+        rim.rotation_euler = (0, math.radians(90), 0)
+        parts.append(assign(rim, "bronze"))
+    return parts
+
+
+def _arch(cy, cz, radius, steps=7):
+    """Half a wheel arch, as points on a semicircle in (y, z)."""
+    return [
+        (cy + math.cos(math.pi - math.pi * (k / steps)) * radius,
+         cz + math.sin(math.pi - math.pi * (k / steps)) * radius)
+        for k in range(steps + 1)
+    ]
+
+
+def _car(prefix, L, W, wheel_r, ride, belt, roof, body_mat, rear_set, front_set):
+    """
+    A car built from its side silhouette rather than from two boxes.
+
+    ## Why it is drawn this way
+
+    The old one was a bevelled box with a smaller bevelled box on top and
+    four cylinders beside it. Rendered from the front — which the preview
+    camera never was until now — it read as a skateboard: no wheel arches,
+    so the wheels stood outside the flanks like castors; no bonnet and no
+    boot, so the silhouette was a loaf; and a cabin sitting on a flat deck
+    rather than growing out of the body.
+
+    A car's whole character at twenty metres is its side profile, so that is
+    what is authored: one closed outline with the arches cut into it,
+    extruded across the width. The glasshouse is a second, narrower profile
+    on top, which is exactly what a glasshouse is.
+    """
+    parts = []
+    half = L / 2
+    arch_r = wheel_r + 0.15
+
+    # The lower body stops at the beltline. Carrying it up over the roof —
+    # which the first rebuild did — produces a wedge sitting on the car like
+    # a lid, because a body and a glasshouse are not the same width and the
+    # difference between them is most of what you read at a distance.
+    outline = [
+        (half - 0.06, ride + 0.02),          # front valance
+        (half, ride + 0.28),
+        (half - 0.10, belt - 0.08),          # nose
+        (half - 1.25, belt - 0.02),          # bonnet
+        (front_set - 0.30, belt + 0.03),     # cowl
+        (rear_set + 0.40, belt + 0.03),      # beltline along the doors
+        (-half + 0.40, belt - 0.02),         # boot lid
+        (-half, belt - 0.32),
+        (-half + 0.06, ride + 0.02),         # rear valance
+    ]
+    outline += list(reversed(_arch(rear_set, ride, arch_r)))
+    outline += [(rear_set + arch_r + 0.02, ride - 0.05), (front_set - arch_r - 0.02, ride - 0.05)]
+    outline += _arch(front_set, ride, arch_r)
+
+    body = extruded_profile(f"{prefix}_body", outline, W, bevel=0.06)
+    parts.append(assign(body, body_mat))
+
+    # The glasshouse, narrower than the body. That inset is the tumblehome,
+    # and without it the two read as one extruded slab.
+    glass_outline = [
+        (front_set - 0.34, belt + 0.02),     # base of the windscreen
+        (front_set - 1.00, roof),            # windscreen head
+        (rear_set + 0.72, roof),             # roof
+        (rear_set - 0.02, belt + 0.02),      # base of the rear screen
+    ]
+    glass = extruded_profile(f"{prefix}_glass", glass_outline, W - 0.30, bevel=0.03)
+    parts.append(assign(glass, "darkMetal"))
+
+    for x in (-1, 1):
+        for tag, y in (("r", rear_set), ("f", front_set)):
+            parts += _wheel(f"{prefix}_wheel_{tag}_{x}", x * (W / 2 - 0.10), y, wheel_r, 0.24)
+
+    # Lamps. At the distance these are seen a lit band across each end is
+    # most of what says "car" — more than any amount of body modelling.
+    for tag, y, mat in (("head", half - 0.10, "glow"), ("tail", -half + 0.06, "darkMetal")):
+        lamp = rounded_box(f"{prefix}_{tag}", (W - 0.40, 0.06, 0.11), (0, y, belt - 0.26),
+                           bevel=0.02)
+        parts.append(assign(lamp, mat))
+    return parts
 
 
 def p_car_saloon():
-    parts = []
-    L, W = 4.72, 1.86
-    # No subdivision on the body.
-    #
-    # Subsurf pulls a bevelled box in hard, and the shrink is what made the
-    # first car read as a pickup: the flanks retreated behind the wheels so
-    # they stood proud like castors, and the cabin ended up perched on a
-    # flat deck rather than growing out of the body. A heavy multi-segment
-    # bevel gives the same softness and keeps the dimensions honest.
-    # Lifted so the wheels stand in arches. Sat lower it swallowed them
-    # and the whole thing read as a loaf.
-    body = rounded_box("car_body", (W, L, 0.60), (0, 0, 0.66), bevel=0.20, segments=6)
-    parts.append(assign(body, "upholsteryDark"))
-    # The greenhouse, set back, narrower, and overlapping the body so the
-    # two read as one shell.
-    cabin = rounded_box("car_cabin", (W - 0.30, L * 0.44, 0.54), (0, -0.18, 1.13),
-                        bevel=0.20, segments=6)
-    parts.append(assign(cabin, "darkMetal"))
-    for x in (-1, 1):
-        for y in (L / 2 - 0.92, -(L / 2 - 0.88)):
-            parts.append(_wheel(f"car_wheel_{x}_{y:.0f}", x * (W / 2 - 0.15), y, 0.33, 0.22))
-    return parts
+    return _car("car", L=4.72, W=1.86, wheel_r=0.33, ride=0.32, belt=0.86, roof=1.44,
+                body_mat="upholsteryDark", rear_set=-1.42, front_set=1.46)
 
 
 def p_car_suv():
-    parts = []
-    L, W = 4.95, 2.00
-    body = rounded_box("suv_body", (W, L, 0.78), (0, 0, 0.82), bevel=0.18, segments=6)
-    parts.append(assign(body, "stone"))
-    cabin = rounded_box("suv_cabin", (W - 0.22, L * 0.50, 0.62), (0, -0.12, 1.52),
-                        bevel=0.17, segments=6)
-    parts.append(assign(cabin, "darkMetal"))
-    for x in (-1, 1):
-        for y in (L / 2 - 1.0, -(L / 2 - 0.96)):
-            parts.append(_wheel(f"suv_wheel_{x}_{y:.0f}", x * (W / 2 - 0.17), y, 0.39, 0.26))
-    return parts
+    return _car("suv", L=4.95, W=2.00, wheel_r=0.39, ride=0.40, belt=1.10, roof=1.82,
+                body_mat="stone", rear_set=-1.50, front_set=1.54)
 
 
 def p_boat_tender():
@@ -1450,35 +1518,84 @@ def p_escalator():
     fixes the run from the rise, so a 5 m floor-to-floor needs 8.66 m of
     floor. Getting that wrong is how an atrium ends up with an escalator
     that lands in a wall.
+
+    ## Rebuilt
+
+    The old one was a smooth ramp: a 60mm slab laid along the incline with
+    the word "steps" in its name. An escalator with no steps in it is a
+    fire-escape stair with a handrail, and the steps are the only part of one
+    anybody looks at — the atrium camera looks straight up the run. There are
+    real treads and risers here, flat landing plates at both ends where the
+    comb is, and a glass balustrade that returns level at the top and bottom
+    rather than stopping in mid-air.
     """
     parts = []
     rise, angle = 5.0, math.radians(30)
     run = rise / math.tan(angle)
     length = math.hypot(rise, run)
     w = 1.05
+    count = 22
+    going, riser = run / count, rise / count
+    landing = 1.6
 
-    truss = rounded_box("esc_truss", (w, length, 0.72), (0, 0, 0), bevel=0.02)
+    truss = rounded_box("esc_truss", (w + 0.08, length, 0.62), (0, 0, 0), bevel=0.02)
     truss.rotation_euler = (angle, 0, 0)
-    truss.location = (0, run / 2, rise / 2 - 0.1)
+    truss.location = (0, run / 2, rise / 2 - 0.38)
     # Stone, not blackened steel. A dark truss reads as a solid slab from
     # below, and the underside of an escalator is the thing an atrium
     # camera looking up sees most of.
     parts.append(assign(truss, "stone"))
 
-    steps = rounded_box("esc_steps", (w - 0.14, length, 0.06), (0, 0, 0), bevel=0.008)
-    steps.rotation_euler = (angle, 0, 0)
-    steps.location = (0, run / 2, rise / 2 + 0.30)
-    parts.append(assign(steps, "stone"))
+    # Treads and risers. The tread is the lit horizontal face and the riser
+    # the shadowed vertical one; that alternation IS the escalator.
+    for i in range(count):
+        y = going * (i + 0.5)
+        z = riser * (i + 1)
+        tread = rounded_box(f"esc_tread_{i}", (w - 0.16, going, 0.042),
+                            (0, y, z - 0.021), bevel=0.005)
+        parts.append(assign(tread, "darkMetal"))
+        kick = rounded_box(f"esc_riser_{i}", (w - 0.16, 0.03, riser),
+                           (0, y - going / 2, z - riser / 2), bevel=0.004)
+        parts.append(assign(kick, "stone"))
 
+    # The comb plates you step on and off.
+    for tag, cy, cz in (("btm", -landing / 2, 0.0), ("top", run + landing / 2, rise)):
+        plate = rounded_box(f"esc_land_{tag}", (w + 0.08, landing, 0.05),
+                            (0, cy, cz - 0.025), bevel=0.006)
+        parts.append(assign(plate, "stone"))
+        comb = rounded_box(f"esc_comb_{tag}", (w - 0.16, 0.16, 0.012),
+                           (0, cy + (landing / 2 - 0.08) * (1 if tag == "btm" else -1), cz + 0.006),
+                           bevel=0.002)
+        parts.append(assign(comb, "bronze"))
+
+    # Balustrade and handrail: the incline, plus a level return at each end.
+    # A rail that stops where the steps do reads as a broken model.
+    bal_h, rail_z = 0.95, 1.02
     for x in (-1, 1):
-        bal = rounded_box(f"esc_bal_{x}", (0.03, length, 0.95), (0, 0, 0), bevel=0.006)
-        bal.rotation_euler = (angle, 0, 0)
-        bal.location = (x * (w / 2 - 0.02), run / 2, rise / 2 + 0.78)
-        parts.append(assign(bal, "marble"))
-        rail = rounded_box(f"esc_rail_{x}", (0.075, length, 0.05), (0, 0, 0), bevel=0.02)
+        px = x * (w / 2 - 0.015)
+        glass = rounded_box(f"esc_glass_{x}", (0.024, length, bal_h), (0, 0, 0), bevel=0.004)
+        glass.rotation_euler = (angle, 0, 0)
+        glass.location = (px, run / 2, rise / 2 + bal_h / 2 + 0.06)
+        parts.append(assign(glass, "glass"))
+        rail = rounded_box(f"esc_rail_{x}", (0.072, length, 0.048), (0, 0, 0), bevel=0.022)
         rail.rotation_euler = (angle, 0, 0)
-        rail.location = (x * (w / 2 - 0.02), run / 2, rise / 2 + 1.27)
+        rail.location = (px, run / 2, rise / 2 + rail_z + 0.06)
         parts.append(assign(rail, "darkMetal"))
+
+        for tag, cy, cz in (("btm", -landing / 2, 0.0), ("top", run + landing / 2, rise)):
+            g = rounded_box(f"esc_glass_{tag}_{x}", (0.024, landing, bal_h),
+                            (px, cy, cz + bal_h / 2 + 0.05), bevel=0.004)
+            parts.append(assign(g, "glass"))
+            r = rounded_box(f"esc_rail_{tag}_{x}", (0.072, landing, 0.048),
+                            (px, cy, cz + rail_z + 0.05), bevel=0.022)
+            parts.append(assign(r, "darkMetal"))
+
+    # Skirt panels closing the gap between the steps and the balustrade.
+    for x in (-1, 1):
+        skirt = rounded_box(f"esc_skirt_{x}", (0.05, length, 0.34), (0, 0, 0), bevel=0.006)
+        skirt.rotation_euler = (angle, 0, 0)
+        skirt.location = (x * (w / 2 - 0.06), run / 2, rise / 2 - 0.06)
+        parts.append(assign(skirt, "darkMetal"))
     return parts
 
 
