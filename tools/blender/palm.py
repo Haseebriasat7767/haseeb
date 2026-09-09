@@ -34,11 +34,20 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "public", "assets", "foliage", "palm.png")
 
-W, H = 1024, 512
+# 1024 x 512 PER FROND, not per sheet.
+#
+# The first bake gave each frond a 1024x256 cell, which put a leaflet at four
+# pixels wide. Four pixels does not survive a mip chain: by the second level
+# the leaflets are grey mush, and an alpha test then cuts that into a dashed
+# line. The palms in the park read as strings of dots hanging off a stick.
+# Each frond gets a 2048 x 512 cell — four to one, which is the proportion a
+# coconut frond actually is. The first bake used two to one and produced a
+# feather; the second had the right leaflets in the wrong envelope.
+W, H = 2048, 1024
 VARIANTS = 2
 # Supersampled, then reduced: a leaflet is a couple of pixels wide at the tip
 # and aliases into dashes without it.
-SS = 3
+SS = 2
 
 
 def leaflet(draw, x0, y0, angle, length, width, colour):
@@ -67,22 +76,34 @@ def frond(draw, ox, oy, cell_w, cell_h, seed):
     mid_y = oy + cell_h / 2
     span = tip_x - base_x
 
-    count = 58
+    count = 74
     for i in range(count):
         t = i / (count - 1)
         # A few gaps, as every real frond has.
-        if rng.random() < 0.04:
+        if rng.random() < 0.035:
             continue
         x = base_x + span * t
-        # Leaflets are longest just past halfway and shortest at both ends.
-        profile = math.sin(math.pi * (0.06 + 0.94 * t)) ** 0.62
-        length = cell_h * 0.46 * profile * rng.uniform(0.86, 1.06)
+        # A coconut frond is not a lens. Its leaflets reach full length within
+        # the first fifth and hold it across most of the leaf, dropping away
+        # only near the tip — which is why the silhouette is a long blade and
+        # not the pointed oval the first bake produced.
+        profile = min(1.0, (t / 0.18) ** 0.7) * (1.0 - max(0.0, (t - 0.72) / 0.28) ** 1.6)
+        profile = max(0.06, profile)
+        length = cell_h * 0.44 * profile * rng.uniform(0.88, 1.05)
         # Swept toward the tip: steep at the base, shallow at the end.
-        sweep = math.radians(64 - 30 * t) * rng.uniform(0.94, 1.06)
-        width = cell_h * 0.016 * rng.uniform(0.8, 1.15)
+        sweep = math.radians(72 - 34 * t) * rng.uniform(0.95, 1.05)
+        width = cell_h * 0.019 * rng.uniform(0.85, 1.12)
         # Greener in the middle of the frond, yellower at the tip.
-        g = int(120 + 46 * profile - 18 * t + rng.uniform(-10, 10))
-        colour = (int(46 + 26 * t), max(70, min(200, g)), int(44 + 10 * (1 - t)), 255)
+        # Tone varies leaflet to leaflet. A frond in one flat green is the
+        # other half of why these read as cut paper.
+        shade = rng.uniform(0.78, 1.18)
+        g = int((132 + 34 * profile - 22 * t) * shade)
+        colour = (
+            int((44 + 30 * t) * shade),
+            max(64, min(205, g)),
+            int((40 + 14 * (1 - t)) * shade),
+            255,
+        )
         for side in (-1, 1):
             leaflet(draw, x, mid_y, side * sweep, length, width, colour)
 

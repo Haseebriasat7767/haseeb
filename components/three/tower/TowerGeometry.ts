@@ -327,14 +327,19 @@ function palm(key: string, x: number, z: number, y: number, seed: number): PalmS
     // Real palms on a beach are wildly uneven in height; a row of identical
     // ones is the single fastest way to make planting read as a stamp.
     trunkHeight: 6.5 + r1 * 6,
-    trunkRadius: 0.19 + r2 * 0.08,
+    // Thinner. At 190-270mm of radius on a twelve-metre trunk these read as
+    // telephone poles, and the crown on top of them read as a broom.
+    trunkRadius: 0.14 + r2 * 0.06,
     lean: 0.05 + r3 * 0.13,
     leanAngle: r1 * Math.PI * 2,
     // A palm carries twenty-odd live fronds, and at nine the crown reads as
     // a thin spider. Affordable now the frond is a ten-triangle ribbon
     // rather than a twelve-triangle box.
     frondCount: 15 + Math.floor(r2 * 6),
-    frondLength: 2.6 + r3 * 1.5,
+    // The thing that was most wrong. A coconut frond is four to six metres
+    // on a trunk of ten to fifteen — at 2.6 to 4.1 the crown was a tuft on a
+    // pole, which is the whole reason these read as brooms rather than palms.
+    frondLength: 4.6 + r3 * 2.0,
     seed,
   };
 }

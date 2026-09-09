@@ -1675,6 +1675,27 @@ function createMaterials() {
       normalScale: 2.5,
       anisotropy: [1, 0.18, 1],
     }),
+    /**
+     * Coconut palm trunk.
+     *
+     * Not `bark`. That is a deeply fissured brown for the broadleaf trees and
+     * it is right for them; on a palm it produced a near-black pole, because
+     * a coconut trunk is nothing like a hardwood one — it is pale grey-brown,
+     * smooth, and banded with the ring scars of fallen fronds. Sharing one
+     * "tree" material between the two is what made the grove read as a row of
+     * chocolate posts.
+     */
+    palmTrunk: withVariation(standard({ color: '#8b7f6b', roughness: 0.82, metalness: 0 }), {
+      scale: 1.6,
+      colorVariation: 0.09,
+      roughnessVariation: 0.06,
+      seed: 43,
+      // Banded, not fissured: a shallow perturbation stretched round the
+      // trunk rather than the deep vertical grain a hardwood gets.
+      normalStrength: 0.06,
+      normalScale: 3.2,
+      anisotropy: [1, 0.35, 1],
+    }),
     /** Sunlit foliage — canopy, shrubs, hedges. Muted sage, not garden green. */
     foliageMid: withVariation(standard({ color: '#5c6a4c', roughness: 0.86, metalness: 0 }), {
       scale: 0.9,

@@ -11,8 +11,8 @@ import {
   Matrix4,
   MeshDepthMaterial,
   MeshStandardMaterial,
-  Quaternion,
   RGBADepthPacking,
+  SphereGeometry,
   SRGBColorSpace,
   TextureLoader,
   Vector3,
@@ -47,9 +47,28 @@ const PALM_SHEET = '/assets/foliage/palm.png';
 /** Variants stacked in the sheet. */
 const PALM_VARIANTS = 2;
 /** Segments along one frond. Enough to arch; a frond is not a spline. */
-const FROND_SEGMENTS = 5;
-/** Matches the foliage cards: the same kind of asset, the same failure. */
-const FROND_ALPHA_CUTOFF = 0.38;
+const FROND_SEGMENTS = 6;
+/**
+ * Lower than the foliage cards use.
+ *
+ * A leaflet is a few texels wide and the mip chain greys it out with
+ * distance; cut at 0.38 that grey becomes a dashed line, and a palm at forty
+ * metres is a string of dots hanging off a stick. Cut lower, the mips are
+ * allowed to blur the leaflets into a soft mass — which is what a palm crown
+ * looks like at forty metres anyway.
+ */
+const FROND_ALPHA_CUTOFF = 0.28;
+/**
+ * How far the two halves of a frond lift from the rachis, as a fraction of
+ * the half width.
+ *
+ * A coconut frond is a shallow V in section, not a sheet of paper. Flat, it
+ * has one tone across its whole width whatever the light does, and from
+ * underneath it disappears to nothing. Folded, the two halves catch the sun
+ * differently and the frond has a spine — which is most of what makes a
+ * crown read as a crown rather than as a pile of cutouts.
+ */
+const FROND_FOLD = 0.34;
 
 let sheet: ReturnType<TextureLoader['load']> | null = null;
 
@@ -93,9 +112,11 @@ function rand(seed: number): number {
  */
 function frondRibbon(length: number, width: number, sag: number, variant: number) {
   const rings = FROND_SEGMENTS + 1;
-  const positions = new Float32Array(rings * 2 * 3);
-  const normals = new Float32Array(rings * 2 * 3);
-  const uvs = new Float32Array(rings * 2 * 2);
+  // Three vertices a ring: the rachis, and a lifted edge either side of it.
+  const cols = 3;
+  const positions = new Float32Array(rings * cols * 3);
+  const normals = new Float32Array(rings * cols * 3);
+  const uvs = new Float32Array(rings * cols * 2);
   const indices: number[] = [];
 
   // The sheet stacks its variants top to bottom, and V runs up from the
@@ -108,20 +129,26 @@ function frondRibbon(length: number, width: number, sag: number, variant: number
     const x = length * t;
     // Quadratic droop, and a little taper so the tip is not a blunt end.
     const y = -sag * t * t;
-    const halfW = (width / 2) * (1 - t * 0.18);
-    for (let side = 0; side < 2; side += 1) {
-      const index = s * 2 + side;
-      const z = side === 0 ? -halfW : halfW;
-      positions.set([x, y, z], index * 3);
-      // The ribbon is close enough to horizontal that an up normal is right
-      // and much cheaper than a real frame; a leaf lit from underneath by
-      // its own geometry looks worse than one lit from above.
-      normals.set([0, 1, 0], index * 3);
-      uvs.set([t, v0 + (side === 0 ? 0 : cell)], index * 2);
+    const halfW = (width / 2) * (1 - t * 0.16);
+    const lift = halfW * FROND_FOLD;
+    for (let col = 0; col < cols; col += 1) {
+      const index = s * cols + col;
+      // -1, 0, +1 across the frond.
+      const across = col - 1;
+      positions.set([x, y + Math.abs(across) * lift, across * halfW], index * 3);
+      // Each half tilts away from the spine, so the two catch the light
+      // differently instead of shading as one plane.
+      const nz = across === 0 ? 0 : Math.sign(across) * FROND_FOLD;
+      const inv = 1 / Math.hypot(1, nz);
+      normals.set([0, inv, nz * inv], index * 3);
+      uvs.set([t, v0 + cell * ((across + 1) / 2)], index * 2);
     }
     if (s > 0) {
-      const a = (s - 1) * 2;
-      indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      const a = (s - 1) * cols;
+      const b = s * cols;
+      for (let col = 0; col < cols - 1; col += 1) {
+        indices.push(a + col, a + col + 1, b + col + 1, a + col, b + col + 1, b + col);
+      }
     }
   }
 
@@ -144,18 +171,67 @@ function buildPalm(
   const { position, trunkHeight, trunkRadius, lean, leanAngle, frondLength, seed } = spec;
   const [ox, oy, oz] = position;
 
-  // The lean, as a rotation applied about the base rather than the centre.
-  const tilt = new Quaternion().setFromEuler(
-    new Euler(Math.sin(leanAngle) * lean, 0, Math.cos(leanAngle) * lean),
-  );
+  // The lean, as a BEND rather than a tilt.
+  //
+  // It used to be a rigid rotation about the base, which makes a leaning pole
+  // — and a grove of leaning poles all rotated by a similar amount reads as
+  // scaffolding. A coconut palm curves: it leaves the ground close to
+  // vertical and sweeps over, so the lean accumulates with height and the top
+  // of the trunk is the only part that is really tipped. The displacement is
+  // quadratic in height, which is what a stem loaded at its tip does.
+  const bend = Math.sin(leanAngle);
+  const bendX = Math.cos(leanAngle) * lean * trunkHeight * 1.35;
+  const bendZ = bend * lean * trunkHeight * 1.35;
+  /** Where the trunk's axis has got to, a fraction `t` up its height. */
+  const sway = (t: number) => ({ x: bendX * t * t, z: bendZ * t * t });
 
-  const trunk = new CylinderGeometry(trunkRadius * 0.62, trunkRadius, trunkHeight, sides, 1);
+  // Ring scars, and a real taper.
+  //
+  // A coconut trunk is not a cone: it swells at the base, thins quickly, and
+  // carries a band at every frond that has ever fallen off it. Those bands
+  // are the only thing that gives a trunk scale at distance — without them
+  // it is a smooth pole and reads as one whatever colour it is painted.
+  const rings = Math.max(6, Math.round(trunkHeight * 2.2));
+  const trunk = new CylinderGeometry(trunkRadius * 0.72, trunkRadius, trunkHeight, sides, rings);
+  const pos = trunk.getAttribute('position');
+  for (let v = 0; v < pos.count; v += 1) {
+    const y = pos.getY(v);
+    const t = y / trunkHeight + 0.5;
+    // A slight flare in the lowest fifth, then the scar banding.
+    const flare = 1 + Math.max(0, 0.18 - t) * 1.5;
+    const band = 1 + Math.sin(t * trunkHeight * 3.4) * 0.022;
+    const offset = sway(t);
+    pos.setX(v, pos.getX(v) * flare * band + offset.x);
+    pos.setZ(v, pos.getZ(v) * flare * band + offset.z);
+  }
+  trunk.computeVertexNormals();
   trunk.translate(0, trunkHeight / 2, 0);
-  trunk.applyMatrix4(new Matrix4().makeRotationFromQuaternion(tilt));
   trunk.translate(ox, oy, oz);
 
-  // Where the crown actually sits once the trunk has leaned over.
-  const head = new Vector3(0, trunkHeight, 0).applyQuaternion(tilt).add(new Vector3(ox, oy, oz));
+  // Where the crown sits once the trunk has swept over.
+  const top = sway(1);
+  const head = new Vector3(ox + top.x, oy + trunkHeight, oz + top.z);
+
+  // A few nuts under the crown. Two dozen triangles, and the one detail that
+  // says "coconut palm" rather than "palm" — a grove with none is a grove
+  // nobody has looked at closely.
+  const nuts: BufferGeometry[] = [trunk];
+  const nutCount = 3 + Math.floor(rand(seed + 601) * 4);
+  for (let n = 0; n < nutCount; n += 1) {
+    const a = rand(seed + n * 71) * Math.PI * 2;
+    const reach = trunkRadius * (1.5 + rand(seed + n * 89) * 1.1);
+    const nut = new SphereGeometry(trunkRadius * (0.42 + rand(seed + n * 103) * 0.14), 7, 5);
+    nut.translate(
+      head.x + Math.cos(a) * reach,
+      head.y - trunkRadius * (1.1 + rand(seed + n * 113) * 1.4),
+      head.z + Math.sin(a) * reach,
+    );
+    nuts.push(nut);
+  }
+  const trunkWithNuts = mergeGeometries(nuts, false) ?? trunk;
+  nuts.forEach((g) => {
+    if (g !== trunk) g.dispose();
+  });
 
   const fronds: BufferGeometry[] = [];
   for (let i = 0; i < frondsPerTree; i += 1) {
@@ -163,9 +239,17 @@ function buildPalm(
     const r2 = rand(seed + i * 97);
     // Radial spread with jitter, so no two trees fan the same way.
     const yaw = (i / frondsPerTree) * Math.PI * 2 + (r - 0.5) * 0.5;
-    // From a little above horizontal down to a heavy droop.
-    const pitch = -0.42 + r2 * 1.25;
-    const length = frondLength * (0.66 + r * 0.44);
+    // A fountain, not a parasol.
+    //
+    // The old spread ran from 24 degrees above horizontal to 48 below, which
+    // is a rosette — every frond in roughly the same plane, splayed. A palm
+    // crown has a few fronds standing nearly upright in the middle, a mass
+    // spreading out around them, and the oldest ones hanging well below the
+    // horizontal. Cubing the parameter puts most fronds in the spread and a
+    // few at each extreme, which is the distribution a real crown has.
+    const shaped = (r2 - 0.5) * 2;
+    const pitch = 0.28 + shaped * shaped * shaped * 0.92 + shaped * 0.34;
+    const length = frondLength * (0.74 + r * 0.36);
 
     // The sheet's cell is 4:1, so the width follows the length rather than
     // being chosen: a frond drawn at the wrong aspect is a frond with its
@@ -183,7 +267,7 @@ function buildPalm(
     fronds.push(blade);
   }
 
-  return { trunk, fronds };
+  return { trunk: trunkWithNuts, fronds };
 }
 
 /**
@@ -281,7 +365,7 @@ export function Palms({
       <mesh
         name={`${name}-trunks`}
         geometry={geometry.trunk}
-        material={materials.bark}
+        material={materials.palmTrunk}
         castShadow={castShadow}
         receiveShadow
       />
