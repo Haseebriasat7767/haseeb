@@ -5,6 +5,7 @@ import { TowerWalkthrough } from '@/components/tower/TowerWalkthrough';
 import { Container } from '@/components/ui/Container';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/tower' },
   title: 'Oceanfront tower',
   description:
     'A twenty-storey oceanfront tower generated entirely in code — five retail levels around a full-height atrium, fifteen floors of apartments above, and an amenity deck between them. Walk it at any hour.',

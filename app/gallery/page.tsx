@@ -4,6 +4,7 @@ import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/gallery' },
   title: 'Gallery',
   description:
     'Eleven framings of the residence, each opening as a live view, under any hour from morning to night.',

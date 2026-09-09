@@ -5,6 +5,7 @@ import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/contact' },
   title: 'Contact',
   description:
     'Arrange a private viewing of the residence at Coastal Ridge with the private client team.',

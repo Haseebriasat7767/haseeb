@@ -4,6 +4,7 @@ import { ViewportPlaceholder } from '@/components/three/ViewportPlaceholder';
 import { ResidenceExplorer } from '@/components/explorer/ResidenceExplorer';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/experience' },
   title: 'Explore',
   description:
     'Move through the residence space by space — foyer, living room, kitchen, stair hall, master suite, library, terrace, and pool — under any hour of the day.',

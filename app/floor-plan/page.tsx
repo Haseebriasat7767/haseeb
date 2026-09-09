@@ -4,6 +4,7 @@ import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/floor-plan' },
   title: 'Architecture',
   description:
     'Drawn plans of both levels of the residence, set to the same room schedule the residence itself is built to.',

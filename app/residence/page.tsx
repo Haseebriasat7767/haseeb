@@ -9,6 +9,7 @@ import { PROPERTY } from '@/lib/constants/site';
 import { PALETTE } from '@/lib/experience/palette';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/residence' },
   title: 'The Residence',
   description:
     'The architectural concept, material palette, and full accommodation schedule of Residence No. 01 at Coastal Ridge — four bedrooms, three bathrooms, across two levels.',
