@@ -164,6 +164,13 @@ export type TowerLayout = {
   columns: ColumnSpec[];
   /** The escape stair and its shaft, the full height of the building. */
   stair: { steps: BoxSpec[]; walls: BoxSpec[]; doorX: Range };
+  /** The plinth the building stands on, its stair, and the front door. */
+  base: {
+    terrace: BoxSpec[];
+    steps: BoxSpec[];
+    seatWalls: BoxSpec[];
+    portal: BoxSpec[];
+  };
   /** Every floor the stair serves, and where the lift sets you down on it. */
   walkFloors: WalkFloor[];
   /** Every residential plate, in level order, for the fit-out to build on. */

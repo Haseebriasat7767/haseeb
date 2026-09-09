@@ -28,6 +28,8 @@ type ExperienceViewportProps = {
   timeOfDay?: TimeOfDay;
   /** Metres of pointer-driven camera parallax; 0 disables it. */
   parallax?: number;
+  /** Metres of slow automatic movement on a held framing; 0 disables it. */
+  drift?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
   /** Fires once the scene is mounted and the loading state has cleared. */
@@ -66,6 +68,7 @@ export function ExperienceViewport({
   content,
   timeOfDay,
   parallax,
+  drift,
   hotspots,
   onReady,
   cinematic,
@@ -112,6 +115,7 @@ export function ExperienceViewport({
           content={content}
           timeOfDay={timeOfDay}
           parallax={parallax}
+          drift={drift}
           hotspots={hotspots}
           cinematic={cinematic}
           onCinematicProgress={onCinematicProgress}

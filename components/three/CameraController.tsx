@@ -17,6 +17,25 @@ type CameraControllerProps = {
    * mouse-follow effect.
    */
   parallax?: number;
+  /**
+   * Metres of slow automatic movement on a HELD framing.
+   *
+   * ## Why a still camera is the wrong default here
+   *
+   * `fixed` composes a framing and then holds it exactly, which is correct
+   * for an architectural elevation and wrong for a walkthrough: a camera
+   * that does not move reads as a photograph, and eighteen photographs in
+   * sequence read as a slideshow. Every property film ever cut keeps the
+   * camera drifting even on its slowest shot, because the parallax between
+   * near and far is what tells the eye it is looking at a place with depth
+   * rather than at a picture of one.
+   *
+   * The move is deliberately below the threshold of being noticed as a move
+   * — a couple of metres over half a minute, across the view axis rather
+   * than into it, with a slight rise and an even slighter dolly on different
+   * periods so the path never repeats a loop the eye can learn.
+   */
+  drift?: number;
   reducedMotion?: boolean;
   /**
    * Camera clipping planes, in metres.
@@ -103,6 +122,7 @@ export function CameraController({
   mode = 'orbit',
   driftSpeed = 0.05,
   parallax = 0,
+  drift = 0,
   reducedMotion = false,
   near = 0.1,
   far = 260,
@@ -118,6 +138,10 @@ export function CameraController({
   const current = useRef(new Vector3(...view.target));
   const angle = useRef(Math.atan2(view.position[2], view.position[0]));
   const offset = useRef(new Vector3());
+  // A second scratch vector. The parallax path reuses `offset` for both its
+  // forward and its right, which works only because `set` reads its arguments
+  // before it writes — the drift needs both at once and cannot.
+  const lateral = useRef(new Vector3());
   const framed = useRef(new Vector3());
 
   useEffect(() => {
@@ -187,6 +211,18 @@ export function CameraController({
 
     framed.current.copy(desired.current);
 
+    // The held-shot drift. Three periods that do not divide into each other,
+    // so the camera never retraces the same arc.
+    if (drift > 0 && !reducedMotion) {
+      angle.current += step;
+      const t = angle.current;
+      const forward = offset.current.copy(target.current).sub(desired.current).normalize();
+      const right = lateral.current.set(forward.z, 0, -forward.x).normalize();
+      framed.current.addScaledVector(right, Math.sin(t * 0.13) * drift);
+      framed.current.addScaledVector(forward, Math.sin(t * 0.081) * drift * 0.42);
+      framed.current.y += Math.sin(t * 0.104) * drift * 0.3;
+    }
+
     // Parallax is applied perpendicular to the view axis, so the camera
     // slides across the subject rather than pushing into it.
     if (parallax > 0 && !reducedMotion) {
@@ -230,7 +266,9 @@ export function CameraController({
       current.current.distanceToSquared(target.current) < 1e-6 &&
       Math.abs(camera.fov - targetFov) <= 0.01;
 
-    if (!settled) invalidate();
+    // A drifting shot is never settled by definition; it has to keep asking
+    // for frames or it stops after the transition resolves.
+    if (!settled || (drift > 0 && !reducedMotion)) invalidate();
   });
 
   return (

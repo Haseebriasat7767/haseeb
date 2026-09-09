@@ -41,6 +41,25 @@ export const ENTRANCE_HEAD = 2.7;
 export const APT_DOOR_Z: Range = [-0.6, 0.6];
 export const APT_DOOR_HEIGHT = 2.25;
 
+/**
+ * The base: where the building stops and the ground starts.
+ *
+ * There was no such place. The podium's finished floor sat at zero and the
+ * plaza's paving at plus forty millimetres, so the building was fractionally
+ * BELOW its own forecourt and met it with no step, no kerb and no plinth —
+ * the two surfaces just abutted. That is why the tower looked like it had
+ * been dropped onto the site rather than built on it: every real building of
+ * this size stands on something, and the height you climb to get in is the
+ * first thing that tells you you have arrived.
+ *
+ * The forecourt drops instead of the building rising, because raising the
+ * podium would move fifteen floor levels, a stair and a lift schedule for a
+ * 450 mm change of datum.
+ */
+export const PLAZA_TOP = -0.45;
+/** Risers from the forecourt up to the terrace. Three, at 150 mm. */
+export const ENTRANCE_RISERS = 3;
+
 export const TOWER_CONFIG: TowerConfig = {
   podiumWidth: 64,
   podiumDepth: 44,
@@ -618,6 +637,90 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
       arcRun(podiumGlass, `shop-c-${level}-${ck}`, cx, cz, pr, a0, y, 0.1, 7);
     }
   }
+
+  // ── The base ──────────────────────────────────────────────────────────
+  const terrace: BoxSpec[] = [];
+  const steps: BoxSpec[] = [];
+  const seatWalls: BoxSpec[] = [];
+  const portal: BoxSpec[] = [];
+
+  // A terrace the building stands on, projecting furthest on the ocean side
+  // where the colonnade and the doors are.
+  const eastReach = 7.2;
+  const sideReach = 3.0;
+  const terraceX: Range = [podiumX[0] - sideReach, podiumX[1] + eastReach];
+  const terraceZ: Range = [podiumZ[0] - sideReach, podiumZ[1] + sideReach];
+  terrace.push(box('terrace', terraceX, [PLAZA_TOP - 0.35, 0], terraceZ));
+
+  // The flight up to it, running the full width of the colonnade. A grand
+  // stair rather than three steps at the door: this is the elevation the
+  // building is approached from, and the climb is the arrival.
+  const riser = -PLAZA_TOP / ENTRANCE_RISERS;
+  const going = 0.44;
+  const flightZ: Range = [podiumZ[0] + 2, podiumZ[1] - 2];
+  for (let i = 0; i < ENTRANCE_RISERS; i += 1) {
+    const y = PLAZA_TOP + riser * (i + 1);
+    const x0 = terraceX[1] - going * (ENTRANCE_RISERS - i);
+    steps.push(box(`entry-step-${i}`, [x0, terraceX[1]], [y - riser - 0.3, y], flightZ));
+  }
+
+  // Seat walls either side of the flight, and along the terrace edge.
+  //
+  // Deliberately thick rather than tall. The collider gives a wall's
+  // thickness to anything tall and thin so glass can stop somebody, and it
+  // leaves low things alone so a stair tread is not swallowed — which means a
+  // 500 mm wall has to be wide enough to stop a visitor on its own.
+  const seatH: Range = [0, 0.52];
+  const seatT = 0.7;
+  for (const [tag, z] of [
+    ['n', flightZ[0]],
+    ['s', flightZ[1]],
+  ] as const) {
+    seatWalls.push(
+      box(
+        `entry-cheek-${tag}`,
+        [terraceX[1] - going * ENTRANCE_RISERS - 0.2, terraceX[1] + 0.1],
+        [PLAZA_TOP, 0.52],
+        tag === 'n' ? [z - seatT, z] : [z, z + seatT],
+      ),
+    );
+  }
+  // The terrace edge on the three sides with no stair, so the platform reads
+  // as a platform and not as paving that happens to be higher.
+  seatWalls.push(box('terrace-edge-n', terraceX, seatH, [terraceZ[0], terraceZ[0] + seatT]));
+  seatWalls.push(box('terrace-edge-s', terraceX, seatH, [terraceZ[1] - seatT, terraceZ[1]]));
+  seatWalls.push(box('terrace-edge-w', [terraceX[0], terraceX[0] + seatT], seatH, terraceZ));
+
+  // ── The front door ────────────────────────────────────────────────────
+  //
+  // There was an opening. An opening is not an entrance: a hole the same
+  // width as a shop window, in the same plane as the glass either side of it,
+  // with nothing marking it. The main door of a twenty-storey building is
+  // supposed to be findable from the far side of the forecourt.
+  const portalFace = innerX[1];
+  const portalOut = 0.34;
+  const portalHead = ENTRANCE_HEAD + 0.5;
+  for (const [tag, z] of [
+    ['n', ENTRANCE_Z[0]],
+    ['s', ENTRANCE_Z[1]],
+  ] as const) {
+    portal.push(
+      box(
+        `portal-jamb-${tag}`,
+        [portalFace - 0.1, portalFace + portalOut],
+        [0, portalHead],
+        tag === 'n' ? [z - 0.42, z] : [z, z + 0.42],
+      ),
+    );
+  }
+  portal.push(
+    box(
+      'portal-head',
+      [portalFace - 0.1, portalFace + portalOut],
+      [ENTRANCE_HEAD, portalHead],
+      [ENTRANCE_Z[0] - 0.42, ENTRANCE_Z[1] + 0.42],
+    ),
+  );
 
   // The colonnade at the ocean entrance, and the deep soffit it holds up.
   const columns: ColumnSpec[] = [];
@@ -1303,6 +1406,7 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     columns,
     tower: { core, slabs, plates, ceilings, glazing: towerGlass, fins, spandrels },
     stair,
+    base: { terrace, steps, seatWalls, portal },
     walkFloors,
     residentialPlates,
     balconies: { slabs: balconySlabs, glass: balconyGlass, rails: balconyRails },

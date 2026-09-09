@@ -18,7 +18,7 @@ import type { TowerLayout } from './TowerTypes';
  */
 export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail?: DetailTier }) {
   const materials = getMaterials();
-  const { podium, tower, stair, balconies, crown, deck, columns, palms } = layout;
+  const { podium, tower, stair, base, balconies, crown, deck, columns, palms } = layout;
 
   return (
     <group name="Tower">
@@ -69,6 +69,19 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
         material={materials.glazing}
         castShadow={false}
       />
+
+      {/* ── The base ──────────────────────────────────────────────────── */}
+      {/* The plinth the whole thing stands on, the flight up to it and the
+          walls that hold its edge. Paving on top, stone at the edges — the
+          two materials are what tell you the terrace is a made platform and
+          not just higher ground. */}
+      <MergedBoxes name="base-terrace" specs={base.terrace} material={materials.paving} />
+      <MergedBoxes name="base-steps" specs={base.steps} material={materials.stone} />
+      <MergedBoxes name="base-walls" specs={base.seatWalls} material={materials.stone} />
+      {/* The door surround. Bronze, standing proud of the glass, because the
+          entrance to a twenty-storey building should be findable from the
+          far side of the forecourt. */}
+      <MergedBoxes name="base-portal" specs={base.portal} material={materials.bronze} />
 
       {/* ── The stair ─────────────────────────────────────────────────── */}
       {/* Runs the whole height of the building, so it is neither podium nor

@@ -34,7 +34,7 @@ import { createMallShops } from './MallShops';
 import { createRetailProps } from './RetailProps';
 import { createSiteProps } from './SiteProps';
 import { createSkyline } from './Skyline';
-import { createShorelineLayout, createTowerLayout, TOWER_CONFIG } from './TowerGeometry';
+import { createShorelineLayout, createTowerLayout, PLAZA_TOP, TOWER_CONFIG } from './TowerGeometry';
 import type { TowerConfig } from './TowerTypes';
 
 /**
@@ -165,7 +165,11 @@ export function TowerScene({
     return [
       {
         key: 'plaza',
-        position: [(x0 + x1) / 2 - apron / 2, -0.04, 0],
+        // Dropped to sit below the terrace. The building used to meet its
+        // own forecourt with no step at all — in fact it sat fractionally
+        // BELOW it — which is why it read as dropped onto the site rather
+        // than built on it. See `PLAZA_TOP` in `TowerGeometry`.
+        position: [(x0 + x1) / 2 - apron / 2, PLAZA_TOP - 0.08, 0],
         scale: [x1 - x0 + apron * 2, 0.16, z1 - z0 + apron * 2],
       },
     ];

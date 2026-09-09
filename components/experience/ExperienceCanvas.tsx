@@ -19,6 +19,8 @@ type ExperienceCanvasProps = {
   content?: SceneContent;
   timeOfDay?: TimeOfDay;
   parallax?: number;
+  /** Metres of slow automatic movement on a held framing. */
+  drift?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
   /** Fires once the scene graph has mounted and the loading state clears. */
@@ -38,6 +40,7 @@ export function ExperienceCanvas({
   content,
   timeOfDay,
   parallax,
+  drift,
   hotspots,
   onReady,
   cinematic,
@@ -61,6 +64,7 @@ export function ExperienceCanvas({
         content={content}
         timeOfDay={timeOfDay}
         parallax={parallax}
+        drift={drift}
         overlay={
           hotspots ? (
             <SpaceHotspots

@@ -153,6 +153,12 @@ export function createWalkCollider(
     // door leaf given that treatment fills its own doorway.
     core.screens,
     apartment.walls,
+    // The base: the terrace you arrive on, the flight up to it, and the
+    // walls that stop you walking off its edge.
+    layout.base.terrace,
+    layout.base.steps,
+    layout.base.seatWalls,
+    layout.base.portal,
     // Outside.
     shoreline.boardwalk,
     shoreline.steps,

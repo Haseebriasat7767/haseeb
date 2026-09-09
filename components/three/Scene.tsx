@@ -35,6 +35,8 @@ type SceneProps = {
   timeOfDay?: TimeOfDay;
   /** Metres of pointer-driven camera parallax; 0 disables it. */
   parallax?: number;
+  /** Metres of slow automatic movement on a held framing. */
+  drift?: number;
   /**
    * Renders this view by path tracing instead of rasterizing. For still
    * hero framings only — it converges over seconds and does not survive a
@@ -76,6 +78,7 @@ export function Scene({
   content = 'villa',
   timeOfDay = DEFAULT_TIME_OF_DAY,
   parallax = 0,
+  drift = 0,
   overlay,
   children,
   diagnosticsEnabled = false,
@@ -159,7 +162,10 @@ export function Scene({
       // its rasterized fallback, which looked like the tracer doing nothing.
       // Walk mode renders every frame by definition: the camera is moving
       // because a person is moving it, and `demand` would show them a still.
-      frameloop={mode === 'fixed' && !cinematic ? 'demand' : 'always'}
+      // A held framing costs nothing on demand — but a DRIFTING held framing
+      // is never finished moving, and `demand` would render the first second
+      // of the drift and then stop dead.
+      frameloop={mode === 'fixed' && !cinematic && drift <= 0 ? 'demand' : 'always'}
       className="h-full w-full"
     >
       <color attach="background" args={[lighting.atmosphere.background]} />
@@ -171,6 +177,7 @@ export function Scene({
           view={view}
           mode={mode}
           parallax={parallax}
+          drift={drift}
           reducedMotion={reducedMotion}
           // The tower stands on an ocean that runs to the horizon. Near is
           // lifted with far to keep the depth ratio sane — nothing in this

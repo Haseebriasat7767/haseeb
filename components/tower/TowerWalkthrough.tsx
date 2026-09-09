@@ -84,6 +84,11 @@ export function TowerWalkthrough() {
         className="h-[86svh] w-full"
         view={view}
         mode={walking ? 'walk' : 'fixed'}
+        // A slow move on every held framing. Eighteen dead-still shots in
+        // sequence is a slideshow; the parallax between near and far is what
+        // tells the eye this is a place and not a picture of one. Off on
+        // foot, where the visitor is doing the moving.
+        drift={walking ? 0 : 1.6}
         content="tower"
         timeOfDay={hour}
         label={`Three-dimensional view of the oceanfront tower — ${view.label}`}
