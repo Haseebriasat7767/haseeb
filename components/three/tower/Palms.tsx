@@ -68,7 +68,23 @@ const FROND_ALPHA_CUTOFF = 0.28;
  * differently and the frond has a spine — which is most of what makes a
  * crown read as a crown rather than as a pile of cutouts.
  */
-const FROND_FOLD = 0.34;
+const FROND_FOLD = 0.5;
+/**
+ * How far the frond rolls about its own rachis from base to tip.
+ *
+ * ## Why a crown of thirty fronds looked like a crown of twelve
+ *
+ * A ribbon seen edge-on is a line. Spread the fronds evenly around the
+ * compass — which phyllotaxis correctly does — and from any one viewpoint a
+ * third of them are close enough to edge-on to contribute nothing, so the
+ * crown reads as half the fronds it has. Adding more does not help: the new
+ * ones are edge-on too.
+ *
+ * A real frond is not planar. It twists along its length, which is why a palm
+ * crown is opaque from every direction. Rolling the section as it runs out
+ * means no frond is edge-on for more than a fraction of its length.
+ */
+const FROND_TWIST = 0.62;
 
 let sheet: ReturnType<TextureLoader['load']> | null = null;
 
@@ -110,7 +126,7 @@ function rand(seed: number): number {
  * frond that leaves the crown rising and falls away under its own weight is
  * the shape everybody recognises, and it costs five quads.
  */
-function frondRibbon(length: number, width: number, sag: number, variant: number) {
+function frondRibbon(length: number, width: number, sag: number, variant: number, twist: number) {
   const rings = FROND_SEGMENTS + 1;
   // Three vertices a ring: the rachis, and a lifted edge either side of it.
   const cols = 3;
@@ -131,16 +147,25 @@ function frondRibbon(length: number, width: number, sag: number, variant: number
     const y = -sag * t * t;
     const halfW = (width / 2) * (1 - t * 0.16);
     const lift = halfW * FROND_FOLD;
+    // The roll, and the frame that goes with it: `u` runs across the frond,
+    // `n` is the face it presents.
+    const roll = twist * t;
+    const cos = Math.cos(roll);
+    const sin = Math.sin(roll);
     for (let col = 0; col < cols; col += 1) {
       const index = s * cols + col;
       // -1, 0, +1 across the frond.
       const across = col - 1;
-      positions.set([x, y + Math.abs(across) * lift, across * halfW], index * 3);
+      const along = across * halfW;
+      const up = Math.abs(across) * lift;
+      positions.set([x, y + along * sin + up * cos, along * cos - up * sin], index * 3);
       // Each half tilts away from the spine, so the two catch the light
       // differently instead of shading as one plane.
-      const nz = across === 0 ? 0 : Math.sign(across) * FROND_FOLD;
-      const inv = 1 / Math.hypot(1, nz);
-      normals.set([0, inv, nz * inv], index * 3);
+      const tilt = across === 0 ? 0 : Math.sign(across) * FROND_FOLD;
+      const ny = cos - sin * tilt;
+      const nz = -sin - cos * tilt;
+      const inv = 1 / Math.hypot(ny, nz);
+      normals.set([0, ny * inv, nz * inv], index * 3);
       uvs.set([t, v0 + cell * ((across + 1) / 2)], index * 2);
     }
     if (s > 0) {
@@ -237,33 +262,62 @@ function buildPalm(
   for (let i = 0; i < frondsPerTree; i += 1) {
     const r = rand(seed + i * 53);
     const r2 = rand(seed + i * 97);
-    // Radial spread with jitter, so no two trees fan the same way.
-    const yaw = (i / frondsPerTree) * Math.PI * 2 + (r - 0.5) * 0.5;
-    // A fountain, not a parasol.
+    // Phyllotaxis, not a wheel.
     //
-    // The old spread ran from 24 degrees above horizontal to 48 below, which
-    // is a rosette — every frond in roughly the same plane, splayed. A palm
-    // crown has a few fronds standing nearly upright in the middle, a mass
-    // spreading out around them, and the oldest ones hanging well below the
-    // horizontal. Cubing the parameter puts most fronds in the spread and a
-    // few at each extreme, which is the distribution a real crown has.
-    const shaped = (r2 - 0.5) * 2;
-    const pitch = 0.28 + shaped * shaped * shaped * 0.92 + shaped * 0.34;
-    const length = frondLength * (0.74 + r * 0.36);
+    // Dividing the circle by the frond count puts them at even angles, which
+    // reads as a fan however much jitter is added. A palm adds each new frond
+    // at the golden angle to the last, so the crown never lines up with
+    // itself from any direction — exactly the property that makes a real one
+    // look dense from everywhere and this one look spoked.
+    const yaw = i * 2.399963 + rand(seed) * Math.PI * 2 + (r - 0.5) * 0.16;
+    // Age, from the newest frond standing up in the middle of the crown to
+    // the oldest hanging below the horizontal. Ordered rather than random: on
+    // a palm the two go together, and a crown with a young frond hanging and
+    // an old one upright is a crown nobody has looked at.
+    const age = i / Math.max(1, frondsPerTree - 1);
+    // Most of a coconut crown sits in a band either side of the horizontal;
+    // only the two or three newest fronds stand up in the middle of it. The
+    // spread was even across the whole range, which sprays the fronds over a
+    // hemisphere and leaves gaps everywhere — a crown is dense because its
+    // fronds overlap, and they only overlap if they are in a band.
+    const banded = Math.sin((age - 0.5) * Math.PI * 0.86);
+    const pitch = 0.06 + banded * 0.86 + (r2 - 0.5) * 0.26;
+    // Young fronds are shorter as well as steeper.
+    const length = frondLength * (0.62 + age * 0.42) * (0.9 + r * 0.2);
 
-    // The sheet's cell is 4:1, so the width follows the length rather than
-    // being chosen: a frond drawn at the wrong aspect is a frond with its
-    // leaflets stretched.
-    const width = length / 4;
+    // Narrower than the sheet's own 4:1.
+    //
+    // Drawn at the cell's aspect each frond is a broad pointed blade and the
+    // crown reads as a clump of ferns. A coconut frond is a long narrow comb;
+    // squeezing the sheet slightly also sweeps the leaflets back, which is
+    // the direction they actually lie.
+    const width = length / 3.9;
     // How far the tip falls below the line the frond leaves the crown on.
-    const sag = length * (0.28 + r * 0.3);
+    //
+    // This was 0.28 to 0.58 of the length — 1.4 to 2.9 metres of droop on a
+    // five-metre frond, which is a weeping willow. A coconut frond arches: it
+    // leaves the crown climbing, rolls over, and only the last third really
+    // falls.
+    // Between the willow the first version was and the spikes the second
+    // became: enough curve to roll over, not so much that it hangs.
+    const sag = length * (0.2 + r * 0.16);
     const variant = Math.floor(rand(seed + i * 131) * PALM_VARIANTS) % PALM_VARIANTS;
 
-    const blade = frondRibbon(length, width, sag, variant);
+    const blade = frondRibbon(
+      length,
+      width,
+      sag,
+      variant,
+      (rand(seed + i * 211) < 0.5 ? -1 : 1) * FROND_TWIST * (0.7 + r * 0.6),
+    );
     // Authored from the origin outward, so the rotation swings it about the
     // crown rather than about its own middle.
     blade.applyMatrix4(new Matrix4().makeRotationFromEuler(new Euler(0, yaw, -pitch, 'YZX')));
-    blade.translate(head.x, head.y, head.z);
+    // Fronds do not all sprout from one mathematical point. They emerge down
+    // the last half-metre of the trunk, oldest lowest, which is what gives a
+    // crown a head rather than a pivot — and what stops two dozen ribbons
+    // meeting at a single vertex in plain sight.
+    blade.translate(head.x, head.y - trunkRadius * (0.4 + age * 3.2), head.z);
     fronds.push(blade);
   }
 

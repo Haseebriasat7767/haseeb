@@ -335,11 +335,13 @@ function palm(key: string, x: number, z: number, y: number, seed: number): PalmS
     // A palm carries twenty-odd live fronds, and at nine the crown reads as
     // a thin spider. Affordable now the frond is a ten-triangle ribbon
     // rather than a twelve-triangle box.
-    frondCount: 15 + Math.floor(r2 * 6),
+    // You can see the sky through a crown of fifteen. A mature coconut palm
+    // carries something like thirty fronds at once.
+    frondCount: 27 + Math.floor(r2 * 8),
     // The thing that was most wrong. A coconut frond is four to six metres
     // on a trunk of ten to fifteen — at 2.6 to 4.1 the crown was a tuft on a
     // pole, which is the whole reason these read as brooms rather than palms.
-    frondLength: 4.6 + r3 * 2.0,
+    frondLength: 4.3 + r3 * 1.7,
     seed,
   };
 }
