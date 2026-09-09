@@ -6,6 +6,7 @@ import type { TowerLayout } from './TowerTypes';
 import type { AmenityLayout } from './AmenityGeometry';
 import type { CoreLayout } from './CoreGeometry';
 import type { ApartmentLayout } from './ApartmentGeometry';
+import type { MallLayout } from './MallShops';
 
 /**
  * The surfaces a visitor can stand on and bump into.
@@ -112,6 +113,7 @@ export function createWalkCollider(
   amenity: AmenityLayout,
   core: CoreLayout,
   apartment: ApartmentLayout,
+  mall: MallLayout,
   shoreline: { boardwalk: BoxSpec[]; steps: BoxSpec[] },
   plaza: readonly BoxSpec[],
 ): WalkCollider {
@@ -135,6 +137,11 @@ export function createWalkCollider(
     layout.deck.parapet,
     layout.deck.glass,
     layout.deck.planters,
+    // The shops: party walls, shopfronts and fascias are architecture, and
+    // the openings in them are the only way into a unit.
+    mall.walls,
+    mall.glazing,
+    mall.fascia,
     // Fit-out that is architecture rather than furniture.
     amenity.walls,
     amenity.tiling,

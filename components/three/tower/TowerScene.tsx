@@ -30,6 +30,7 @@ import { WalkControls } from '../WalkControls';
 import { createApartment, mergeApartments } from './ApartmentGeometry';
 import { InstancedModels } from '../models/InstancedModels';
 import { createParkLayout } from './Park';
+import { createMallShops } from './MallShops';
 import { createRetailProps } from './RetailProps';
 import { createSiteProps } from './SiteProps';
 import { createSkyline } from './Skyline';
@@ -80,6 +81,11 @@ export function TowerScene({
 
   // The retail fit-out, on every level around the atrium.
   const retail = useMemo(() => createRetailProps(layout.plan), [layout.plan]);
+  // The shops: sixteen demised units off the atrium, with fronts and names.
+  const mall = useMemo(
+    () => createMallShops(layout.plan, { dressed: detail !== 'low' }),
+    [layout.plan, detail],
+  );
 
   // The amenity floor at the base of the tower — gym, spa and residents'
   // lounge, on the one level that opens onto the deck.
@@ -169,8 +175,9 @@ export function TowerScene({
   // walk — it is a second merged geometry over the whole building and there
   // is no reason to pay for it while the camera is on rails.
   const collider = useMemo(
-    () => (walk ? createWalkCollider(layout, amenity, core, apartment, shoreline, plaza) : null),
-    [walk, layout, amenity, core, apartment, shoreline, plaza],
+    () =>
+      walk ? createWalkCollider(layout, amenity, core, apartment, mall, shoreline, plaza) : null,
+    [walk, layout, amenity, core, apartment, mall, shoreline, plaza],
   );
 
   useEffect(() => () => collider?.geometry.dispose(), [collider]);
@@ -271,6 +278,26 @@ export function TowerScene({
 
         <Tower layout={layout} detail={detail} />
 
+        {/* ── The shops ────────────────────────────────────────────────
+            Sixteen demised units off the atrium. Merged by material like
+            everything else, so the whole mall is six draw calls. */}
+        <MergedBoxes name="mall-walls" specs={mall.walls} material={materials.plaster} />
+        <MergedBoxes name="mall-floors" specs={mall.floors} material={materials.interiorStone} />
+        <MergedBoxes name="mall-fascia" specs={mall.fascia} material={materials.joinery} />
+        <MergedBoxes
+          name="mall-glazing"
+          specs={mall.glazing}
+          material={materials.glazing}
+          castShadow={false}
+        />
+        <MergedBoxes
+          name="mall-coves"
+          specs={mall.coves}
+          material={materials.lightStrip}
+          castShadow={false}
+          receiveShadow={false}
+        />
+
         {/* ── Tier 4 ───────────────────────────────────────────────────
             Signage, wayfinding and the building's own name. Three sheets,
             three draw calls, and the cheapest realism in the schedule: a
@@ -281,6 +308,14 @@ export function TowerScene({
           sheet={SIGNAGE_SHEET}
           decals={signage}
           emissiveIntensity={0.62}
+        />
+        {/* The same sixteen names, on the fascias inside the mall. One sheet
+            and one more draw call, because they share the atlas. */}
+        <DecalPlanes
+          name="mall-signage"
+          sheet={SIGNAGE_SHEET}
+          decals={mall.signage}
+          emissiveIntensity={0.7}
         />
         {/* Painted, not illuminated. A level number is a graphic on a wall. */}
         <DecalPlanes
@@ -311,7 +346,7 @@ export function TowerScene({
             but not draw calls, and `retail-shelf` is nineteen primitives
             standing in twenty places. Batched by piece it is a few dozen,
             and the cost stops scaling with how many floors are furnished. */}
-        <InstancedModels name="site-props" placements={[...props, ...retail]} />
+        <InstancedModels name="site-props" placements={[...props, ...retail, ...mall.models]} />
         {/* ── The core ─────────────────────────────────────────────── */}
         <group name="Core">
           <MergedBoxes name="core-joinery" specs={core.joinery} material={materials.joinery} />
