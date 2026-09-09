@@ -330,7 +330,10 @@ function palm(key: string, x: number, z: number, y: number, seed: number): PalmS
     trunkRadius: 0.19 + r2 * 0.08,
     lean: 0.05 + r3 * 0.13,
     leanAngle: r1 * Math.PI * 2,
-    frondCount: 9 + Math.floor(r2 * 4),
+    // A palm carries twenty-odd live fronds, and at nine the crown reads as
+    // a thin spider. Affordable now the frond is a ten-triangle ribbon
+    // rather than a twelve-triangle box.
+    frondCount: 15 + Math.floor(r2 * 6),
     frondLength: 2.6 + r3 * 1.5,
     seed,
   };

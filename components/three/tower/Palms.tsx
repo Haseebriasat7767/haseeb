@@ -1,12 +1,67 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { BoxGeometry, CylinderGeometry, Euler, Matrix4, Quaternion, Vector3 } from 'three';
-import type { BufferGeometry } from 'three';
+import {
+  BufferAttribute,
+  CylinderGeometry,
+  DoubleSide,
+  Euler,
+  LinearFilter,
+  LinearMipmapLinearFilter,
+  Matrix4,
+  MeshDepthMaterial,
+  MeshStandardMaterial,
+  Quaternion,
+  RGBADepthPacking,
+  SRGBColorSpace,
+  TextureLoader,
+  Vector3,
+} from 'three';
+import { BufferGeometry } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { getMaterials } from '@/lib/three/materials';
 import type { DetailTier } from '../villa/VillaTypes';
 import type { PalmSpec } from './TowerTypes';
+
+/**
+ * The frond sheet, and how a frond is drawn.
+ *
+ * ## What was wrong
+ *
+ * Each frond was one flat `BoxGeometry`. The comment here used to admit the
+ * problem and pick the wrong fix: a frond at true width "reads as a dark
+ * stick", so the blade was widened to stand in for the leaflets that were
+ * not being drawn. A wide flat blade does not read as a leaf, it reads as a
+ * plank — and a dozen planks radiating from a point read as a star. From the
+ * arrival camera the beach was a field of them, and it was the single most
+ * cartoon-like thing in the frame.
+ *
+ * A palm frond is a comb of a hundred leaflets with as much air as leaf.
+ * That is a silhouette with holes in it, which is what an alpha cutout is
+ * for — the same trick the broadleaf canopies already use, and the reason
+ * they read where the palms did not. `tools/blender/palm.py` bakes two
+ * fronds; each is drawn as a ribbon of quads that arches under its own
+ * weight, so the leaf curves instead of sticking out straight.
+ */
+const PALM_SHEET = '/assets/foliage/palm.png';
+/** Variants stacked in the sheet. */
+const PALM_VARIANTS = 2;
+/** Segments along one frond. Enough to arch; a frond is not a spline. */
+const FROND_SEGMENTS = 5;
+/** Matches the foliage cards: the same kind of asset, the same failure. */
+const FROND_ALPHA_CUTOFF = 0.38;
+
+let sheet: ReturnType<TextureLoader['load']> | null = null;
+
+function getPalmSheet() {
+  if (sheet) return sheet;
+  sheet = new TextureLoader().load(PALM_SHEET);
+  sheet.colorSpace = SRGBColorSpace;
+  sheet.magFilter = LinearFilter;
+  sheet.minFilter = LinearMipmapLinearFilter;
+  sheet.anisotropy = 8;
+  return sheet;
+}
 
 /** Trunk facets per tier. A palm at forty metres does not need twelve. */
 const TRUNK_SIDES: Record<DetailTier, number> = { low: 5, medium: 7, high: 9 };
@@ -29,6 +84,55 @@ function rand(seed: number): number {
  * is that some fronds stand up, some sit level, and the older ones hang
  * well below horizontal.
  */
+/**
+ * One frond: a ribbon of quads running out from the crown and arching down.
+ *
+ * The arch is the point. A straight blade at any angle reads as a spoke; a
+ * frond that leaves the crown rising and falls away under its own weight is
+ * the shape everybody recognises, and it costs five quads.
+ */
+function frondRibbon(length: number, width: number, sag: number, variant: number) {
+  const rings = FROND_SEGMENTS + 1;
+  const positions = new Float32Array(rings * 2 * 3);
+  const normals = new Float32Array(rings * 2 * 3);
+  const uvs = new Float32Array(rings * 2 * 2);
+  const indices: number[] = [];
+
+  // The sheet stacks its variants top to bottom, and V runs up from the
+  // bottom of a texture — so variant 0 is the TOP row and the highest V.
+  const cell = 1 / PALM_VARIANTS;
+  const v0 = 1 - cell * (variant + 1);
+
+  for (let s = 0; s < rings; s += 1) {
+    const t = s / FROND_SEGMENTS;
+    const x = length * t;
+    // Quadratic droop, and a little taper so the tip is not a blunt end.
+    const y = -sag * t * t;
+    const halfW = (width / 2) * (1 - t * 0.18);
+    for (let side = 0; side < 2; side += 1) {
+      const index = s * 2 + side;
+      const z = side === 0 ? -halfW : halfW;
+      positions.set([x, y, z], index * 3);
+      // The ribbon is close enough to horizontal that an up normal is right
+      // and much cheaper than a real frame; a leaf lit from underneath by
+      // its own geometry looks worse than one lit from above.
+      normals.set([0, 1, 0], index * 3);
+      uvs.set([t, v0 + (side === 0 ? 0 : cell)], index * 2);
+    }
+    if (s > 0) {
+      const a = (s - 1) * 2;
+      indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+  }
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new BufferAttribute(normals, 3));
+  geometry.setAttribute('uv', new BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  return geometry;
+}
+
 function buildPalm(
   spec: PalmSpec,
   sides: number,
@@ -63,15 +167,17 @@ function buildPalm(
     const pitch = -0.42 + r2 * 1.25;
     const length = frondLength * (0.66 + r * 0.44);
 
-    // Wider than a real frond's proportions, and deliberately. A palm leaf
-    // is a comb of hundreds of leaflets with air between them; drawn as a
-    // single blade at true width it reads as a dark stick, which is exactly
-    // how the first render came out. The extra width stands in for the
-    // leaflets that are not being drawn.
-    const blade = new BoxGeometry(length, 0.05, 0.72 + r2 * 0.42);
+    // The sheet's cell is 4:1, so the width follows the length rather than
+    // being chosen: a frond drawn at the wrong aspect is a frond with its
+    // leaflets stretched.
+    const width = length / 4;
+    // How far the tip falls below the line the frond leaves the crown on.
+    const sag = length * (0.28 + r * 0.3);
+    const variant = Math.floor(rand(seed + i * 131) * PALM_VARIANTS) % PALM_VARIANTS;
+
+    const blade = frondRibbon(length, width, sag, variant);
     // Authored from the origin outward, so the rotation swings it about the
     // crown rather than about its own middle.
-    blade.translate(length / 2, 0, 0);
     blade.applyMatrix4(new Matrix4().makeRotationFromEuler(new Euler(0, yaw, -pitch, 'YZX')));
     blade.translate(head.x, head.y, head.z);
     fronds.push(blade);
@@ -98,6 +204,43 @@ export function Palms({
 }) {
   const materials = getMaterials();
   const sides = TRUNK_SIDES[detail];
+
+  // Alpha-cut, not blended, and both-sided — the same three decisions the
+  // foliage cards make, for the same three reasons. Opaque-with-alphaTest
+  // keeps the fronds in the depth prepass and out of the transparency sort;
+  // a single-sided frond goes black the moment the sun is behind the tree.
+  const frondMaterial = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        map: getPalmSheet(),
+        side: DoubleSide,
+        alphaTest: FROND_ALPHA_CUTOFF,
+        transparent: false,
+        roughness: 0.86,
+        metalness: 0,
+        envMapIntensity: 0.55,
+      }),
+    [],
+  );
+
+  // Shadows need the cutout too, or every frond casts its bounding quad and
+  // the beach is striped with rectangles nothing in the scene explains.
+  const frondDepth = useMemo(() => {
+    const depth = new MeshDepthMaterial({
+      depthPacking: RGBADepthPacking,
+      map: getPalmSheet(),
+      alphaTest: FROND_ALPHA_CUTOFF,
+    });
+    return depth;
+  }, []);
+
+  useEffect(
+    () => () => {
+      frondMaterial.dispose();
+      frondDepth.dispose();
+    },
+    [frondMaterial, frondDepth],
+  );
   // A palm's crown is its whole silhouette, so the frond count is the last
   // thing to cut — but on the low tier it is still the largest saving here.
   const frondScale = detail === 'low' ? 0.6 : detail === 'medium' ? 0.8 : 1;
@@ -145,7 +288,8 @@ export function Palms({
       <mesh
         name={`${name}-fronds`}
         geometry={geometry.frond}
-        material={materials.frond}
+        material={frondMaterial}
+        customDepthMaterial={frondDepth}
         castShadow={castShadow}
         receiveShadow
       />
