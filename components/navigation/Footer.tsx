@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Container } from '@/components/ui/Container';
-import { NAV_ITEMS } from '@/lib/constants/navigation';
+import { LEGAL_ITEMS, NAV_ITEMS } from '@/lib/constants/navigation';
 import { PROPERTY, SITE } from '@/lib/constants/site';
 
 export function Footer() {
@@ -52,11 +52,22 @@ export function Footer() {
 
         <div className="rule" />
 
-        <div className="text-stone flex flex-col gap-2 text-[0.6875rem] tracking-[0.2em] uppercase sm:flex-row sm:justify-between">
+        <div className="text-stone flex flex-col gap-4 text-[0.6875rem] tracking-[0.2em] uppercase sm:flex-row sm:items-center sm:justify-between">
           <span>
             &copy; {PROPERTY.year} {SITE.name}. All rights reserved.
           </span>
-          <span>Aurelia Private Residence — a conceptual residence experience</span>
+
+          {/* The three standing documents. They belong in the footer rather
+              than the main navigation: nobody browses to them, but a visitor
+              looking for one expects to find it here, and an accessibility
+              statement is only useful if it is reachable from every page. */}
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-6 gap-y-2">
+            {LEGAL_ITEMS.map((item) => (
+              <Link key={item.href} href={item.href} className="hover:text-gold transition-colors">
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </Container>
     </footer>

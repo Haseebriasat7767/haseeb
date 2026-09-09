@@ -102,31 +102,40 @@ export function ExperienceViewport({
   return (
     <div
       ref={containerRef}
-      role="img"
-      aria-label={label}
       className={cn('bg-obsidian relative isolate overflow-hidden', className)}
     >
-      {webgl === false ? (
-        <UnsupportedNotice onReady={onReady} />
-      ) : webgl && inView ? (
-        <ExperienceCanvas
-          view={view}
-          mode={mode}
-          content={content}
-          timeOfDay={timeOfDay}
-          parallax={parallax}
-          drift={drift}
-          hotspots={hotspots}
-          cinematic={cinematic}
-          onCinematicProgress={onCinematicProgress}
-          onReady={onReady}
-        />
-      ) : (
-        // Still deciding whether WebGL exists, or the viewport has not been
-        // scrolled to yet. Both used to render null, which is the same black
-        // rectangle by another route.
-        <ViewportPlaceholder />
-      )}
+      {/* The label goes onto the `<canvas>` element itself, inside
+          `ExperienceCanvas`. It used to sit on a wrapper — but that wrapper
+          also holds the walk toggle, the hour dial, the step navigation and
+          the scene's own hotspot buttons, and an `img` may not contain
+          interactive controls: everything inside it is presentational by
+          definition, so a screen reader announces buttons and then says they
+          are part of a picture. Labelling the render surface leaves the
+          chrome as ordinary siblings that can still be reached. */}
+      <div className="absolute inset-0">
+        {webgl === false ? (
+          <UnsupportedNotice onReady={onReady} />
+        ) : webgl && inView ? (
+          <ExperienceCanvas
+            label={label}
+            view={view}
+            mode={mode}
+            content={content}
+            timeOfDay={timeOfDay}
+            parallax={parallax}
+            drift={drift}
+            hotspots={hotspots}
+            cinematic={cinematic}
+            onCinematicProgress={onCinematicProgress}
+            onReady={onReady}
+          />
+        ) : (
+          // Still deciding whether WebGL exists, or the viewport has not been
+          // scrolled to yet. Both used to render null, which is the same black
+          // rectangle by another route.
+          <ViewportPlaceholder />
+        )}
+      </div>
       {children}
     </div>
   );

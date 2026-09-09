@@ -4,6 +4,8 @@ import { Cursor } from '@/components/effects/Cursor';
 import { GrainOverlay } from '@/components/effects/GrainOverlay';
 import { Footer } from '@/components/navigation/Footer';
 import { Header } from '@/components/navigation/Header';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { StructuredData } from '@/components/seo/StructuredData';
 import { SITE } from '@/lib/constants/site';
 import './globals.css';
@@ -73,6 +75,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body className="min-h-svh antialiased">
         <StructuredData />
+        {/* Measurement, without a consent banner — because there is nothing
+            to consent to.
+
+            Vercel Web Analytics is cookieless: a visitor is identified by a
+            hash of the incoming request, not by anything written to their
+            device. Nothing else on this site writes to it either — no
+            localStorage, no sessionStorage, no cookies — and the fonts are
+            served from this origin by `next/font` rather than fetched from
+            Google. So the site stores nothing and calls nothing, and the
+            ePrivacy consent requirement, which is about storing and reading
+            on a visitor's device, has nothing to attach to.
+
+            That is a better outcome than a banner. A banner asking permission
+            for nothing trains people to dismiss the ones that matter — and
+            an inoperable one undermines the consent it claims to collect.
+            See /privacy, which says all of this in the visitor's language.
+
+            Speed Insights reports the field Core Web Vitals — the 75th
+            percentile of real visits, which is the only measurement of this
+            that counts. A WebGL hero is an LCP risk and this is how we find
+            out whether it is one here. */}
+        <Analytics />
+        <SpeedInsights />
         <a
           href="#main"
           className="focus:bg-alabaster focus:text-obsidian sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:text-xs focus:tracking-[0.2em] focus:uppercase"

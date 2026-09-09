@@ -58,7 +58,7 @@ export function Field({ label, error, optional, multiline, ...props }: FieldProp
         )}
       >
         {label}
-        {optional ? <span className="text-stone/60 normal-case"> (optional)</span> : null}
+        {optional ? <span className="text-stone normal-case"> (optional)</span> : null}
       </label>
 
       {error ? (

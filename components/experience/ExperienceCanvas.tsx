@@ -23,6 +23,8 @@ type ExperienceCanvasProps = {
   drift?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
+  /** Alternative text for the rendered frame. */
+  label?: string;
   /** Fires once the scene graph has mounted and the loading state clears. */
   onReady?: () => void;
   /** Path-traces this framing instead of rasterizing it. Stills only. */
@@ -41,6 +43,7 @@ export function ExperienceCanvas({
   timeOfDay,
   parallax,
   drift,
+  label,
   hotspots,
   onReady,
   cinematic,
@@ -65,6 +68,7 @@ export function ExperienceCanvas({
         timeOfDay={timeOfDay}
         parallax={parallax}
         drift={drift}
+        label={label}
         overlay={
           hotspots ? (
             <SpaceHotspots

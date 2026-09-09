@@ -201,7 +201,14 @@ export function JourneyStage() {
               <div
                 className={cn(
                   'ease-luxe pointer-events-auto max-w-[34ch] transition-[opacity,transform] duration-[900ms] sm:max-w-[46ch] lg:ml-[9.5rem] xl:ml-[11rem]',
-                  isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-45',
+                  // The inactive dim used to be 45%, which took the eyebrow
+                  // down to 2.34:1 against the obsidian ground — and these
+                  // blocks hold real links, so a keyboard visitor could tab
+                  // into text they cannot read. 75% is the measured floor:
+                  // every pair in the block clears 4.5:1 there (the worst is
+                  // 4.58:1) and fails at 70%. The rise still carries the
+                  // transition; the dim only supports it.
+                  isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-75',
                 )}
               >
                 <p

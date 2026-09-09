@@ -12,7 +12,11 @@
   --color-ink: #121214;
   --color-charcoal: #1c1c1f;
   --color-graphite: #2a2a2e;
-  --color-stone: #6b6b70;
+  /* 5.17:1 on obsidian. It was #6b6b70, which measures 3.73:1 — under the
+     4.5:1 AA floor for text at this size, and it is the muted token, so it
+     failed on every page of the site at once. Still clearly secondary
+     against alabaster; just legible now. */
+  --color-stone: #82828a;
   --color-mist: #a8a8ad;
   --color-alabaster: #f4f1ec;
   --color-bone: #e6e1d8;

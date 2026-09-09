@@ -38,6 +38,12 @@ type SceneProps = {
   /** Metres of slow automatic movement on a held framing. */
   drift?: number;
   /**
+   * Alternative text for the rendered frame. It is applied to the `<canvas>`
+   * element itself rather than to a wrapper, because the wrapper also holds
+   * the hotspot buttons and an `img` may not contain interactive controls.
+   */
+  label?: string;
+  /**
    * Renders this view by path tracing instead of rasterizing. For still
    * hero framings only — it converges over seconds and does not survive a
    * moving camera.
@@ -79,6 +85,7 @@ export function Scene({
   timeOfDay = DEFAULT_TIME_OF_DAY,
   parallax = 0,
   drift = 0,
+  label,
   overlay,
   children,
   diagnosticsEnabled = false,
@@ -166,6 +173,14 @@ export function Scene({
       // is never finished moving, and `demand` would render the first second
       // of the drift and then stop dead.
       frameloop={mode === 'fixed' && !cinematic && drift <= 0 ? 'demand' : 'always'}
+      // The canvas is the picture; the DOM that react-three-fiber wraps it in
+      // is shared with drei's `Html` hotspots, so the role belongs here and
+      // nowhere further out.
+      onCreated={({ gl }) => {
+        if (!label) return;
+        gl.domElement.setAttribute('role', 'img');
+        gl.domElement.setAttribute('aria-label', label);
+      }}
       className="h-full w-full"
     >
       <color attach="background" args={[lighting.atmosphere.background]} />

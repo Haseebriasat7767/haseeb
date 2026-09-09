@@ -24,3 +24,18 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Gallery', href: '/gallery' },
   { label: 'Tower', href: '/tower' },
 ] as const;
+
+/**
+ * The standing documents, shown only in the footer.
+ *
+ * These are kept out of `NAV_ITEMS` on purpose — nobody arrives wanting to
+ * read the terms — but they are listed here rather than hard-coded into the
+ * footer so the sitemap can build from the same array. The comment on
+ * `NAV_ITEMS` applies with equal force: a page reachable from neither this
+ * list nor the sitemap does not exist.
+ */
+export const LEGAL_ITEMS: readonly NavItem[] = [
+  { label: 'Privacy', href: '/privacy' },
+  { label: 'Terms', href: '/terms' },
+  { label: 'Accessibility', href: '/accessibility' },
+] as const;

@@ -24,23 +24,31 @@ export function PropertySpecs() {
 
         <dl className="border-alabaster/10 bg-alabaster/10 grid grid-cols-2 gap-px border md:grid-cols-4">
           {PROPERTY.specification.map((item, index) => (
-            <Reveal key={item.label} delay={index * 50} className="bg-obsidian">
-              <div className="flex h-full flex-col gap-2 p-6 sm:p-8">
-                <dt className="text-eyebrow text-stone flex items-center gap-2 uppercase">
-                  {item.label}
-                  {item.derived ? (
-                    <span
-                      title="Counted from the room schedule"
-                      aria-label="Counted from the room schedule"
-                      className="bg-gold-dim inline-block h-1 w-1 rounded-full"
-                    />
-                  ) : null}
-                </dt>
-                <dd className="font-display text-alabaster text-3xl leading-none font-light sm:text-4xl">
+            // A definition list may contain only `dt`, `dd` and a single `div`
+            // between them — so `Reveal` IS that div, and the note moves inside
+            // the `dd` it describes rather than sitting loose after it.
+            <Reveal
+              key={item.label}
+              delay={index * 50}
+              className="bg-obsidian flex h-full flex-col gap-2 p-6 sm:p-8"
+            >
+              <dt className="text-eyebrow text-stone flex items-center gap-2 uppercase">
+                {item.label}
+                {item.derived ? (
+                  <span
+                    role="img"
+                    title="Counted from the room schedule"
+                    aria-label="Counted from the room schedule"
+                    className="bg-gold-dim inline-block h-1 w-1 rounded-full"
+                  />
+                ) : null}
+              </dt>
+              <dd className="flex flex-col">
+                <span className="font-display text-alabaster text-3xl leading-none font-light sm:text-4xl">
                   {item.value}
-                </dd>
-                <p className="text-stone mt-1 text-xs leading-relaxed">{item.note}</p>
-              </div>
+                </span>
+                <span className="text-stone mt-3 text-xs leading-relaxed">{item.note}</span>
+              </dd>
             </Reveal>
           ))}
         </dl>
