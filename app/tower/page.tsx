@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { ViewportPlaceholder } from '@/components/three/ViewportPlaceholder';
+import { TowerMaterials } from '@/components/tower/TowerMaterials';
 import { TowerSpecs } from '@/components/tower/TowerSpecs';
 import { TowerViews } from '@/components/tower/TowerViews';
 import { TowerWalkthrough } from '@/components/tower/TowerWalkthrough';
@@ -76,6 +77,7 @@ export default function TowerPage() {
           rather than written beside it. */}
       <Container className="pb-section flex flex-col gap-24">
         <TowerSpecs />
+        <TowerMaterials />
         <TowerViews />
 
         <section
