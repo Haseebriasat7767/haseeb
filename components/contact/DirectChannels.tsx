@@ -17,8 +17,8 @@ import { CLIENT, mailtoLink, whatsappLink } from '@/lib/constants/client';
  * Each channel renders only when its variable is set. A WhatsApp button
  * pointing at a number nobody owns is worse than no button: it looks like
  * a working channel right up to the moment it swallows an enquiry. So an
- * unconfigured deployment shows the operator what to set instead of
- * showing a visitor something broken.
+ * unconfigured deployment shows nothing to the visitor rather than a
+ * broken channel or implementation details about what to configure.
  */
 export function DirectChannels() {
   const mailto = mailtoLink('Enquiry from the AURELIA site');
@@ -29,48 +29,55 @@ export function DirectChannels() {
 
   const hasAny = Boolean(mailto || whatsapp);
 
+  // The operator note used to render on screen for every visitor, spelling
+  // out the exact env vars to set. That is useful information, but it
+  // belongs to whoever deploys this, not to a buyer evaluating the page —
+  // so it goes to the console instead, and the block simply does not
+  // render for visitors until a real channel exists. This follows the same
+  // null-means-do-not-render rule the rest of this file already applies to
+  // the brochure button and the agent identity block.
+  if (!hasAny) {
+    // Warned on the server, not the client. This is a server component, so
+    // a `typeof window !== 'undefined'` guard is never true here and the
+    // note would never be printed at all. The contact page is statically
+    // prerendered, so this fires once during the build and lands in the
+    // deploy log — which is exactly where somebody deploying it is looking.
+    console.warn(
+      '[AURELIA] No direct contact channel configured. Set NEXT_PUBLIC_ENQUIRY_EMAIL ' +
+        'and, optionally, NEXT_PUBLIC_ENQUIRY_PHONE to show an email address and a ' +
+        'WhatsApp link on the contact page.',
+    );
+    return null;
+  }
+
   return (
     <div className="border-alabaster/10 bg-alabaster/[0.03] flex flex-col gap-4 border p-6">
       <p className="text-eyebrow text-stone uppercase">Or reach us directly</p>
-
-      {hasAny ? (
-        <>
-          <p className="text-mist text-sm leading-relaxed">
-            If the form gives you any trouble, these reach us just as well.
-          </p>
-          <div className="flex flex-col gap-2.5">
-            {agent.email ? (
-              <a
-                href={mailto ?? `mailto:${agent.email}`}
-                data-cursor="link"
-                className="text-alabaster hover:text-gold text-sm break-all transition-colors"
-              >
-                {agent.email}
-              </a>
-            ) : null}
-            {whatsapp && agent.phone ? (
-              <a
-                href={whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-cursor="link"
-                className="text-alabaster hover:text-gold text-sm transition-colors"
-              >
-                WhatsApp {agent.phone}
-              </a>
-            ) : null}
-          </div>
-        </>
-      ) : (
-        /* Addressed to whoever deploys this, not to a visitor — and it is
-           deliberately plain rather than styled as a channel, so nobody
-           mistakes it for one. */
-        <p className="text-stone text-sm leading-relaxed">
-          No direct channel is published yet. Set <code>NEXT_PUBLIC_ENQUIRY_EMAIL</code> and{' '}
-          <code>NEXT_PUBLIC_ENQUIRY_PHONE</code> to show an email address and a WhatsApp link here,
-          so an enquiry can still reach you if the form ever fails.
-        </p>
-      )}
+      <p className="text-mist text-sm leading-relaxed">
+        If the form gives you any trouble, these reach us just as well.
+      </p>
+      <div className="flex flex-col gap-2.5">
+        {agent.email ? (
+          <a
+            href={mailto ?? `mailto:${agent.email}`}
+            data-cursor="link"
+            className="text-alabaster hover:text-gold text-sm break-all transition-colors"
+          >
+            {agent.email}
+          </a>
+        ) : null}
+        {whatsapp && agent.phone ? (
+          <a
+            href={whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-cursor="link"
+            className="text-alabaster hover:text-gold text-sm transition-colors"
+          >
+            WhatsApp {agent.phone}
+          </a>
+        ) : null}
+      </div>
     </div>
   );
 }
