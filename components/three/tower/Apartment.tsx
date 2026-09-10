@@ -84,6 +84,28 @@ export function Apartment({
         chamfer={SOFT_RADIUS}
         chamferSegments={SOFT_SEGMENTS}
       />
+      {/* Curtain folds. The softest edge in the flat: fabric hanging in
+          folds has no arris at all. */}
+      <MergedBoxes
+        name="apt-drapery"
+        specs={parts.drapery}
+        material={materials.drapery}
+        chamfer={SOFT_RADIUS}
+        chamferSegments={SOFT_SEGMENTS}
+      />
+      {/* Emissive fixture faces — lit surfaces, not light sources.
+          The apartment rendered nineteen part groups and not this one, so
+          it had no lit fixture anywhere: every room was filled evenly by
+          daylight and the eye had nothing to measure depth against. It is
+          the single biggest reason these interiors read flatter than the
+          villa's, which has rendered its glow from the start. */}
+      <MergedBoxes
+        name="apt-glow"
+        specs={parts.glow}
+        material={materials.lightGlow}
+        castShadow={false}
+        receiveShadow={false}
+      />
       <MergedBoxes
         name="apt-sheer"
         specs={parts.sheer}

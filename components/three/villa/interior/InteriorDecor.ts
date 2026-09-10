@@ -36,6 +36,15 @@ export type CurtainOptions = {
   gather?: 'both' | 'left' | 'right';
   /** Folds per metre of gathered panel. Higher reads as heavier fabric. */
   density?: number;
+  /**
+   * Which world axis the opening runs along.
+   *
+   * `x` is the original and the default — a wall facing north or south. The
+   * tower's principal glazing faces the ocean and so runs along Z, and
+   * every box below is built from the same two ranges, so the whole
+   * treatment transposes by swapping which range is which.
+   */
+  axis?: 'x' | 'z';
 };
 
 /**
@@ -53,17 +62,28 @@ export type CurtainOptions = {
  * into the same mesh as every other fabric surface in the house.
  */
 export function createCurtains(parts: Parts, key: string, options: CurtainOptions): void {
-  const { across, at, y, gather = 'both', density = 9 } = options;
+  const { across, at, y, gather = 'both', density = 9, axis = 'x' } = options;
   const width = span(across);
   if (width <= 0.4) return;
+
+  /**
+   * Builds a box in whichever orientation this opening runs.
+   *
+   * `run` is along the opening, `depth` is through the wall. On the default
+   * axis those are X and Z; transposed they are Z and X.
+   */
+  const slab = (name: string, run: Range, yRange: Range, depth: Range) =>
+    axis === 'x' ? box(name, run, yRange, depth) : box(name, depth, yRange, run);
 
   // The sheer: one thin plane across the whole opening, set back against
   // the glass. It softens the daylight and gives the heavy panels
   // something to read against.
-  parts.sheer.push(box(`${key}-sheer`, across, [y[0] + 0.02, y[1] - 0.02], [at[0], at[0] + 0.012]));
+  parts.sheer.push(
+    slab(`${key}-sheer`, across, [y[0] + 0.02, y[1] - 0.02], [at[0], at[0] + 0.012]),
+  );
 
   // A pelmet, which is also what hides the head of every panel.
-  parts.joinery.push(box(`${key}-track`, across, [y[1] - 0.12, y[1]], [at[0], at[1]]));
+  parts.joinery.push(slab(`${key}-track`, across, [y[1] - 0.12, y[1]], [at[0], at[1]]));
 
   // The cove.
   //
@@ -80,7 +100,7 @@ export function createCurtains(parts: Parts, key: string, options: CurtainOption
   // surface in the house — barely present at midday, carrying the room at
   // night — so nothing here has to know what time it is.
   parts.glow.push(
-    box(`${key}-cove`, across, [y[1] - 0.135, y[1] - 0.115], [at[1] - 0.07, at[1] - 0.015]),
+    slab(`${key}-cove`, across, [y[1] - 0.135, y[1] - 0.115], [at[1] - 0.07, at[1] - 0.015]),
   );
 
   const panelWidth = Math.min(width * 0.3, 1.15);
@@ -104,7 +124,7 @@ export function createCurtains(parts: Parts, key: string, options: CurtainOption
       const hem = y[0] + (forward ? 0 : 0.015);
 
       parts.drapery.push(
-        box(
+        slab(
           `${key}-fold-${panelIndex}-${i}`,
           end.direction > 0 ? [x0, x1] : [x1, x0],
           [hem, y[1] - 0.1],

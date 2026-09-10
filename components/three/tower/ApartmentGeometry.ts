@@ -2,6 +2,7 @@ import type { ArtworkPlacement } from '../ArtworkPanels';
 import type { BlobSpec } from '../villa/landscape/LandscapeTypes';
 import type { Form } from '../villa/furniture/FormTypes';
 import { createFloorVessel } from '../villa/furniture/Pieces';
+import { createCurtains } from '../villa/interior/InteriorDecor';
 import type { ModelName } from '../models/ModelLibrary';
 import { emptyParts, type Parts } from '../villa/interior/Furniture';
 import type { BoxSpec, Range } from '../villa/VillaTypes';
@@ -265,6 +266,27 @@ export function createApartment(
   const caseZ: Range = [inset(-6.4, 1), inset(6.4, 1)];
   const bedroomZ: Range = [z[0], -1.6];
 
+  // ── The ceiling ───────────────────────────────────────────────────────
+  //
+  // ## Why this was the whole problem
+  //
+  // There was not one. The soffit was described in this file as "the only
+  // ceiling modelling there is", which was true and was the bug: a dropped
+  // soffit is defined by what it drops FROM, and with nothing above it the
+  // panel hung in mid-air as a bright blob with sky behind it. Worse, the
+  // room was lit as an outdoor space — daylight arrived from straight up
+  // with nothing to stop it, so every surface flattened toward white and
+  // the furniture lost the tonal range that makes the villa's rooms read.
+  //
+  // A slab does exist above each plate structurally, but it is the tower's
+  // shell rather than a finished ceiling: it is far away, unlit on its
+  // underside, and does not follow the fit-out. This is the plasterboard
+  // ceiling of the flat, sitting where the fit-out says it should.
+  //
+  // 120mm thick, which is what a suspended ceiling actually is, and it
+  // spans the whole plate so no camera angle finds an edge.
+  walls.push(box(k('ceiling'), x, [ceilingY, ceilingY + 0.12], z));
+
   // ── Partitions ────────────────────────────────────────────────────────
   walls.push(box(k('wall-lounge'), [loungeBackX, loungeBackX + 0.26], [floorY, ceilingY], z));
   walls.push(
@@ -370,6 +392,25 @@ export function createApartment(
       [-1.55, 1.55],
     ),
   );
+
+  // ── Lounge: the ocean glazing ─────────────────────────────────────────
+  //
+  // Sheers, a pelmet and a lit cove at the head, from the same treatment the
+  // villa uses — transposed, because this opening runs along Z rather than
+  // X. It does three jobs at once, and the third is the one that mattered:
+  // the cove is a grazing wash down a vertical surface, which is what the
+  // apartment had none of. Without it the room was filled evenly and the
+  // eye had nothing to measure depth against.
+  //
+  // Gathered at the north end only, so the panels stack against the return
+  // wall and leave the view itself unobstructed.
+  createCurtains(parts, k('lounge-curtain'), {
+    axis: 'z',
+    across: [inset(-6.8, 0.4), inset(6.8, 0.4)],
+    at: [glassX - 0.42, glassX - 0.2],
+    y: [floorY, ceilingY - 0.06],
+    gather: hand === 1 ? 'left' : 'right',
+  });
 
   // ── Lounge: the dropped soffit ────────────────────────────────────────
   // A lowered plane over the seating with a cove around it. In a flat-slab

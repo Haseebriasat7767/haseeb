@@ -87,19 +87,36 @@ def srgb(r, g, b):
     return (c(r), c(g), c(b), 1.0)
 
 
+# Matched to `lib/three/materials.ts`.
+#
+# These two palettes drifted, and it showed everywhere a baked glTF piece
+# stood next to a generated one. Upholstery was the worst: Blender baked it
+# at #DBD4C4 while the runtime drew it at #9a917f — a stop and a half apart,
+# so the tower's glTF sofas read as bare white foam beside the villa's
+# fabric ones. Any change to a colour here belongs in that file too.
 PALETTE = {
-    "upholstery": (srgb(0.86, 0.83, 0.77), 0.88, 0.0),
-    "upholsteryDark": (srgb(0.36, 0.34, 0.31), 0.86, 0.0),
-    "joinery": (srgb(0.42, 0.31, 0.22), 0.46, 0.0),
-    "marble": (srgb(0.90, 0.89, 0.86), 0.22, 0.0),
-    "stone": (srgb(0.78, 0.73, 0.65), 0.62, 0.0),
+    "upholstery": (srgb(0.604, 0.569, 0.498), 0.95, 0.0),
+    "upholsteryDark": (srgb(0.29, 0.275, 0.247), 0.96, 0.0),
+    "joinery": (srgb(0.42, 0.314, 0.227), 0.46, 0.0),
+    "marble": (srgb(0.886, 0.871, 0.835), 0.22, 0.0),
+    "stone": (srgb(0.796, 0.765, 0.694), 0.66, 0.0),
     "travertine": (srgb(0.82, 0.76, 0.66), 0.66, 0.0),
-    "bronze": (srgb(0.70, 0.56, 0.36), 0.28, 0.95),
-    "darkMetal": (srgb(0.22, 0.22, 0.24), 0.35, 0.90),
-    "ceramic": (srgb(0.95, 0.95, 0.94), 0.16, 0.02),
+    "bronze": (srgb(0.69, 0.557, 0.361), 0.26, 0.95),
+    "darkMetal": (srgb(0.165, 0.165, 0.188), 0.33, 0.90),
+    "ceramic": (srgb(0.933, 0.941, 0.933), 0.12, 0.02),
     "linen": (srgb(0.93, 0.91, 0.87), 0.90, 0.0),
-    "paper": (srgb(0.80, 0.76, 0.70), 0.88, 0.0),
+    # Matched to the runtime `plaster` (#cec7ba) so a modelled ceiling piece
+    # and the plasterboard around it are the same surface. The soffit used
+    # to be `linen`, which is most of a stop brighter, and against the real
+    # ceiling it stopped reading as a dropped plane and became a white
+    # object floating under one.
+    "plaster": (srgb(0.808, 0.780, 0.729), 0.90, 0.0),
+    "paper": (srgb(0.812, 0.776, 0.714), 0.88, 0.0),
     "glow": (srgb(1.0, 0.94, 0.82), 0.5, 0.0),
+    # A cove is a rim you notice, not a lamp you look at. `glow` at full
+    # strength blew the soffit's whole edge into a halo and took the panel
+    # with it; this is the same colour at a third of the output.
+    "coveGlow": (srgb(1.0, 0.94, 0.82), 0.5, 0.0),
     # Balustrade glass. Alpha rather than transmission: these are exported to
     # glTF and read by a rasterizer, which has no refraction to give, and a
     # transmissive material would arrive as an opaque white slab. The
@@ -110,6 +127,10 @@ PALETTE = {
 
 # Materials that export with an alpha below one.
 GLASS_ALPHA = {"glass": 0.22}
+
+# Emissive materials and how hard they push. A lamp shade is the source and
+# should read as one; an architectural cove is a lit edge and should not.
+EMISSIVE = {"glow": 1.4, "coveGlow": 0.45}
 
 
 def material(name):
@@ -125,9 +146,9 @@ def material(name):
     if name in GLASS_ALPHA:
         bsdf.inputs["Alpha"].default_value = GLASS_ALPHA[name]
         mat.blend_method = "BLEND"
-    if name == "glow":
+    if name in EMISSIVE:
         bsdf.inputs["Emission Color"].default_value = color
-        bsdf.inputs["Emission Strength"].default_value = 1.4
+        bsdf.inputs["Emission Strength"].default_value = EMISSIVE[name]
     return mat
 
 
@@ -958,14 +979,14 @@ def p_ceiling_soffit():
 
     panel = organic_slab("soffit_panel", 3.5, drop, lobes=3, wobble=0.19,
                          phase=0.8, squash=0.74, bevel=0.05)
-    parts.append(assign(panel, "linen"))
+    parts.append(assign(panel, "plaster"))
 
     # The cove: a slightly larger blob sitting just above the panel's edge,
     # so what the room sees is a lit rim, never the source.
     cove = organic_slab("soffit_cove", 3.62, 0.05, lobes=3, wobble=0.19,
                         phase=0.8, squash=0.74, bevel=0.02)
     cove.location = (0, 0, drop - 0.005)
-    parts.append(assign(cove, "glow"))
+    parts.append(assign(cove, "coveGlow"))
     return parts
 
 
