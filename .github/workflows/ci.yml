@@ -1,0 +1,75 @@
+name: CI
+
+# Every push and every pull request. The point of this file is that a commit
+# which breaks typecheck, lint, formatting, the tests or the build cannot
+# reach production without somebody being told first.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A new push supersedes the run in flight for the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # `npm ci` honours .npmrc, which sets legacy-peer-deps for a spurious
+      # peer range in @vercel/analytics that pins React 18.
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  # Accessibility is checked against a real production build in a real
+  # browser, because that is the only place the stylesheet, the client
+  # components and the rendered DOM all exist at once. An earlier manual run
+  # of this audit silently graded an unstyled page for exactly that reason,
+  # so the harness now fails loudly if the stylesheet has not applied.
+  accessibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit
+        run: npm run test:a11y

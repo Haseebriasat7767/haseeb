@@ -74,6 +74,25 @@ const MIN_PLAN_THICKNESS = 0.7;
  */
 const MIN_WALL_HEIGHT = 0.9;
 
+/**
+ * The collider's size for one box, given the size the building draws it at.
+ *
+ * Separated from the geometry builder so the rule can be checked directly:
+ * both of the bugs it exists to prevent — walking through glass, and a stair
+ * flight fattened into a ramp — were sizing mistakes, not geometry mistakes.
+ */
+export function colliderScale(scale: readonly [number, number, number]): [number, number, number] {
+  const [x, y, z] = scale;
+  if (y < MIN_WALL_HEIGHT) return [x, y, z];
+  return [Math.max(x, MIN_PLAN_THICKNESS), y, Math.max(z, MIN_PLAN_THICKNESS)];
+}
+
+/** Exposed for the tests that pin the sizing rule to real building parts. */
+export const COLLIDER_LIMITS = {
+  minPlanThickness: MIN_PLAN_THICKNESS,
+  minWallHeight: MIN_WALL_HEIGHT,
+} as const;
+
 function boxesToGeometry(specs: readonly BoxSpec[]): BufferGeometry[] {
   const matrix = new Matrix4();
   const position = new Vector3();
@@ -84,11 +103,7 @@ function boxesToGeometry(specs: readonly BoxSpec[]): BufferGeometry[] {
     const part = UNIT.clone();
     position.set(...spec.position);
     quaternion.setFromAxisAngle(new Vector3(0, 1, 0), spec.rotationY ?? 0);
-    scale.set(...spec.scale);
-    if (scale.y >= MIN_WALL_HEIGHT) {
-      scale.x = Math.max(scale.x, MIN_PLAN_THICKNESS);
-      scale.z = Math.max(scale.z, MIN_PLAN_THICKNESS);
-    }
+    scale.set(...colliderScale(spec.scale));
     matrix.compose(position, quaternion, scale);
     part.applyMatrix4(matrix);
     return part;

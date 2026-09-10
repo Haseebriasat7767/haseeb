@@ -1,7 +1,6 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useMemo, useState } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { Container } from '@/components/ui/Container';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -12,6 +11,7 @@ import type { Space } from '@/lib/experience/spaces';
 import type { TimeOfDay } from '@/types';
 import { CinematicOverlay } from '@/components/experience/CinematicOverlay';
 import { HourDial } from '@/components/experience/HourDial';
+import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
 import { SpaceRail } from './SpaceRail';
 
@@ -24,24 +24,29 @@ const DEFAULT_SPACE = SPACES[0]!;
  * navigates — the scene is never torn down and rebuilt.
  */
 export function ResidenceExplorer() {
-  const params = useSearchParams();
   const reducedMotion = useReducedMotion();
   const webgl = useWebGLSupport();
 
-  const requested = params.get('space');
-  const [framedId, setFramedId] = useState<string>(
-    () => findSpace(requested ?? '')?.id ?? DEFAULT_SPACE.id,
-  );
-  const [openId, setOpenId] = useState<string | null>(() => findSpace(requested ?? '')?.id ?? null);
+  const [framedId, setFramedId] = useState<string>(DEFAULT_SPACE.id);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(DEFAULT_TIME_OF_DAY);
 
-  // A deep link arriving after mount (client navigation) should still land.
-  useEffect(() => {
-    const target = findSpace(requested ?? '');
+  /**
+   * Opens the space named in `?space=`.
+   *
+   * Passed down to `DeepLinkedSpace` rather than read here. Calling
+   * `useSearchParams` in this component made Next bail out of server
+   * rendering for the whole Suspense boundary, so the page's HTML was an
+   * empty placeholder — no heading, no rail, nothing for a crawler that does
+   * not run JavaScript. Confining the hook to a leaf that renders nothing
+   * leaves the rest of this tree server-rendered.
+   */
+  const openSpace = useCallback((id: string) => {
+    const target = findSpace(id);
     if (!target) return;
     setFramedId(target.id);
     setOpenId(target.id);
-  }, [requested]);
+  }, []);
 
   const framed = useMemo(() => findSpace(framedId) ?? DEFAULT_SPACE, [framedId]);
   const open = useMemo(() => (openId ? (findSpace(openId) ?? null) : null), [openId]);
@@ -139,6 +144,13 @@ export function ResidenceExplorer() {
       {/* `min-w-0` on both columns: a grid item defaults to `min-width:
           auto`, so without it the widest child sets the track width and the
           whole page scrolls sideways on a narrow screen. */}
+      {/* Reads `?space=` and renders nothing. Its own boundary, so its
+          client-only nature cannot pull the rest of the page out of the
+          server-rendered HTML. */}
+      <Suspense fallback={null}>
+        <DeepLinkedSpace onSpace={openSpace} />
+      </Suspense>
+
       <Container className="pb-section">
         {/* The page's only `h1`, and it belongs here rather than above the
             frame: the view opens the page full bleed on purpose, so the
