@@ -14,7 +14,8 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:a11y": "node scripts/a11y.mjs"
+    "test:a11y": "node scripts/a11y.mjs",
+    "brochure:stills": "node scripts/brochure-stills.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
@@ -26,6 +27,7 @@
     "lucide-react": "^0.577.0",
     "next": "^15.5.25",
     "nodemailer": "^10.0.2",
+    "pdf-lib": "^1.17.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "^0.180.0",

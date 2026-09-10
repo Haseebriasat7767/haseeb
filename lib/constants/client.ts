@@ -79,10 +79,12 @@ export type ClientConfig = {
   };
 
   /**
-   * Path to a real brochure in `public/`, or `null`. There is no brochure
-   * in this repository and none is invented: fabricating a developer's
-   * marketing material is not a thing to do, so the button simply does not
-   * appear until a real file is dropped in and named here.
+   * Where the brochure is served from, or `null` to hide every download
+   * affordance. Nothing here is invented marketing material: the document
+   * at this path is generated at build time by `app/brochure/route.ts`
+   * from the residence's own room schedule and material palette, so it
+   * states only what the site already states. Point it somewhere else, or
+   * set it to `null`, and the button follows.
    */
   brochurePath: string | null;
 };
@@ -123,7 +125,7 @@ export const CLIENT: ClientConfig = {
     whatsapp: process.env.NEXT_PUBLIC_ENQUIRY_PHONE ?? null,
   },
 
-  brochurePath: null,
+  brochurePath: '/brochure',
 };
 
 /**
