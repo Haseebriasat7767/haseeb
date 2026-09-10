@@ -27,8 +27,11 @@ const CARD_DETAIL: Record<DetailTier, { perCluster: number; shrubCards: number }
   // Enough cards that no viewing angle finds a gap between them. Four left
   // holes the inner mass showed through, and a crown with a hole in it
   // reads as broken geometry rather than as a tree.
-  medium: { perCluster: 5, shrubCards: 4 },
-  high: { perCluster: 7, shrubCards: 5 },
+  // Card counts rose with the reach cut: pulling cards inward tightens the
+  // crown but leaves the outer edge thinner, and a gap in a silhouette is
+  // the thing that reads as broken.
+  medium: { perCluster: 6, shrubCards: 4 },
+  high: { perCluster: 9, shrubCards: 5 },
 };
 
 const between = (rng: () => number, lo: number, hi: number) => lo + rng() * (hi - lo);
@@ -75,8 +78,13 @@ export function createFoliageCards(
       const roll = between(rng, -0.35, 0.35);
 
       // Offset toward the outside of the cluster, so cards build the
-      // silhouette rather than stacking through its middle.
-      const reach = radius * between(rng, 0.25, 0.8);
+      // silhouette rather than stacking through its middle — but not so far
+      // that a card clears the mass entirely. At 0.8 the outermost cards on
+      // an outer cluster had nothing behind them, and from any angle where
+      // the quad faced the camera it read as a leafy rectangle floating in
+      // the sky beside the tree. Half that keeps every card overlapping
+      // something.
+      const reach = radius * between(rng, 0.12, 0.42);
       const position: Vector3Tuple = [
         blob.position[0] + Math.cos(yaw) * reach,
         blob.position[1] + between(rng, -0.45, 0.55) * radius,
@@ -87,14 +95,19 @@ export function createFoliageCards(
       // cards at roughly the blob's own diameter and left them near its
       // centre, so the faceted volume still drew the outline and the cards
       // only decorated its surface — the exact problem this replaces.
-      const width = radius * between(rng, 3.4, 4.8) * sizeScale;
+      const width = radius * between(rng, 2.9, 4.0) * sizeScale;
       const height = width * between(rng, 0.8, 1.16);
 
       // Mirroring through a negative width doubles the apparent number of
       // atlas variants for nothing.
       const mirrored = rng() > 0.5 ? -1 : 1;
 
-      const shade = between(rng, 0.74, 1.12);
+      // A narrower range than before. At 0.74–1.12 neighbouring cards
+      // differed by half again in brightness, so the crown read as light
+      // patches and near-black patches rather than as foliage with light
+      // falling across it. Real leaf mass varies, but nothing like that
+      // much within one crown.
+      const shade = between(rng, 0.86, 1.08);
       cards.push({
         position,
         rotation: [pitch, yaw, roll],

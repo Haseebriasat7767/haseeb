@@ -268,16 +268,31 @@ function makeTree(
   }
 
   const clusterTotal = Math.max(1, canopyClusters);
+  const crownCentre: Vector3Tuple = [
+    trunkTop[0],
+    trunkTop[1] + cfg.trunkHeight * 0.18,
+    trunkTop[2],
+  ];
+
   for (let c = 0; c < clusterTotal; c += 1) {
     const center = clusterCenters[c % clusterCenters.length]!;
     const r = cfg.canopyRadius * between(rng, 0.34, 0.6);
+
+    // Scatter, but half what it was. Clusters used to be flung far enough
+    // apart that each carried its own cloud of cards with clear sky between
+    // them: the tree read as several separate bushes hanging in the air
+    // rather than as one crown. A canopy is a single mass with a ragged
+    // edge, and the clusters have to overlap for that to happen at all.
+    const spread = cfg.canopySpread * 0.22;
+    const position: Vector3Tuple = [
+      center[0] + between(rng, -spread, spread),
+      center[1] + between(rng, -0.4, 0.8),
+      center[2] + between(rng, -spread, spread),
+    ];
+
     const spec: BlobSpec = {
       key: `${keyPrefix}-canopy-${c}`,
-      position: [
-        center[0] + between(rng, -cfg.canopySpread * 0.42, cfg.canopySpread * 0.42),
-        center[1] + between(rng, -0.55, 1.15),
-        center[2] + between(rng, -cfg.canopySpread * 0.42, cfg.canopySpread * 0.42),
-      ],
+      position,
       radius: r,
       scale: [between(rng, 0.85, 1.3), between(rng, 0.72, 1.0), between(rng, 0.85, 1.3)],
       seed: nextSeed(),
@@ -286,7 +301,15 @@ function makeTree(
       deform: between(rng, 0.34, 0.52),
       detail: canopyDetail,
     };
-    (c % 3 === 2 ? canopyDark : canopyMid).push(spec);
+
+    // Shadowed foliage goes where foliage is actually shadowed — inside the
+    // crown and under it — instead of every third cluster whatever its
+    // position. Assigned by count it landed on outer clusters as often as
+    // inner ones, and a dark patch on the silhouette reads as a hole in the
+    // tree rather than as depth within it.
+    const outward = Math.hypot(position[0] - crownCentre[0], position[2] - crownCentre[2]);
+    const inside = outward < cfg.canopySpread * 0.3 || position[1] < crownCentre[1];
+    (inside ? canopyDark : canopyMid).push(spec);
   }
 
   return { trunks, canopyMid, canopyDark };
