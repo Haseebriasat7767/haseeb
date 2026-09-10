@@ -1,3 +1,4 @@
+import nodemailer, { type Transporter } from 'nodemailer';
 import { NextResponse } from 'next/server';
 import { validateEnquiry, type Enquiry } from '@/lib/contact/enquiry';
 
@@ -20,16 +21,23 @@ import { validateEnquiry, type Enquiry } from '@/lib/contact/enquiry';
  * it always had. A route that returned 200 without sending anything would be
  * worse than no route at all: it would turn a visible gap into a silent one.
  *
- * Nothing here is a client secret. The API key is read on the server only and
- * never crosses the wire to the browser.
+ * ## How it sends
+ *
+ * Plain SMTP, through whatever mailbox the operator already owns — a Google
+ * Workspace account, Microsoft 365, or the mail server that comes with the
+ * hosting. There is no email vendor in this file and no account to sign up
+ * for: the five `SMTP_*` variables below are the same ones any mail client
+ * asks for.
+ *
+ * Nothing here is a client secret. The password is read on the server only
+ * and never crosses the wire to the browser.
  */
 
 // Node rather than edge: the rate limiter below keeps state in module memory,
-// and the mail call is a single outbound fetch with no streaming.
+// and nodemailer opens a real TCP connection, which the edge runtime has no
+// way to do.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
 /**
  * Shortest a human takes to fill this form in.
@@ -80,35 +88,60 @@ function escape(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-type MailArgs = {
-  from: string;
+type SmtpConfig = {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
   to: string;
-  subject: string;
-  html: string;
-  replyTo?: string;
+  from: string;
 };
 
-async function send(key: string, mail: MailArgs): Promise<void> {
-  const response = await fetch(RESEND_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: mail.from,
-      to: [mail.to],
-      subject: mail.subject,
-      html: mail.html,
-      ...(mail.replyTo ? { reply_to: mail.replyTo } : {}),
-    }),
-  });
+/**
+ * Reads the mail settings, or returns null if any of them is missing.
+ *
+ * All six together or none: a half-configured deployment is the case that
+ * produces a silent failure, so it is treated exactly like no configuration
+ * at all rather than being allowed to fail later at send time.
+ */
+function readSmtpConfig(): SmtpConfig | null {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const password = process.env.SMTP_PASSWORD;
+  const to = process.env.ENQUIRY_TO;
+  const from = process.env.ENQUIRY_FROM;
 
-  if (!response.ok) {
-    // The body carries the provider's reason; it goes to the server log, not
-    // to the visitor, who can do nothing with it.
-    throw new Error(`Resend ${response.status}: ${await response.text()}`);
-  }
+  // 587 with STARTTLS is what virtually every provider wants; 465 is implicit
+  // TLS and is the other one worth supporting. Anything else has to be named.
+  const port = Number(process.env.SMTP_PORT ?? 587);
+
+  if (!host || !user || !password || !to || !from || !Number.isFinite(port)) return null;
+  return { host, port, user, password, to, from };
+}
+
+/**
+ * One transport per warm instance.
+ *
+ * nodemailer pools connections, so re-creating it per request would open a
+ * fresh TCP and TLS handshake for every enquiry — and some providers count
+ * that as a login attempt and start refusing them.
+ */
+let transport: Transporter | null = null;
+
+function getTransport(config: SmtpConfig): Transporter {
+  transport ??= nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    // Implicit TLS on 465; STARTTLS on everything else. Never plaintext:
+    // `requireTLS` makes the connection fail rather than quietly downgrade
+    // and send a visitor's name, address and message in the clear.
+    secure: config.port === 465,
+    requireTLS: config.port !== 465,
+    auth: { user: config.user, pass: config.password },
+    pool: true,
+    maxConnections: 2,
+  });
+  return transport;
 }
 
 function row(label: string, value: string): string {
@@ -116,9 +149,7 @@ function row(label: string, value: string): string {
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.ENQUIRY_TO;
-  const from = process.env.ENQUIRY_FROM;
+  const smtp = readSmtpConfig();
 
   let body: unknown;
   try {
@@ -161,7 +192,7 @@ export async function POST(request: Request) {
   // already have your enquiry" when it has never had one — which is the
   // exact dishonesty this route exists to avoid, arrived at from the other
   // direction. There is also nothing to protect: the route sends nothing.
-  if (!apiKey || !to || !from) {
+  if (!smtp) {
     return NextResponse.json({ status: 'unconfigured' }, { status: 503 });
   }
 
@@ -176,10 +207,12 @@ export async function POST(request: Request) {
     enquiry.preferredDate ? row('Preferred viewing', enquiry.preferredDate) : '',
   ].join('');
 
+  const mailer = getTransport(smtp);
+
   try {
-    await send(apiKey, {
-      from,
-      to,
+    await mailer.sendMail({
+      from: smtp.from,
+      to: smtp.to,
       subject: `Private viewing enquiry — ${enquiry.name}`,
       // `reply_to` is the enquirer, so answering is one keystroke rather than
       // copying an address out of the body.
@@ -200,10 +233,10 @@ export async function POST(request: Request) {
   // telling the visitor their enquiry failed because a courtesy email bounced
   // would be false.
   try {
-    await send(apiKey, {
-      from,
+    await mailer.sendMail({
+      from: smtp.from,
       to: enquiry.email,
-      replyTo: to,
+      replyTo: smtp.to,
       subject: 'Your enquiry — AURELIA',
       html: `<div style="font:400 15px/1.6 system-ui;color:#1b1f25">
 <p style="font:500 12px system-ui;letter-spacing:.14em;text-transform:uppercase;color:#96733d;margin:0 0 18px">AURELIA</p>

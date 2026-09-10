@@ -72,10 +72,17 @@ export default function PrivacyPage() {
 
       <h2>Where it goes</h2>
       <p>
-        Enquiries are delivered by <a href="https://resend.com">Resend</a>, an email provider, and
-        are then held in the mailbox they arrive in. This site is hosted by{' '}
-        <a href="https://vercel.com">Vercel</a>, which processes the ordinary technical logs any web
-        host keeps in order to serve a page.
+        Enquiries are sent straight to our own mailbox over SMTP and are then held in that mailbox.
+        There is no third-party form service or email marketing platform in between — nobody
+        processes your enquiry but us and the provider that hosts that mailbox. This site is hosted
+        by <a href="https://vercel.com">Vercel</a>, which processes the ordinary technical logs any
+        web host keeps in order to serve a page.
+      </p>
+      <p>
+        <strong>This section is not yet complete.</strong> The company that hosts our mailbox is a
+        processor of your enquiry and has to be named here — as does its country, if it is outside
+        the UK and the EU. No mail provider has been configured for this deployment, so there is
+        nothing accurate to name. The operator must complete this before the site is published.
       </p>
 
       <h2>How long it is kept</h2>
