@@ -59,9 +59,10 @@ export type ClientConfig = {
 
   /** Who the buyer is actually talking to. */
   agent: {
-    name: string;
-    title: string;
-    agency: string;
+    /** Null until configured — the card omits the identity block entirely. */
+    name: string | null;
+    title: string | null;
+    agency: string | null;
     /** From `NEXT_PUBLIC_ENQUIRY_EMAIL`. `null` hides every email channel. */
     email: string | null;
     /**
@@ -96,15 +97,30 @@ export const CLIENT: ClientConfig = {
   },
 
   agent: {
-    name: 'Elena Marchetti',
-    title: 'Private Client Director',
-    agency: 'Aurelia Estates',
+    /**
+     * Who the enquiry reaches.
+     *
+     * These were a fictional person — a name, a title and an agency invented
+     * to dress the demo. That was harmless while the contact channels were
+     * also unset, and stopped being harmless the moment a real email and a
+     * real WhatsApp number were configured beneath them: the page then
+     * states that the invented person's address is the real one, which is a
+     * false claim about a real human being on a live page.
+     *
+     * Null unless set, and the card hides the whole identity block when
+     * there is no name — the same rule every other channel here follows.
+     */
+    name: process.env.NEXT_PUBLIC_AGENT_NAME ?? null,
+    title: process.env.NEXT_PUBLIC_AGENT_TITLE ?? null,
+    agency: process.env.NEXT_PUBLIC_AGENT_AGENCY ?? null,
     email: process.env.NEXT_PUBLIC_ENQUIRY_EMAIL ?? null,
     phone: process.env.NEXT_PUBLIC_ENQUIRY_PHONE ?? null,
-    // Unset by design — see the note on the type above. Replace with a real
-    // number, digits only (for example '447700900123'), to switch on the
-    // WhatsApp button everywhere it appears.
-    whatsapp: null,
+    // The same number the phone link uses. It was hard-coded to null, which
+    // meant setting NEXT_PUBLIC_ENQUIRY_PHONE switched on the telephone
+    // link and silently left WhatsApp off — a channel that looked
+    // configured and was not. If a separate WhatsApp number is ever needed
+    // it gets its own variable; until then one number is one number.
+    whatsapp: process.env.NEXT_PUBLIC_ENQUIRY_PHONE ?? null,
   },
 
   brochurePath: null,
@@ -120,7 +136,11 @@ export const CLIENT: ClientConfig = {
  * instead of "hi".
  */
 export function whatsappLink(message?: string): string | null {
-  const number = CLIENT.agent.whatsapp;
+  // `wa.me` takes digits only: a leading `+`, spaces, brackets or dashes all
+  // produce a link that opens WhatsApp on an error rather than a chat. The
+  // number is written by a human into an environment variable, so it is
+  // normalised here instead of being demanded in that format.
+  const number = CLIENT.agent.whatsapp?.replace(/\D/g, '');
   if (!number) return null;
 
   const text =

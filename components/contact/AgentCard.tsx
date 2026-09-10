@@ -27,13 +27,26 @@ export function AgentCard() {
 
   return (
     <div className="border-alabaster/10 bg-alabaster/[0.03] flex flex-col gap-8 border p-8 sm:p-10">
+      {/* Only when a real person is configured. The card used to name an
+          invented one, which was harmless beside unset channels and became
+          a false claim the moment a real address sat under it. */}
       <div className="flex flex-col gap-1">
-        <p className="text-eyebrow text-stone uppercase">Private client</p>
-        <p className="font-display text-alabaster mt-3 text-2xl leading-tight font-light">
-          {agent.name}
+        <p className="text-eyebrow text-stone uppercase">
+          {agent.name ? 'Private client' : 'Enquiries'}
         </p>
-        <p className="text-mist text-sm">{agent.title}</p>
-        <p className="text-stone text-sm">{agent.agency}</p>
+        {agent.name ? (
+          <>
+            <p className="font-display text-alabaster mt-3 text-2xl leading-tight font-light">
+              {agent.name}
+            </p>
+            {agent.title ? <p className="text-mist text-sm">{agent.title}</p> : null}
+            {agent.agency ? <p className="text-stone text-sm">{agent.agency}</p> : null}
+          </>
+        ) : (
+          <p className="text-mist mt-3 text-sm leading-relaxed">
+            Every enquiry is read and answered personally.
+          </p>
+        )}
       </div>
 
       <div className="rule" />
