@@ -71,12 +71,13 @@ export function Gallery() {
           </Reveal>
         ))}
         {/*
-          The twelfth cell.
+          The cell that closes the grid.
 
-          Eleven framings in a grid of two or three columns leaves one cell
-          empty, and an empty cell in a hairline grid is not neutral — it
+          Seventeen framings in a grid of two or three columns leave a
+          ragged last row, and a gap in a hairline grid is not neutral — it
           shows as a pale block where the page ran out of things to say.
-          Filling it with the one thing a visitor who has just looked
+          Eighteen divides by both, so this cell squares the grid at either
+          width. Filling it with the one thing a visitor who has just looked
           through every room might want next costs nothing and reads as
           composition rather than as a patch.
         */}

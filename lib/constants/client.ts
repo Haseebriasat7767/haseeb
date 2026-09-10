@@ -107,13 +107,20 @@ export const CLIENT: ClientConfig = {
      * also unset, and stopped being harmless the moment a real email and a
      * real WhatsApp number were configured beneath them: the page then
      * states that the invented person's address is the real one, which is a
-     * false claim about a real human being on a live page.
+     * false claim about a real human being on a live page. So they were
+     * emptied.
      *
-     * Null unless set, and the card hides the whole identity block when
-     * there is no name — the same rule every other channel here follows.
+     * The name below is not a replacement invention: it is the person who
+     * actually reads the enquiries and owns the address and number
+     * configured underneath. That is the whole distinction the note above
+     * is about — the rule was never "no name", it was "no invented name".
+     *
+     * `agency` stays null because there is no practice to name, and the
+     * card omits any line it has no value for. A client rebranding this
+     * sets all three from the environment.
      */
-    name: process.env.NEXT_PUBLIC_AGENT_NAME ?? null,
-    title: process.env.NEXT_PUBLIC_AGENT_TITLE ?? null,
+    name: process.env.NEXT_PUBLIC_AGENT_NAME ?? 'Haseeb Riasat',
+    title: process.env.NEXT_PUBLIC_AGENT_TITLE ?? 'Direct enquiries',
     agency: process.env.NEXT_PUBLIC_AGENT_AGENCY ?? null,
     email: process.env.NEXT_PUBLIC_ENQUIRY_EMAIL ?? null,
     phone: process.env.NEXT_PUBLIC_ENQUIRY_PHONE ?? null,

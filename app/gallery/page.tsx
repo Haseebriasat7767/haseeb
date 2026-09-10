@@ -2,12 +2,16 @@ import type { Metadata } from 'next';
 import { Gallery } from '@/components/gallery/Gallery';
 import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SPACES } from '@/lib/experience/spaces';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/gallery' },
   title: 'Gallery',
-  description:
-    'Eleven framings of the residence, each opening as a live view, under any hour from morning to night.',
+  // Counted, not written. This said "Eleven" against a gallery that renders
+  // seventeen, because the number was typed once and the space list grew
+  // afterwards — exactly the drift the property figures were fixed for.
+  // The gallery maps `SPACES` unfiltered, so the length is the count.
+  description: `${SPACES.length} framings of the residence, each opening as a live view, under any hour from morning to night.`,
   openGraph: {
     title: 'Gallery — AURELIA',
     description: 'Framings of the residence, under any hour from morning to night.',

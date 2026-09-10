@@ -23,10 +23,11 @@ export const SITE = {
   description:
     'Two buildings generated entirely in code — a coastal residence and a twenty-storey oceanfront tower — walkable in real time at any hour, from any device. A demonstration of how a development can be sold before it is built.',
   // Canonical origin, used for `metadataBase`, the sitemap and the social
-  // cards. Set `NEXT_PUBLIC_SITE_URL` on a custom domain; the deployment
-  // below is the real one this build is served from, so a shared link
-  // resolves rather than pointing at a reserved example domain.
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://haseeb-orcin.vercel.app',
+  // cards. The fallback is the custom domain the site is served from, so a
+  // shared link resolves to the name the project actually has rather than
+  // to a deployment URL that changes with the hosting. Override it with
+  // `NEXT_PUBLIC_SITE_URL` on a preview or a second domain.
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.aureliaridge.site',
   locale: 'en_US',
   contact: {
     email: CLIENT.agent.email,

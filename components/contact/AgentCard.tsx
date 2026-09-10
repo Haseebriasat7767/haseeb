@@ -29,11 +29,16 @@ export function AgentCard() {
     <div className="border-alabaster/10 bg-alabaster/[0.03] flex flex-col gap-8 border p-8 sm:p-10">
       {/* Only when a real person is configured. The card used to name an
           invented one, which was harmless beside unset channels and became
-          a false claim the moment a real address sat under it. */}
+          a false claim the moment a real address sat under it.
+
+          The eyebrow read "Private client" whenever a name was set, which
+          was written for a card naming an agent at a private-client desk.
+          Over the name of the person the enquiry actually reaches it says
+          the opposite of what it means — that he is the client — and it
+          repeats the title directly beneath it. It is a section label, so
+          it labels the section. */}
       <div className="flex flex-col gap-1">
-        <p className="text-eyebrow text-stone uppercase">
-          {agent.name ? 'Private client' : 'Enquiries'}
-        </p>
+        <p className="text-eyebrow text-stone uppercase">Enquiries</p>
         {agent.name ? (
           <>
             <p className="font-display text-alabaster mt-3 text-2xl leading-tight font-light">
