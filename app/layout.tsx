@@ -55,7 +55,9 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    apple: [{ url: '/icon.svg' }],
+    // iOS does not rasterise SVG for a home-screen icon — a client who
+    // adds this to their phone during a demo would get a blank tile.
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   robots: { index: true, follow: true },
   // Canonical on every page. Without it a link with a `?step=` on it is a
