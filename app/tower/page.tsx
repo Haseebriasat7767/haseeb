@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { ViewportPlaceholder } from '@/components/three/ViewportPlaceholder';
+import { TowerSpecs } from '@/components/tower/TowerSpecs';
+import { TowerViews } from '@/components/tower/TowerViews';
 import { TowerWalkthrough } from '@/components/tower/TowerWalkthrough';
+import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
+import { SectionHeading } from '@/components/ui/SectionHeading';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/tower' },
@@ -62,6 +66,39 @@ export default function TowerPage() {
             which is what puts the sunset in front of the balconies.
           </p>
         </div>
+      </Container>
+
+      {/* The tower had two paragraphs and nothing else, while the residence
+          had a specification, a material schedule, a way into every space
+          and a closing ask. A visitor who arrived on this page had no way
+          to do anything with it. These three sections are that parity, and
+          every figure and link in them is generated from the building
+          rather than written beside it. */}
+      <Container className="pb-section flex flex-col gap-24">
+        <TowerSpecs />
+        <TowerViews />
+
+        <section
+          aria-labelledby="tower-cta-heading"
+          className="border-alabaster/10 flex flex-col items-start gap-8 border-t pt-16"
+        >
+          <SectionHeading
+            eyebrow="Enquire"
+            title={<span id="tower-cta-heading">Built before it exists</span>}
+            lede="This tower has no site and no developer. That is the point of it: a
+              building can be walked, priced and sold from a link like this one long
+              before anything is on the ground. If that is useful to a project of
+              yours, start here."
+          />
+          <div className="flex flex-wrap gap-3">
+            <Button href="/contact" magnetic>
+              Discuss your project
+            </Button>
+            <Button href="/residence" variant="outline" magnetic>
+              See the residence
+            </Button>
+          </div>
+        </section>
       </Container>
     </>
   );
