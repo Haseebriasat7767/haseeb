@@ -103,6 +103,7 @@ function fitOut(
   trade: Trade,
   seed: number,
   place: (key: string, name: ModelName, across: number, back: number, turn?: number) => void,
+  dressed = true,
 ): void {
   const r = (n: number) => rand(seed * 31 + n);
 
@@ -110,14 +111,16 @@ function fitOut(
     // Rails down both flanks, a table of folded goods in the middle, and
     // the till at the back — which is where a till goes, because it is the
     // last thing you reach and the first thing staff can see the door from.
+    // The three that make it a clothes shop from inside it: something to
+    // buy from, something to buy off, and a figure in the window.
+    place('till', 'retail-counter', 1.3, UNIT_DEPTH - 1.4, Math.PI);
     place('rail-a', 'retail-rack', -1.5, 1.8, Math.PI / 2);
+    place('form-a', 'mannequin', -1.9 + r(1) * 0.3, 0.9);
+    if (!dressed) return;
     place('rail-b', 'retail-rack', 1.5, 1.8, -Math.PI / 2);
     place('rail-c', 'retail-rack', -1.5, 3.6, Math.PI / 2);
     place('shelf', 'retail-shelf', 0, UNIT_DEPTH - 0.5);
     place('table', 'low-table', 0.2, 2.4);
-    place('till', 'retail-counter', 1.3, UNIT_DEPTH - 1.4, Math.PI);
-    // Two figures in the window, which is what a fashion window is for.
-    place('form-a', 'mannequin', -1.9 + r(1) * 0.3, 0.9);
     place('form-b', 'mannequin', -1.1 + r(2) * 0.3, 1.3);
     place('form-c', 'mannequin', 1.7 + r(3) * 0.3, 1.0);
     return;
@@ -126,26 +129,30 @@ function fitOut(
   if (trade === 'home') {
     // A design shop is a room dressed as a room. The stock is the setting.
     place('sofa', 'sofa-3seat', -0.6, 2.6, Math.PI);
-    place('chair', 'lounge-chair', 1.4, 2.2, -Math.PI / 2);
     place('table', 'organic-table-lg', 0.1, 3.4);
+    place('till', 'retail-counter', 1.4, UNIT_DEPTH - 1.5, Math.PI);
+    if (!dressed) return;
+    place('chair', 'lounge-chair', 1.4, 2.2, -Math.PI / 2);
     place('drum', 'side-drum', 1.6, 3.6);
     place('lamp', 'floor-lamp', -1.9, 3.2);
     place('shelf', 'retail-shelf', 0, UNIT_DEPTH - 0.5);
     place('case', 'vitrine', -1.8, 1.2);
     place('vessel', 'vessel-tall', 1.9, 1.1);
-    place('till', 'retail-counter', 1.4, UNIT_DEPTH - 1.5, Math.PI);
     return;
   }
 
   // Food: a counter across the front, tables behind it, pendants over.
   place('counter', 'retail-counter', 0, 1.6, Math.PI);
   place('back', 'kitchen-run', 0, UNIT_DEPTH - 0.6);
-  for (let i = 0; i < 3; i += 1) {
+  // One laid table is a restaurant. Three is a restaurant with covers.
+  const covers = dressed ? 3 : 1;
+  for (let i = 0; i < covers; i += 1) {
     const across = -2.2 + i * 2.2;
     place(`table-${i}`, 'dining-table', across, 3.6);
     place(`chair-${i}a`, 'dining-chair', across - 0.9, 3.6, Math.PI / 2);
     place(`chair-${i}b`, 'dining-chair', across + 0.9, 3.6, -Math.PI / 2);
   }
+  if (!dressed) return;
   place('stool-a', 'bar-stool', -2.4, 2.5);
   place('stool-b', 'bar-stool', -1.2, 2.5);
 }
@@ -328,24 +335,36 @@ export function createMallShops(plan: TowerPlan, { dressed = true }: MallOptions
         });
 
         // ── The fit-out ────────────────────────────────────────────────
-        if (!dressed) {
-          void name;
-          continue;
-        }
-        fitOut(trade, tenant, (partKey, model, across, back, turn = 0) => {
-          const depthAt = run.frontAt + run.dir * back;
-          models.push({
-            key: `${key}-${partKey}`,
-            name: model,
-            position:
-              run.axis === 'x'
-                ? [centreA + across, floorY, depthAt]
-                : [depthAt, floorY, centreA + across],
-            rotationY: run.faceYaw + turn,
-          });
-        });
-
+        //
+        // This used to `continue` here on the low tier, which left sixteen
+        // lit, signed, glazed units with absolutely nothing inside them.
+        // The reasoning was that nobody resolves a rail from across the
+        // walkway — true, and it stops being true the moment a visitor
+        // walks in through the door, which the walkthrough invites them to
+        // do. An empty shop is not a cheaper shop, it is a shop that has
+        // gone out of business.
+        //
+        // So the tier now takes out the long tail and leaves the two or
+        // three pieces that make each unit read as its trade from inside
+        // it. Roughly a third of the stock, and no empty rooms.
         void name;
+        fitOut(
+          trade,
+          tenant,
+          (partKey, model, across, back, turn = 0) => {
+            const depthAt = run.frontAt + run.dir * back;
+            models.push({
+              key: `${key}-${partKey}`,
+              name: model,
+              position:
+                run.axis === 'x'
+                  ? [centreA + across, floorY, depthAt]
+                  : [depthAt, floorY, centreA + across],
+              rotationY: run.faceYaw + turn,
+            });
+          },
+          dressed,
+        );
       }
     }
   }

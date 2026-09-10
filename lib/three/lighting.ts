@@ -412,6 +412,35 @@ function polarToPosition(elevation: number, azimuth: number, distance: number): 
   return [horizontal * Math.sin(az), Math.sin(el) * distance, horizontal * Math.cos(az)];
 }
 
+/**
+ * Which building the sun is lighting.
+ *
+ * ## Why the rig needs to know
+ *
+ * Every `shadowExtent` in this file was measured against the villa: a 30 × 22 m
+ * house on a ledge, where a frustum of about fifty metres holds the building,
+ * its terrace and the length of its own shadows.
+ *
+ * The tower is eighty metres tall and stands in a site several times that
+ * across — plaza, park, podium, deck, boardwalk and beach. Lit with the
+ * villa's frustum, most of that ground is outside the shadow map entirely,
+ * and the sampler clamps at the edge: the lawn picks up big rectangular
+ * bands of shadow belonging to nothing, and they slide across the grass as
+ * the camera moves, which is the artefact this fixes.
+ *
+ * Widening the frustum spreads the same texels over more ground, so the
+ * subject also carries the normal-bias multiplier that keeps the softer
+ * shadows off the surfaces casting them.
+ */
+export type ShadowSubject = 'villa' | 'tower';
+
+const SHADOW_SUBJECTS: Record<ShadowSubject, { extent: number; normalBias: number }> = {
+  villa: { extent: 1, normalBias: 1 },
+  // Sized to the whole site rather than the building: the beach and the park
+  // are what fall out of a building-sized frustum first.
+  tower: { extent: 2.6, normalBias: 2.4 },
+};
+
 /** A lighting state with every derived value the renderer actually needs. */
 export type ResolvedLighting = LightingState & {
   tier: QualityTier;
@@ -433,10 +462,12 @@ export type ResolvedLighting = LightingState & {
 export function resolveLighting(
   timeOfDay: TimeOfDay = DEFAULT_TIME_OF_DAY,
   tier: QualityTier = 'high',
+  subject: ShadowSubject = 'villa',
 ): ResolvedLighting {
   const state = TIME_OF_DAY[timeOfDay];
   const limits = LIGHTING_TIERS[tier];
-  const shadowExtent = state.sun.shadowExtent * limits.shadowExtentScale;
+  const subjectScale = SHADOW_SUBJECTS[subject];
+  const shadowExtent = state.sun.shadowExtent * limits.shadowExtentScale * subjectScale.extent;
 
   return {
     ...state,
@@ -447,6 +478,9 @@ export function resolveLighting(
       state.sun.azimuth + state.bounce.azimuthOffset,
       SUN_DISTANCE,
     ),
+    // A frustum this much wider is a shadow texel this much bigger, and a
+    // bigger texel is acne on anything the sun grazes. The bias grows with it.
+    sun: { ...state.sun, shadowNormalBias: state.sun.shadowNormalBias * subjectScale.normalBias },
     shadowExtent,
     // Far enough to enclose the sun's stand-off plus the frustum itself, so
     // a low sun never clips the far end of its own long shadows.

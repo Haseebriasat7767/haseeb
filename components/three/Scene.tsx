@@ -144,7 +144,15 @@ export function Scene({
   // do the interior practicals and the exterior fixtures, so nothing can
   // drift out of step with the hour.
   const lighting = useMemo(() => {
-    const base = resolveLighting(timeOfDay, quality.tier);
+    // The shadow frustum is the rig's business, not this component's. It
+    // used to be widened here — `shadowExtent * 2.6` on the way out — which
+    // widened the frustum and nothing else: `shadowFar` was still the value
+    // computed from the villa's extent, and `shadowNormalBias` was still the
+    // villa's bias against texels now 2.6 times the size. That is what put
+    // rectangular bands of shadow on the tower's lawn and made them crawl
+    // as the camera moved. `resolveLighting` now takes the subject and
+    // derives all three together.
+    const base = resolveLighting(timeOfDay, quality.tier, content === 'tower' ? 'tower' : 'villa');
     if (content !== 'tower') return base;
 
     // The hours are composed for the residence, whose whole site fits
@@ -152,8 +160,7 @@ export function Scene({
     // different scale of scene entirely: the cameras that frame it stand a
     // hundred and thirty metres back and the sea runs to the horizon, so at
     // the villa's fog distances the tower washes out to nothing before it
-    // is even in frame. Same air, more of it — and a shadow frustum wide
-    // enough for an eighty-metre building to cast across its own plaza.
+    // is even in frame. Same air, more of it.
     return {
       ...base,
       atmosphere: {
@@ -161,7 +168,6 @@ export function Scene({
         fogNear: base.atmosphere.fogNear * 3.2,
         fogFar: base.atmosphere.fogFar * 4.4,
       },
-      shadowExtent: base.shadowExtent * 2.6,
     };
   }, [timeOfDay, quality.tier, content]);
 

@@ -141,26 +141,71 @@ export function WalkControls({
     const up = (e: KeyboardEvent) => s.keys.delete(e.code);
     const blur = () => s.keys.clear();
 
-    const move = (e: MouseEvent) => {
-      if (document.pointerLockElement !== canvas) return;
-      s.yaw -= e.movementX * 0.0022;
-      s.pitch = Math.max(-1.35, Math.min(1.35, s.pitch - e.movementY * 0.0022));
+    // ── Looking around ──────────────────────────────────────────────────
+    //
+    // This was pointer lock: click the canvas and the browser hid the cursor
+    // and handed us raw deltas. It gives the best possible look control and
+    // it takes the mouse away completely — while locked there is no pointer
+    // to click the lift with, the hour dial with, or the Continue button
+    // with, and the way out is a key most visitors do not know to press.
+    // On a page whose whole job is to let someone look around a building AND
+    // operate the controls around it, that is the wrong trade.
+    //
+    // Drag to look instead. Hold the left button and the view turns with the
+    // pointer; let go and the cursor is a cursor again, sitting over the UI
+    // it can now click. Same 360°, nothing captured.
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    const pointerDown = (e: PointerEvent) => {
+      // Left button only, and only on the canvas — a drag that starts on a
+      // button is that button's drag, not the camera's.
+      if (e.button !== 0) return;
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      // Keeps the deltas coming if the pointer leaves the canvas mid-turn,
+      // which is what happens every time someone spins past 90°.
+      canvas.setPointerCapture?.(e.pointerId);
+      canvas.style.cursor = 'grabbing';
     };
-    const click = () => {
-      if (document.pointerLockElement !== canvas) void canvas.requestPointerLock?.();
+
+    const pointerMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      s.yaw -= (e.clientX - lastX) * 0.0042;
+      s.pitch = Math.max(-1.35, Math.min(1.35, s.pitch - (e.clientY - lastY) * 0.0042));
+      lastX = e.clientX;
+      lastY = e.clientY;
     };
+
+    const endDrag = (e: PointerEvent) => {
+      if (!dragging) return;
+      dragging = false;
+      canvas.releasePointerCapture?.(e.pointerId);
+      canvas.style.cursor = 'grab';
+    };
+
+    canvas.style.cursor = 'grab';
 
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     window.addEventListener('blur', blur);
-    document.addEventListener('mousemove', move);
-    canvas.addEventListener('click', click);
+    canvas.addEventListener('pointerdown', pointerDown);
+    canvas.addEventListener('pointermove', pointerMove);
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointercancel', endDrag);
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
       window.removeEventListener('blur', blur);
-      document.removeEventListener('mousemove', move);
-      canvas.removeEventListener('click', click);
+      canvas.removeEventListener('pointerdown', pointerDown);
+      canvas.removeEventListener('pointermove', pointerMove);
+      canvas.removeEventListener('pointerup', endDrag);
+      canvas.removeEventListener('pointercancel', endDrag);
+      canvas.style.cursor = '';
+      // Nothing to unlock any more, but a build that ran the old code may
+      // still hold the lock when this remounts.
       if (document.pointerLockElement === canvas) document.exitPointerLock?.();
     };
   }, [gl]);

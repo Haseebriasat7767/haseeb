@@ -136,7 +136,7 @@ export function TowerWalkthrough() {
         {walking ? (
           <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
             <span className="hidden sm:inline">
-              Click to look · W A S D to walk · Q E R F to turn · Shift to run
+              Drag to look · W A S D to walk · Q E R F to turn · Shift to run
             </span>
             <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
           </div>
