@@ -26,6 +26,7 @@ import { createAmenity } from './AmenityGeometry';
 import { createCore } from './CoreGeometry';
 import { setWalkFloors } from '@/lib/three/walk-floors';
 import { createWalkCollider } from './WalkCollider';
+import { walkLook, walkMove } from '@/lib/three/walk-input';
 import { WalkControls } from '../WalkControls';
 import { createApartment, mergeApartments } from './ApartmentGeometry';
 import { InstancedModels } from '../models/InstancedModels';
@@ -212,7 +213,13 @@ export function TowerScene({
         {/* Free roam. Starts on the boardwalk at the ocean entrance, facing
             the colonnade, so the first thing a visitor does is walk in. */}
         {collider ? (
-          <WalkControls collider={collider} start={[40, 0.3, 6]} heading={Math.PI / 2} />
+          <WalkControls
+            collider={collider}
+            start={[40, 0.3, 6]}
+            heading={Math.PI / 2}
+            moveRef={walkMove}
+            lookRef={walkLook}
+          />
         ) : null}
         {/* The land behind the building IS the lawn.
             

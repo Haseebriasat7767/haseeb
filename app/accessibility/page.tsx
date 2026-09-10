@@ -72,9 +72,17 @@ export default function AccessibilityPage() {
       <h2>Known limitations</h2>
       <ul>
         <li>
-          <strong>The walkthrough needs a keyboard and a pointer.</strong> First-person walk mode is
-          driven by the movement keys and mouse look. There are no touch controls yet, so it cannot
-          be operated on a phone or tablet, and it cannot be operated by keyboard alone.
+          <strong>The walkthrough is not operable by screen reader.</strong> Walk mode can now be
+          driven three ways — the movement keys, with <em>Q</em>, <em>E</em>, <em>R</em> and{' '}
+          <em>F</em> to turn and look; a mouse; or two thumb sticks on a touch screen — so it no
+          longer requires a pointer and no longer excludes phones and tablets. What it still cannot
+          do is describe itself: a visitor using a screen reader is told the frame&rsquo;s subject
+          and nothing about what is in it.
+        </li>
+        <li>
+          <strong>The thumb sticks are pointer-only.</strong> They mirror controls that already
+          exist on the keyboard, so they are hidden from assistive technology rather than exposed as
+          two unlabelled drag targets a screen reader could not operate.
         </li>
         <li>
           <strong>The 3D views are announced, not transcribed.</strong> Each rendered frame carries

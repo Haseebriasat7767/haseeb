@@ -173,9 +173,21 @@ export function WalkControls({
     const delta = Math.min(rawDelta, 0.05);
 
     // ── Look ──────────────────────────────────────────────────────────────
-    if (lookRef?.current) {
-      s.yaw -= lookRef.current.x * delta * 2.4;
-      s.pitch = Math.max(-1.35, Math.min(1.35, s.pitch - lookRef.current.y * delta * 2.4));
+    //
+    // Three ways in, because a walkthrough that only turns with a captured
+    // mouse cannot be used on a phone or by anyone navigating with a
+    // keyboard. The mouse writes straight to yaw/pitch in its own handler;
+    // the thumb stick and the turn keys are rates, integrated here.
+    const k = s.keys;
+    let lookX = lookRef?.current.x ?? 0;
+    let lookY = lookRef?.current.y ?? 0;
+    if (k.has('KeyQ')) lookX -= 1;
+    if (k.has('KeyE')) lookX += 1;
+    if (k.has('KeyR')) lookY -= 1;
+    if (k.has('KeyF')) lookY += 1;
+    if (lookX !== 0 || lookY !== 0) {
+      s.yaw -= lookX * delta * 2.4;
+      s.pitch = Math.max(-1.35, Math.min(1.35, s.pitch - lookY * delta * 2.4));
     }
     camera.rotation.set(s.pitch, s.yaw, 0, 'YXZ');
 
@@ -185,7 +197,6 @@ export function WalkControls({
     right.set(Math.cos(s.yaw), 0, -Math.sin(s.yaw));
     wish.set(0, 0, 0);
 
-    const k = s.keys;
     if (k.has('KeyW') || k.has('ArrowUp')) wish.add(forward);
     if (k.has('KeyS') || k.has('ArrowDown')) wish.sub(forward);
     if (k.has('KeyD') || k.has('ArrowRight')) wish.add(right);

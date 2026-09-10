@@ -1,11 +1,12 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { HourDial } from '@/components/experience/HourDial';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import { hourTheme } from '@/lib/experience/hour-theme';
+import { TouchSticks } from './TouchSticks';
 import { getWalkFloors, subscribeWalkFloors, travelTo } from '@/lib/three/walk-floors';
 import type { WalkFloor } from '@/lib/three/walk-floors';
 import { DEFAULT_TOWER_VIEW, TOWER_VIEWS, TOWER_VIEW_NOTES } from '@/lib/three/tower-views';
@@ -56,6 +57,17 @@ export function TowerWalkthrough() {
   const [step, setStep] = useState(initial);
   const [hour, setHour] = useState<TimeOfDay>(OPENING_HOUR);
   const [walking, setWalking] = useState(false);
+  // Open with a mouse, closed under a thumb. Starts closed so the server's
+  // markup matches the first client render.
+  const [liftOpen, setLiftOpen] = useState(false);
+
+  useEffect(() => {
+    const fine = window.matchMedia('(pointer: fine)');
+    const read = () => setLiftOpen(fine.matches);
+    read();
+    fine.addEventListener('change', read);
+    return () => fine.removeEventListener('change', read);
+  }, []);
 
   // The floors come from the scene, not from a list kept here — see
   // `lib/three/walk-floors`. Empty until the 3D layer has mounted and built
@@ -121,9 +133,17 @@ export function TowerWalkthrough() {
 
         {walking ? (
           <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
-            Click to look · W A S D to walk · Shift to run
+            <span className="hidden sm:inline">
+              Click to look · W A S D to walk · Q E R F to turn · Shift to run
+            </span>
+            <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
           </div>
         ) : null}
+
+        {/* Thumb controls. Outside the canvas because a touch target inside a
+            WebGL scene has to be raycast, and they write to the same shared
+            input the controller already reads. */}
+        <TouchSticks active={walking} />
 
         {/* The lift. Twenty storeys is four minutes of stairwell at walking
             pace, and nobody wants to see the stair twenty times to reach the
@@ -131,11 +151,27 @@ export function TowerWalkthrough() {
             used. It sets you down in the lift lobby of the floor you pick,
             which is where a lift leaves you. */}
         {walking && floors.length > 0 ? (
-          <div className="absolute top-24 left-6 z-20 max-h-[68%] w-52 overflow-y-auto">
-            <p className="text-eyebrow text-mist/70 bg-obsidian/60 px-3 py-2 uppercase backdrop-blur-sm">
+          /* Collapsible, because on a phone twenty storeys of buttons filled
+             the screen: the list covered the building it was meant to move
+             you through, and sat directly over the left thumb zone. It opens
+             by default with a mouse, where there is room for it and no thumb
+             to block. */
+          <div className="absolute top-24 left-6 z-20 flex max-h-[52%] w-52 flex-col sm:max-h-[68%]">
+            <button
+              type="button"
+              onClick={() => setLiftOpen((open) => !open)}
+              aria-expanded={liftOpen}
+              aria-controls="lift-floors"
+              className="text-eyebrow text-mist/80 hover:text-alabaster bg-obsidian/60 flex shrink-0 items-center justify-between gap-2 px-3 py-2 uppercase backdrop-blur-sm transition-colors"
+            >
               Take the lift
-            </p>
-            <ul className="bg-obsidian/50 backdrop-blur-sm">
+              <span aria-hidden="true">{liftOpen ? '−' : '+'}</span>
+            </button>
+            <ul
+              id="lift-floors"
+              hidden={!liftOpen}
+              className="bg-obsidian/50 min-h-0 overflow-y-auto backdrop-blur-sm"
+            >
               {[...floors].reverse().map((floor) => {
                 const current = floor.id === floorId;
                 return (
