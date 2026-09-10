@@ -16,6 +16,8 @@ vi.mock('nodemailer', () => ({
   createTransport: () => ({ sendMail }),
 }));
 
+const WEB3 = { WEB3FORMS_ACCESS_KEY: 'test-access-key' };
+
 const CONFIG = {
   SMTP_HOST: 'smtp.example.test',
   SMTP_PORT: '587',
@@ -58,14 +60,78 @@ function post(body: unknown) {
  * address.
  */
 async function loadRoute(env: Record<string, string> = CONFIG) {
-  for (const key of Object.keys(CONFIG)) delete process.env[key];
+  for (const key of [...Object.keys(CONFIG), ...Object.keys(WEB3)]) delete process.env[key];
   Object.assign(process.env, env);
   return (await import('@/app/api/enquiry/route')).POST;
 }
 
 beforeEach(() => sendMail.mockReset().mockResolvedValue({ messageId: 'ok' }));
 afterEach(() => {
-  for (const key of Object.keys(CONFIG)) delete process.env[key];
+  for (const key of [...Object.keys(CONFIG), ...Object.keys(WEB3)]) delete process.env[key];
+  vi.unstubAllGlobals();
+});
+
+describe('Web3Forms delivery', () => {
+  /** Their API answers 200 even on rejection, so the body decides. */
+  function web3Responds(body: unknown, status = 200) {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(body), { status }));
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('posts the enquiry and reports it sent', async () => {
+    const POST = await loadRoute(WEB3);
+    const fetchMock = web3Responds({ success: true });
+
+    const response = await POST(post(valid()));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: 'sent' });
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.web3forms.com/submit');
+    const sent = JSON.parse(init.body as string);
+    expect(sent.access_key).toBe('test-access-key');
+    expect(sent.message).toContain('private viewing');
+  });
+
+  it('refuses to report success when the key is rejected', async () => {
+    // The trap: Web3Forms answers HTTP 200 with success:false. Trusting the
+    // status code alone would report a delivery that never happened.
+    const POST = await loadRoute(WEB3);
+    web3Responds({ success: false, message: 'Invalid access key' }, 200);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await POST(post(valid()));
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({ status: 'failed' });
+  });
+
+  it('reports failure when the network drops', async () => {
+    const POST = await loadRoute(WEB3);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('network down');
+      }),
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect((await POST(post(valid()))).status).toBe(502);
+  });
+
+  it('is preferred over SMTP when both are configured', async () => {
+    const POST = await loadRoute({ ...CONFIG, ...WEB3 });
+    web3Responds({ success: true });
+
+    expect((await POST(post(valid()))).status).toBe(200);
+    // The mail transport must not also fire — one enquiry, one delivery.
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it('still answers unconfigured when neither is set', async () => {
+    const POST = await loadRoute({});
+    expect((await POST(post(valid()))).status).toBe(503);
+  });
 });
 
 describe('delivery', () => {

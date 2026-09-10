@@ -24,11 +24,19 @@ import { rateLimited } from '@/lib/server/rate-limit';
  *
  * ## How it sends
  *
- * Plain SMTP, through whatever mailbox the operator already owns — a Google
- * Workspace account, Microsoft 365, or the mail server that comes with the
- * hosting. There is no email vendor in this file and no account to sign up
- * for: the five `SMTP_*` variables below are the same ones any mail client
- * asks for.
+ * Two routes, tried in order, whichever is configured:
+ *
+ * 1. **Web3Forms** — one environment variable, `WEB3FORMS_ACCESS_KEY`. The
+ *    fastest thing to stand up: no mailbox, no SMTP settings, no domain to
+ *    verify. The enquiry is POSTed to their API and forwarded to the address
+ *    the key was issued to.
+ * 2. **SMTP** — through whatever mailbox the operator already owns. No
+ *    third-party service sees the enquiry, and the acknowledgement to the
+ *    enquirer only exists on this path.
+ *
+ * Web3Forms wins when both are set, because it is the one somebody
+ * deliberately turned on to get going. Neither configured is still `503`
+ * and still honest.
  *
  * Nothing here is a client secret. The password is read on the server only
  * and never crosses the wire to the browser.
@@ -117,12 +125,44 @@ function getTransport(config: SmtpConfig): Transporter {
   return transport;
 }
 
+/**
+ * Hands the enquiry to Web3Forms.
+ *
+ * Their API answers 200 with `{success: false}` on a rejected key rather
+ * than a non-2xx status, so the body has to be read: trusting the status
+ * code alone would report a delivery that never happened, which is the one
+ * failure this whole route exists to prevent.
+ */
+async function sendViaWeb3Forms(accessKey: string, enquiry: Enquiry): Promise<void> {
+  const response = await fetch('https://api.web3forms.com/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      access_key: accessKey,
+      subject: `Private viewing enquiry — ${enquiry.name}`,
+      from_name: 'AURELIA',
+      // Named so the forwarded email is readable rather than a field dump.
+      name: enquiry.name,
+      email: enquiry.email,
+      telephone: enquiry.phone || '—',
+      preferred_viewing: enquiry.preferredDate || '—',
+      message: enquiry.message,
+    }),
+  });
+
+  const body = (await response.json().catch(() => ({}))) as { success?: boolean; message?: string };
+  if (!response.ok || body.success !== true) {
+    throw new Error(`Web3Forms ${response.status}: ${body.message ?? 'rejected'}`);
+  }
+}
+
 function row(label: string, value: string): string {
   return `<tr><td style="padding:6px 18px 6px 0;color:#6c757f;font:400 13px system-ui">${label}</td><td style="padding:6px 0;color:#1b1f25;font:400 15px system-ui">${escape(value)}</td></tr>`;
 }
 
 export async function POST(request: Request) {
   const smtp = readSmtpConfig();
+  const web3FormsKey = process.env.WEB3FORMS_ACCESS_KEY?.trim() || null;
 
   let body: unknown;
   try {
@@ -165,7 +205,7 @@ export async function POST(request: Request) {
   // already have your enquiry" when it has never had one — which is the
   // exact dishonesty this route exists to avoid, arrived at from the other
   // direction. There is also nothing to protect: the route sends nothing.
-  if (!smtp) {
+  if (!smtp && !web3FormsKey) {
     return NextResponse.json({ status: 'unconfigured' }, { status: 503 });
   }
 
@@ -179,6 +219,24 @@ export async function POST(request: Request) {
     enquiry.phone ? row('Telephone', enquiry.phone) : '',
     enquiry.preferredDate ? row('Preferred viewing', enquiry.preferredDate) : '',
   ].join('');
+
+  // Web3Forms first: it is the one somebody deliberately switched on.
+  if (web3FormsKey) {
+    try {
+      await sendViaWeb3Forms(web3FormsKey, enquiry);
+    } catch (error) {
+      console.error('[enquiry] web3forms delivery failed', error);
+      return NextResponse.json({ status: 'failed' }, { status: 502 });
+    }
+    // No acknowledgement on this path: sending one would mean a second
+    // submission to the same inbox, which is worse than no courtesy email.
+    return NextResponse.json({ status: 'sent' });
+  }
+
+  // Unreachable — the guard above returns when neither is configured, and
+  // the Web3Forms branch has already returned. It narrows the type honestly
+  // rather than asserting past it.
+  if (!smtp) return NextResponse.json({ status: 'unconfigured' }, { status: 503 });
 
   const mailer = getTransport(smtp);
 

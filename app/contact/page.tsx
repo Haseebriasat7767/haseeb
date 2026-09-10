@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AgentCard } from '@/components/contact/AgentCard';
+import { DirectChannels } from '@/components/contact/DirectChannels';
 import { EnquiryForm } from '@/components/contact/EnquiryForm';
 import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -27,8 +28,12 @@ export default function ContactPage() {
       />
 
       <Container className="pb-section grid gap-16 lg:grid-cols-12 lg:gap-20">
-        <div className="lg:col-span-7">
+        <div className="flex flex-col gap-8 lg:col-span-7">
           <EnquiryForm />
+          {/* Always on screen, never behind a failure state: a form has more
+              ways to fail than to succeed, and a lost enquiry costs more
+              than the whole site. */}
+          <DirectChannels />
         </div>
 
         <div className="lg:col-span-5">
