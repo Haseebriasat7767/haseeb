@@ -44,9 +44,21 @@ export const PROPERTY = {
    * Headline figures for the property intro. They describe the conceptual
    * residence this experience presents, and are not claims about a listing
    * on the market.
+   *
+   * `Interior` read 1,120 m² for most of this project's life, against a
+   * room schedule totalling 840. Nothing computed it and nothing could: the
+   * envelope is 30 × 22 m, the upper floor is smaller than the ground
+   * floor, and the entrance is a double-height void — 1,120 does not fit in
+   * the building. It also could not be a gross figure quoted over a net
+   * schedule, because the schedule already counts the foyer, the stair hall
+   * and both upper circulation spaces. It was simply a number somebody
+   * wrote, and anyone adding up the plans would have caught it.
+   *
+   * It is now the schedule's own total, checked against
+   * `lib/property/schedule.ts` by a test on every run.
    */
   stats: [
-    { label: 'Interior', value: '1,120 m²' },
+    { label: 'Interior', value: '840 m²' },
     { label: 'Grounds', value: '4.2 ha' },
     { label: 'Bedrooms', value: 'Four' },
     { label: 'Elevation', value: '86 m' },
@@ -64,7 +76,7 @@ export const PROPERTY = {
     { label: 'Rooms', value: '21', note: 'Enclosed spaces', derived: true },
     { label: 'Bedrooms', value: '4', note: 'Including the master suite', derived: true },
     { label: 'Bathrooms', value: '3', note: 'All ensuite or adjacent', derived: true },
-    { label: 'Interior', value: '1,120 m²', note: 'Across both levels', derived: false },
+    { label: 'Interior', value: '840 m²', note: 'Across both levels', derived: true },
     { label: 'Grounds', value: '4.2 ha', note: 'Private ledge above the coast', derived: false },
     { label: 'Pool', value: 'Private', note: 'Infinity edge, 11 × 6.5 m', derived: false },
     { label: 'Elevation', value: '86 m', note: 'Above sea level', derived: false },
