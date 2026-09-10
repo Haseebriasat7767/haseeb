@@ -50,12 +50,24 @@ export function TowerWalkthrough() {
   // single view is what makes one of these shareable — a balcony at sunset
   // is a link you can send someone, where "open this and press Continue six
   // times" is not.
+  //
+  // `?step=` also accepts a view's own id (`?step=balcony`), not only its
+  // position. A numeric index is generated fresh everywhere it's linked
+  // from — see `TowerViews` — so it never goes stale on this site. But a
+  // link someone saved or sent stays exactly what they typed, and if
+  // `TOWER_VIEWS` is ever reordered, every numeric link anyone is holding
+  // silently repoints to a different framing while every id-based one
+  // keeps working. Indices and ids both resolve to the same list, so
+  // neither form is a second source of truth to keep in sync.
   const params = useSearchParams();
-  const requested = Number(params.get('step'));
-  const initial =
+  const raw = params.get('step');
+  const byId = raw ? TOWER_VIEWS.findIndex((view) => view.id === raw) : -1;
+  const requested = Number(raw);
+  const byIndex =
     Number.isFinite(requested) && requested >= 1 && requested <= TOWER_VIEWS.length
       ? requested - 1
-      : 0;
+      : -1;
+  const initial = byId >= 0 ? byId : byIndex >= 0 ? byIndex : 0;
 
   const [step, setStep] = useState(initial);
   const [hour, setHour] = useState<TimeOfDay>(OPENING_HOUR);
