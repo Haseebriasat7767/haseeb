@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { TrackedViewLink } from './TrackedViewLink';
 import { Reveal } from '@/components/effects/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { TOWER_VIEWS, TOWER_VIEW_NOTES } from '@/lib/three/tower-views';
@@ -53,7 +53,8 @@ export function TowerViews() {
 
           return (
             <Reveal as="li" key={view.id} delay={index * 30} className="bg-obsidian">
-              <Link
+              <TrackedViewLink
+                space={view.id}
                 href={`/tower?step=${step}`}
                 data-cursor="link"
                 className={cn(
@@ -79,7 +80,7 @@ export function TowerViews() {
                     →
                   </span>
                 </span>
-              </Link>
+              </TrackedViewLink>
             </Reveal>
           );
         })}

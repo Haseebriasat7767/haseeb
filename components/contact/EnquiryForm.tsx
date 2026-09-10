@@ -9,6 +9,7 @@ import {
   type Enquiry,
   type EnquiryErrors,
 } from '@/lib/contact/enquiry';
+import { trackEnquirySubmitted, trackEnquiryStarted } from '@/lib/analytics/events';
 import { Field } from './Field';
 
 const EMPTY: Enquiry = { name: '', email: '', phone: '', preferredDate: '', message: '' };
@@ -42,8 +43,16 @@ export function EnquiryForm() {
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [company, setCompany] = useState('');
   const openedAt = useRef(Date.now());
+  // Fires once, on the first keystroke — a form somebody typed into and
+  // abandoned is a different fact than a page that loaded and was never
+  // touched, and only this tells the two apart.
+  const started = useRef(false);
 
   const set = (key: keyof Enquiry) => (event: { target: { value: string } }) => {
+    if (!started.current) {
+      started.current = true;
+      trackEnquiryStarted();
+    }
     setValues((current) => ({ ...current, [key]: event.target.value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
@@ -71,8 +80,10 @@ export function EnquiryForm() {
               ? { kind: 'unconfigured', mailto: result.mailto }
               : { kind: 'undeliverable', body: result.body },
       );
+      trackEnquirySubmitted(result.status);
     } catch {
       setStatus({ kind: 'failed' });
+      trackEnquirySubmitted('failed');
     }
   }
 

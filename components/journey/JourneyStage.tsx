@@ -10,6 +10,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import { hourTheme } from '@/lib/experience/hour-theme';
 import { JOURNEY } from '@/lib/experience/journey';
+import { trackSpaceEntered } from '@/lib/analytics/events';
 import { DEFAULT_TIME_OF_DAY } from '@/lib/three/lighting';
 import { cn } from '@/lib/utils/cn';
 import type { TimeOfDay } from '@/types';
@@ -263,7 +264,12 @@ export function JourneyStage() {
                   </div>
                 ) : chapter.space ? (
                   <div className="mt-9">
-                    <Button href={`/experience?space=${chapter.space}`} variant="ghost" size="sm">
+                    <Button
+                      href={`/experience?space=${chapter.space}`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => trackSpaceEntered(chapter.space!, 'residence')}
+                    >
                       Enter this space
                       <span aria-hidden="true">→</span>
                     </Button>

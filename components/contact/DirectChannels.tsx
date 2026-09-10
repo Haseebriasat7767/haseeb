@@ -1,4 +1,6 @@
 import { CLIENT, mailtoLink, whatsappLink } from '@/lib/constants/client';
+import { trackContactChannelClick } from '@/lib/analytics/events';
+import { TrackedLink } from './TrackedLink';
 
 /**
  * The ways to reach a human that do not depend on the form working.
@@ -58,16 +60,18 @@ export function DirectChannels() {
       </p>
       <div className="flex flex-col gap-2.5">
         {agent.email ? (
-          <a
+          <TrackedLink
+            onTrack={() => trackContactChannelClick('email')}
             href={mailto ?? `mailto:${agent.email}`}
             data-cursor="link"
             className="text-alabaster hover:text-gold text-sm break-all transition-colors"
           >
             {agent.email}
-          </a>
+          </TrackedLink>
         ) : null}
         {whatsapp && agent.phone ? (
-          <a
+          <TrackedLink
+            onTrack={() => trackContactChannelClick('whatsapp')}
             href={whatsapp}
             target="_blank"
             rel="noopener noreferrer"
@@ -75,7 +79,7 @@ export function DirectChannels() {
             className="text-alabaster hover:text-gold text-sm transition-colors"
           >
             WhatsApp {agent.phone}
-          </a>
+          </TrackedLink>
         ) : null}
       </div>
     </div>

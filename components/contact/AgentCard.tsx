@@ -1,4 +1,6 @@
 import { CLIENT, mailtoLink, telLink, whatsappLink } from '@/lib/constants/client';
+import { trackBrochureDownload, trackContactChannelClick } from '@/lib/analytics/events';
+import { TrackedLink } from './TrackedLink';
 
 /**
  * Who the buyer is actually talking to, and every direct way to reach them.
@@ -59,7 +61,8 @@ export function AgentCard() {
       <ul className="flex flex-col gap-3">
         {whatsapp ? (
           <li>
-            <a
+            <TrackedLink
+              onTrack={() => trackContactChannelClick('whatsapp')}
               href={whatsapp}
               target="_blank"
               rel="noopener noreferrer"
@@ -68,13 +71,14 @@ export function AgentCard() {
             >
               WhatsApp
               <span aria-hidden="true">→</span>
-            </a>
+            </TrackedLink>
           </li>
         ) : null}
 
         {tel ? (
           <li>
-            <a
+            <TrackedLink
+              onTrack={() => trackContactChannelClick('call')}
               href={tel}
               data-cursor="link"
               className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
@@ -83,20 +87,21 @@ export function AgentCard() {
               <span aria-hidden="true" className="text-stone normal-case">
                 {agent.phone}
               </span>
-            </a>
+            </TrackedLink>
           </li>
         ) : null}
 
         {mailto ? (
           <li>
-            <a
+            <TrackedLink
+              onTrack={() => trackContactChannelClick('email')}
               href={mailto}
               data-cursor="link"
               className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
             >
               Email
               <span aria-hidden="true">→</span>
-            </a>
+            </TrackedLink>
           </li>
         ) : null}
 
@@ -112,7 +117,8 @@ export function AgentCard() {
 
         {brochurePath ? (
           <li>
-            <a
+            <TrackedLink
+              onTrack={trackBrochureDownload}
               href={brochurePath}
               download
               data-cursor="link"
@@ -120,7 +126,7 @@ export function AgentCard() {
             >
               Download brochure
               <span aria-hidden="true">↓</span>
-            </a>
+            </TrackedLink>
           </li>
         ) : null}
       </ul>
