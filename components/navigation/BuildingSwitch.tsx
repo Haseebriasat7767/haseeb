@@ -39,7 +39,7 @@ export function BuildingSwitch({ className }: { className?: string }) {
             data-cursor="link"
             aria-current={current ? 'page' : undefined}
             className={cn(
-              'ease-luxe flex flex-col gap-0.5 px-4 py-2.5 transition-colors duration-300 sm:px-5',
+              'ease-luxe flex min-h-11 flex-col justify-center gap-0.5 px-4 py-2.5 transition-colors duration-300 sm:px-5',
               current ? 'bg-alabaster/10' : 'hover:bg-alabaster/5',
             )}
           >

@@ -127,7 +127,7 @@ export function TowerWalkthrough() {
           <button
             type="button"
             onClick={() => setWalking((on) => !on)}
-            className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+            className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
           >
             {walking ? 'Guided tour' : 'Walk the building'}
           </button>
@@ -282,7 +282,7 @@ export function TowerWalkthrough() {
                 type="button"
                 onClick={() => go(step - 1)}
                 disabled={step === 0}
-                className="text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
+                className="text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
               >
                 Back
               </button>
@@ -290,7 +290,7 @@ export function TowerWalkthrough() {
                 type="button"
                 onClick={() => go(step + 1)}
                 disabled={step === last}
-                className="text-eyebrow text-obsidian bg-alabaster hover:bg-bone focus-visible:outline-gold ease-luxe rounded-full px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
+                className="text-eyebrow text-obsidian bg-alabaster hover:bg-bone focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
               >
                 {step === last ? 'End of walkthrough' : 'Continue'}
               </button>

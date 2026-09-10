@@ -21,7 +21,10 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 const SIZES: Record<Size, string> = {
-  sm: 'h-9 px-4 text-[0.6875rem]',
+  // 36px is a comfortable size on a mouse and an uncomfortable one under
+  // a thumb, and `sm` is what the in-page "enter this space" links use — so
+  // it is 44 on touch and stays compact where a pointer is doing the work.
+  sm: 'h-11 px-4 text-[0.6875rem] sm:h-9',
   md: 'h-12 px-7 text-xs',
 };
 

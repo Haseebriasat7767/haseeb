@@ -52,6 +52,11 @@ export function SpaceHotspots({ detail = 'high', activeId, onSelect }: SpaceHots
               aria-label={`${space.name} — open details`}
               className={cn(
                 'group ease-luxe pointer-events-auto flex items-center gap-0 transition-opacity duration-500',
+                // The dot is 24px because that is the size it should look;
+                // a thumb needs 44. The padding grows the hit area to that
+                // and the matching negative margin takes it back out of the
+                // layout, so the marker sits exactly where it did.
+                '-m-2.5 p-2.5',
                 active ? 'opacity-100' : 'opacity-80 hover:opacity-100',
               )}
             >

@@ -45,7 +45,7 @@ export function VisitedCTA({ shown }: { shown: boolean }) {
           href="/contact"
           data-cursor="link"
           tabIndex={shown ? undefined : -1}
-          className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold shrink-0 border px-5 py-3 text-center uppercase transition-colors"
+          className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold inline-flex min-h-11 shrink-0 items-center justify-center border px-5 py-3 text-center uppercase transition-colors"
         >
           Discuss your project
         </Link>

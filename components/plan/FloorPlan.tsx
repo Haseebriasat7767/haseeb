@@ -64,7 +64,7 @@ export function FloorPlan() {
               onClick={() => setLevelId(entry.id)}
               data-cursor="link"
               className={cn(
-                'ease-luxe flex-1 px-4 py-3 font-sans text-[0.625rem] tracking-[0.24em] uppercase transition-colors duration-300',
+                'ease-luxe flex min-h-11 flex-1 items-center justify-center px-4 py-3 font-sans text-[0.625rem] tracking-[0.24em] uppercase transition-colors duration-300',
                 active ? 'bg-alabaster text-obsidian' : 'text-mist hover:text-alabaster',
               )}
             >
@@ -172,7 +172,11 @@ export function FloorPlan() {
                       <Link
                         href={`/experience?space=${space.id}`}
                         data-cursor="link"
-                        className="hover:text-gold text-sm transition-colors"
+                        // The row is already 44px tall; the link inside it
+                        // was only as tall as its own text. Padding out to
+                        // the row's edges and pulling the margin back makes
+                        // the whole row tappable without moving anything.
+                        className="hover:text-gold -my-3 inline-flex min-h-11 items-center py-3 text-sm transition-colors"
                       >
                         {room.label}
                       </Link>
