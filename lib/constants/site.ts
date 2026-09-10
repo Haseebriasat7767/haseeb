@@ -19,9 +19,9 @@ export const SITE = {
   // buyer does not care that it is real-time, and a developer being pitched
   // cares even less — what they are buying is a residence a client can walk
   // through from anywhere. The technology stays out of the positioning.
-  tagline: 'Luxury Property Experience',
+  tagline: 'Real-Time Property Experiences',
   description:
-    'Explore The Aurelia Residence through an immersive digital property experience — every room, every hour of the day, from anywhere.',
+    'Two buildings generated entirely in code — a coastal residence and a twenty-storey oceanfront tower — walkable in real time at any hour, from any device. A demonstration of how a development can be sold before it is built.',
   // Canonical origin, used for `metadataBase`, the sitemap and the social
   // cards. Set `NEXT_PUBLIC_SITE_URL` on a custom domain; the deployment
   // below is the real one this build is served from, so a shared link

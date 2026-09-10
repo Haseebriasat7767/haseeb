@@ -24,6 +24,52 @@ import { Terrain } from './Terrain';
 import { TowerScene } from './tower/TowerScene';
 import { ProceduralVilla } from './villa/ProceduralVilla';
 
+/**
+ * ============================================================================
+ * THE SCENE — how this 3D experience is put together
+ * ============================================================================
+ *
+ * Read this first if you are new to the project, or need to explain it.
+ *
+ * ## How a scene loads
+ *
+ * Nothing 3D is in the page bundle. `ExperienceViewport` waits until the
+ * viewport is scrolled to and WebGL is confirmed, then loads the canvas
+ * chunk — which is why every page here holds ~103 kB of shared JavaScript
+ * despite the project containing three.js, drei, a BVH and a path tracer.
+ * While that chunk and its assets load, `LoadingScreen` reports real
+ * progress from three's own `LoadingManager` (via drei's `useProgress`),
+ * not a timer. The screen dismisses when the scene reports ready.
+ *
+ * ## How time of day works
+ *
+ * One state, five states deep: `TimeOfDay` is a named hour, not a number.
+ * `lib/three/lighting.ts` maps each name to a complete lighting description
+ * — sun angle and colour, sky and horizon tint, fog density, exposure — and
+ * `SceneEnvironment` applies the whole set at once. Nothing about the
+ * geometry changes when the hour changes; only the light does. That is why
+ * the dial is instant, and why a new hour is a data entry rather than code.
+ *
+ * ## How to add a new space (camera marker)
+ *
+ * Spaces live in `lib/experience/spaces.ts` as plain data. One entry needs
+ * an `id`, a display `name`, an `eyebrow`, a `level` ('site' | 'ground' |
+ * 'upper'), a short `description` and `feature`, and a `view` — the camera
+ * position, target and field of view for that framing. Add the entry and it
+ * appears in the space rail, gets a hotspot marker on the model, becomes
+ * deep-linkable as `?space=<id>`, and counts toward the three levels that
+ * unlock the closing call to action. No component needs editing.
+ *
+ * ## Quality tiers
+ *
+ * `useQualityTier` reads pointer type and core count — not the user agent —
+ * and resolves one of three profiles in `lib/three/scene-config.ts`. The
+ * tier decides device pixel ratio, whether shadows render at all, shadow
+ * map size and antialiasing, so a phone and a workstation run the same
+ * scene at costs appropriate to each.
+ * ============================================================================
+ */
+
 type SceneProps = {
   view?: CameraView;
   mode?: CameraMode;

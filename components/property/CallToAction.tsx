@@ -10,19 +10,19 @@ export function CallToAction() {
         <Reveal>
           <SectionHeading
             align="center"
-            eyebrow="Private Viewing"
-            title={<span id="cta-heading">Own the extraordinary.</span>}
-            lede="Viewings are held by appointment. Share your details and a member of the
-              team will respond with the full architectural dossier."
+            eyebrow="Commission a build"
+            title={<span id="cta-heading">Bring your property to life.</span>}
+            lede="Everything here was built from geometry, not photography — which means it can be
+              built for a development that does not exist yet. Tell us about the project."
           />
         </Reveal>
 
         <Reveal delay={120} className="flex flex-wrap justify-center gap-3">
           <Button href="/contact" magnetic>
-            Request private viewing
+            Discuss your project
           </Button>
-          <Button href="/floor-plan" variant="outline" magnetic>
-            View floor plan
+          <Button href="/tower" variant="outline" magnetic>
+            See the tower
           </Button>
         </Reveal>
       </Container>

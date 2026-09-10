@@ -6,6 +6,8 @@ import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { HourDial } from '@/components/experience/HourDial';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import { hourTheme } from '@/lib/experience/hour-theme';
+import { BuildingSwitch } from '@/components/navigation/BuildingSwitch';
+import { TouchHint } from '@/components/experience/TouchHint';
 import { TouchSticks } from './TouchSticks';
 import { getWalkFloors, subscribeWalkFloors, travelTo } from '@/lib/three/walk-floors';
 import type { WalkFloor } from '@/lib/three/walk-floors';
@@ -145,6 +147,10 @@ export function TowerWalkthrough() {
             input the controller already reads. */}
         <TouchSticks active={walking} />
 
+        {/* Guided tour only: in walk mode the thumb sticks carry their own
+            instructions and a second hint would contradict them. */}
+        {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
+
         {/* The lift. Twenty storeys is four minutes of stairwell at walking
             pace, and nobody wants to see the stair twenty times to reach the
             top — so the stair is there to be walked and this is there to be
@@ -266,6 +272,10 @@ export function TowerWalkthrough() {
                 {note}
               </p>
             </div>
+
+            {/* The other building, reachable from inside this one. Hidden on
+                foot along with the rest of the tour chrome. */}
+            <BuildingSwitch className="self-start" />
 
             <div className="flex flex-wrap items-center gap-3">
               <button

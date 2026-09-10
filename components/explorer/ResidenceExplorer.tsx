@@ -1,8 +1,9 @@
 'use client';
 
-import { Suspense, useCallback, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { Container } from '@/components/ui/Container';
+import { useCoarsePointer } from '@/hooks/useCoarsePointer';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import { DEFAULT_TIME_OF_DAY } from '@/lib/three/lighting';
@@ -10,6 +11,9 @@ import { findSpace, SPACES } from '@/lib/experience/spaces';
 import type { Space } from '@/lib/experience/spaces';
 import type { TimeOfDay } from '@/types';
 import { CinematicOverlay } from '@/components/experience/CinematicOverlay';
+import { TouchHint } from '@/components/experience/TouchHint';
+import { VisitedCTA } from '@/components/experience/VisitedCTA';
+import { BuildingSwitch } from '@/components/navigation/BuildingSwitch';
 import { HourDial } from '@/components/experience/HourDial';
 import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
@@ -25,11 +29,25 @@ const DEFAULT_SPACE = SPACES[0]!;
  */
 export function ResidenceExplorer() {
   const reducedMotion = useReducedMotion();
+  // Pointer parallax has no meaning without a pointer: on a touch screen the
+  // camera would only shift while a thumb is already dragging it, which
+  // fights the drag rather than adding to it. It also costs a render every
+  // pointermove on exactly the devices with the least headroom.
+  const coarsePointer = useCoarsePointer();
   const webgl = useWebGLSupport();
 
   const [framedId, setFramedId] = useState<string>(DEFAULT_SPACE.id);
   const [openId, setOpenId] = useState<string | null>(null);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(DEFAULT_TIME_OF_DAY);
+
+  /**
+   * Which of the three levels the visitor has framed.
+   *
+   * A Set rather than a counter: revisiting the terrace three times is not
+   * the same as having seen the upper floor, and only the second earns the
+   * closing offer.
+   */
+  const [seen, setSeen] = useState<ReadonlySet<Space['level']>>(() => new Set());
 
   /**
    * Opens the space named in `?space=`.
@@ -49,6 +67,17 @@ export function ResidenceExplorer() {
   }, []);
 
   const framed = useMemo(() => findSpace(framedId) ?? DEFAULT_SPACE, [framedId]);
+
+  useEffect(() => {
+    setSeen((previous) => {
+      if (previous.has(framed.level)) return previous;
+      const next = new Set(previous);
+      next.add(framed.level);
+      return next;
+    });
+  }, [framed.level]);
+
+  const seenEverything = seen.size >= 3;
   const open = useMemo(() => (openId ? (findSpace(openId) ?? null) : null), [openId]);
 
   const select = useCallback((space: Space) => {
@@ -90,7 +119,7 @@ export function ResidenceExplorer() {
           view={framed.view}
           mode="journey"
           timeOfDay={timeOfDay}
-          parallax={reducedMotion ? 0 : 1}
+          parallax={reducedMotion || coarsePointer ? 0 : 1}
           label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
           hotspots={{ activeId: openId, onSelect: select }}
         >
@@ -114,6 +143,11 @@ export function ResidenceExplorer() {
             aria-hidden="true"
             className="from-obsidian/70 pointer-events-none absolute inset-y-0 left-0 hidden w-72 bg-gradient-to-r to-transparent lg:block"
           />
+
+          {/* Touch only. Without a cursor there is nothing to tell a phone
+              visitor the frame moves, and an interactive view mistaken for
+              a photograph is scrolled past. */}
+          <TouchHint label="Drag to look around · Pinch to zoom" />
 
           {/* The same dial that stands on the landing page, in the same
               place, doing the same thing — the hour is one idea across the
@@ -159,7 +193,10 @@ export function ResidenceExplorer() {
             actually written, which left this page with no `h1` at all —
             invisible to a crawler reading the document outline, and a
             document that starts at `h2` for anyone navigating by heading. */}
-        <header className="border-alabaster/10 border-t pt-10">
+        <header className="border-alabaster/10 flex flex-col gap-6 border-t pt-10">
+          {/* The pair, so the second building is visible from inside the
+              first rather than only in the menu. */}
+          <BuildingSwitch className="self-start" />
           <p className="text-eyebrow text-stone uppercase">Explore</p>
           <h1 className="font-display text-alabaster text-display-md mt-5 max-w-[24ch] font-light">
             Every space in the residence
@@ -186,6 +223,10 @@ export function ResidenceExplorer() {
               Moving the pointer across the frame shifts the camera slightly, the way a hand-held
               architectural camera would. The hour changes the lighting state, not the geometry.
             </p>
+
+            {/* Appears once the site, the ground floor and the upper floor
+                have all been framed — never before. */}
+            <VisitedCTA shown={seenEverything} />
           </div>
         </div>
       </Container>

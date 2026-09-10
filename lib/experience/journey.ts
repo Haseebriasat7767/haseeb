@@ -33,9 +33,9 @@ export const JOURNEY: readonly JourneyChapter[] = [
   {
     id: 'exterior',
     index: '01',
-    eyebrow: 'The Aurelia Residence',
-    title: 'Where architecture meets timeless living.',
-    body: 'A private house on a coastal ridge, composed from stone, cast concrete, and glass.',
+    eyebrow: 'Two buildings, generated in code',
+    title: 'Walk a building that has not been built.',
+    body: 'A private residence on a coastal ridge and a twenty-storey oceanfront tower — both generated from geometry rather than photographed, both walkable at any hour of the day. Neither exists.',
     view: chapterView('arrival'),
     space: 'arrival',
   },
