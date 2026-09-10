@@ -1,6 +1,7 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { NextResponse } from 'next/server';
 import { validateEnquiry, type Enquiry } from '@/lib/contact/enquiry';
+import { rateLimited } from '@/lib/server/rate-limit';
 
 /**
  * Where a private-viewing enquiry actually goes.
@@ -49,35 +50,7 @@ export const dynamic = 'force-dynamic';
 const MIN_ELAPSED_MS = 3000;
 
 /** Enquiries per address per window, and the window. */
-const RATE_LIMIT = 4;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-
-/**
- * A rate limiter in module memory.
- *
- * Worth being straight about what this is: on a serverless host each instance
- * has its own memory, so a determined flood spread across cold starts gets
- * more than four through. It is a speed bump for the ordinary case — a stuck
- * retry loop, someone leaning on the button — not a guarantee. A real one
- * needs shared storage, and that is a dependency this route does not yet
- * justify.
- */
-const seen = new Map<string, number[]>();
-
-function rateLimited(key: string): boolean {
-  const now = Date.now();
-  const hits = (seen.get(key) ?? []).filter((at) => now - at < RATE_WINDOW_MS);
-  hits.push(now);
-  seen.set(key, hits);
-
-  // Keep the map from growing without bound on a long-lived instance.
-  if (seen.size > 500) {
-    for (const [k, v] of seen) {
-      if (v.every((at) => now - at >= RATE_WINDOW_MS)) seen.delete(k);
-    }
-  }
-  return hits.length > RATE_LIMIT;
-}
+const LIMIT = { limit: 4, windowMs: 10 * 60 * 1000 };
 
 /** Escapes text bound for an HTML mail body. */
 function escape(value: string): string {
@@ -196,7 +169,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: 'unconfigured' }, { status: 503 });
   }
 
-  if (rateLimited(enquiry.email.trim().toLowerCase())) {
+  if (rateLimited('enquiry', enquiry.email.trim().toLowerCase(), LIMIT)) {
     return NextResponse.json({ status: 'rateLimited' }, { status: 429 });
   }
 

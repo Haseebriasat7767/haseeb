@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { reportClientError } from '@/lib/observability/report';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { SectionHeading } from '@/components/ui/SectionHeading';
@@ -14,6 +15,14 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error('[AURELIA]', error);
+    // Also to the server, so a failure only this visitor's device produces
+    // is not something we find out about from nobody.
+    reportClientError({
+      kind: 'page-error',
+      message: error.message,
+      stack: error.stack,
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

@@ -6,6 +6,7 @@ import { Footer } from '@/components/navigation/Footer';
 import { Header } from '@/components/navigation/Header';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { ErrorReporter } from '@/components/observability/ErrorReporter';
 import { StructuredData } from '@/components/seo/StructuredData';
 import { SITE } from '@/lib/constants/site';
 import './globals.css';
@@ -75,6 +76,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body className="min-h-svh antialiased">
         <StructuredData />
+        {/* Forwards uncaught browser errors to the platform log. Renders
+            nothing; React's boundaries cover render, this covers the rest. */}
+        <ErrorReporter />
         {/* Measurement, without a consent banner — because there is nothing
             to consent to.
 
