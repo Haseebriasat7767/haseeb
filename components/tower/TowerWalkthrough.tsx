@@ -9,6 +9,7 @@ import { hourTheme } from '@/lib/experience/hour-theme';
 import { BuildingSwitch } from '@/components/navigation/BuildingSwitch';
 import { TouchHint } from '@/components/experience/TouchHint';
 import { TouchSticks } from './TouchSticks';
+import { WalkPad } from './WalkPad';
 import { getWalkFloors, subscribeWalkFloors, travelTo } from '@/lib/three/walk-floors';
 import type { WalkFloor } from '@/lib/three/walk-floors';
 import { DEFAULT_TOWER_VIEW, TOWER_VIEWS, TOWER_VIEW_NOTES } from '@/lib/three/tower-views';
@@ -136,7 +137,7 @@ export function TowerWalkthrough() {
         {walking ? (
           <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
             <span className="hidden sm:inline">
-              Drag to look · W A S D to walk · Q E R F to turn · Shift to run
+              Drag to look · arrows or W A S D to walk · Shift to run
             </span>
             <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
           </div>
@@ -146,6 +147,9 @@ export function TowerWalkthrough() {
             WebGL scene has to be raycast, and they write to the same shared
             input the controller already reads. */}
         <TouchSticks active={walking} />
+        {/* The mouse half of the same job: sticks under a thumb, arrows under
+            a cursor. Each renders only for its own kind of pointer. */}
+        <WalkPad active={walking} />
 
         {/* Guided tour only: in walk mode the thumb sticks carry their own
             instructions and a second hint would contradict them. */}
