@@ -140,7 +140,20 @@ export function ResidenceExplorer() {
           auto`, so without it the widest child sets the track width and the
           whole page scrolls sideways on a narrow screen. */}
       <Container className="pb-section">
-        <div className="border-alabaster/10 grid gap-10 border-t pt-10 lg:grid-cols-12 lg:gap-16">
+        {/* The page's only `h1`, and it belongs here rather than above the
+            frame: the view opens the page full bleed on purpose, so the
+            heading introduces the rail once the visitor has looked. It was
+            described that way in `app/experience/page.tsx` but never
+            actually written, which left this page with no `h1` at all —
+            invisible to a crawler reading the document outline, and a
+            document that starts at `h2` for anyone navigating by heading. */}
+        <header className="border-alabaster/10 border-t pt-10">
+          <p className="text-eyebrow text-stone uppercase">Explore</p>
+          <h1 className="font-display text-alabaster text-display-md mt-5 max-w-[24ch] font-light">
+            Every space in the residence
+          </h1>
+        </header>
+        <div className="grid gap-10 pt-10 lg:grid-cols-12 lg:gap-16">
           <div className="min-w-0 lg:col-span-7">
             <SpaceRail activeId={framedId} onSelect={select} />
           </div>

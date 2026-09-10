@@ -28,7 +28,9 @@ export function SpaceRail({ activeId, onSelect, className }: SpaceRailProps) {
 
         return (
           <div key={group.level} className="flex flex-col gap-3">
-            <h3 className="text-eyebrow text-stone uppercase">{group.label}</h3>
+            {/* `h2`, not `h3`: these group labels sit directly under the
+                page's `h1`, so an `h3` skipped a level in the outline. */}
+            <h2 className="text-eyebrow text-stone uppercase">{group.label}</h2>
             <ul className="flex flex-col">
               {spaces.map((space) => {
                 const active = space.id === activeId;
