@@ -9,12 +9,24 @@ import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 
+const CANONICAL_PATH = '/tower';
+
 export const metadata: Metadata = {
-  alternates: { canonical: '/tower' },
+  // A local const rather than repeating the path: `alternates.canonical`
+  // and `openGraph.url` have to agree, and a route only ever moves once.
+  alternates: { canonical: CANONICAL_PATH },
   title: 'Oceanfront tower',
   description:
     'A twenty-storey oceanfront tower generated entirely in code — five retail levels around a full-height atrium, fifteen floors of apartments above, and an amenity deck between them. Walk it at any hour.',
   openGraph: {
+    url: CANONICAL_PATH,
+    // Every route lost its social card the moment it defined its own
+    // `openGraph` object: Next does not deep-merge that field across the
+    // segment tree, so this object fully replaced the root layout's —
+    // taking `url`, `siteName` and the auto-attached image with it. The
+    // path is relative and resolves against the same `metadataBase` the
+    // root layout sets, so nothing here names a domain.
+    images: ['/opengraph-image'],
     title: 'Oceanfront tower — AURELIA',
     description:
       'Twenty storeys, five of retail and fifteen of residences, walked from the plaza to a balcony at sunset.',
