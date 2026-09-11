@@ -43,11 +43,7 @@ export function SpaceRail({ activeId, onSelect, className }: SpaceRailProps) {
                       aria-current={active ? 'true' : undefined}
                       data-cursor="link"
                       className={cn(
-                        // `py-1.5` made each row 32px tall — fine beside a
-                        // cursor, short of a thumb. The rail is the only way
-                        // to move between spaces on a phone, so the rows are
-                        // the full 44 there and stay tight on a pointer.
-                        'group ease-luxe flex min-h-11 w-full items-center gap-3 py-1.5 text-left sm:min-h-0',
+                        'group ease-luxe flex min-h-11 w-full items-center gap-3 py-1.5 text-left',
                         'font-sans text-sm transition-colors duration-300',
                         active ? 'text-alabaster' : 'text-mist hover:text-alabaster',
                       )}

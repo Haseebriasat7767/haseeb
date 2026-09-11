@@ -20,9 +20,9 @@ export function Field({ label, error, optional, multiline, ...props }: FieldProp
   const errorId = `${id}-error`;
 
   const shared = cn(
-    'peer w-full bg-transparent pt-6 pb-2 font-sans text-alabaster',
+    'peer w-full bg-transparent pt-3 pb-3 sm:pt-6 sm:pb-2 font-sans text-alabaster',
     'placeholder-transparent outline-none transition-colors duration-300',
-    'border-b',
+    'border-b min-h-11',
     error ? 'border-red-400/70' : 'border-alabaster/20 focus:border-gold',
   );
 

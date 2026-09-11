@@ -164,7 +164,7 @@ export function FloorPlan() {
                     onMouseEnter={() => setHovered(room.id)}
                     onMouseLeave={() => setHovered(null)}
                     className={cn(
-                      'ease-luxe flex items-baseline justify-between gap-4 py-3 transition-colors duration-300',
+                      'ease-luxe flex min-h-11 items-baseline justify-between gap-4 py-3 transition-colors duration-300',
                       hovered === room.id ? 'text-alabaster' : 'text-mist',
                     )}
                   >
