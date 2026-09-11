@@ -211,6 +211,8 @@ export function Scene({
         antialias: quality.antialias,
         powerPreference: 'high-performance',
         toneMapping: ACESFilmicToneMapping,
+        precision: quality.tier === 'low' ? 'lowp' : 'highp',
+        logarithmicDepthBuffer: quality.tier === 'low',
       }}
       camera={{ position: view.position, fov: view.fov }}
       // Renders only when something changes — idle scenes cost no GPU time.

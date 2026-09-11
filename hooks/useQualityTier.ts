@@ -15,8 +15,11 @@ function resolveTier(): QualityProfile {
   const saveData =
     (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData ??
     false;
+  // More aggressive: treat all mobile (coarse pointer) as low-medium tier for performance
+  const isMobile = coarsePointer && smallViewport;
 
   if (saveData || (coarsePointer && cores <= 4)) return getQualityProfile('low');
+  if (isMobile) return getQualityProfile('medium'); // Force medium for mobile
   if (coarsePointer || smallViewport || cores <= 8) return getQualityProfile('medium');
   return getQualityProfile('high');
 }

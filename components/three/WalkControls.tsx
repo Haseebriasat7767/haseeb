@@ -37,8 +37,8 @@ const EYE = 1.68;
 /** How wide the visitor is. Wide enough not to slip through a mullion. */
 const RADIUS = 0.32;
 const GRAVITY = -22;
-const WALK_SPEED = 3.4;
-const RUN_SPEED = 7.0;
+const WALK_SPEED = 5.5; // Increased from 3.4 for faster navigation
+const RUN_SPEED = 9.5;  // Increased from 7.0 for faster sprinting
 /**
  * Furthest the capsule may move before collision is resolved again.
  *
@@ -58,7 +58,7 @@ const RUN_SPEED = 7.0;
  * because it is the only one that does not depend on the frame rate: on a slow
  * device the step gets bigger and every geometric tolerance stops holding.
  */
-const MAX_SUBSTEP = 0.12;
+const MAX_SUBSTEP = 0.16; // Increased from 0.12 for faster collision detection on mobile
 
 export type WalkControlsProps = {
   collider: WalkCollider;

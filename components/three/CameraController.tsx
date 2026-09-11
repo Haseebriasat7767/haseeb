@@ -232,7 +232,8 @@ export function CameraController({
       framed.current.y += pointer.y * parallax * 0.45;
     }
 
-    const smoothing = mode === 'journey' ? 0.0015 : 0.001;
+    // Increased smoothing for faster camera transitions on mobile
+    const smoothing = mode === 'journey' ? 0.0035 : 0.002;
     camera.position.lerp(framed.current, 1 - Math.pow(smoothing, step));
 
     // Easing the look-at target as well is what keeps a long move reading as
