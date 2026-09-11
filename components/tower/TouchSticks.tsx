@@ -125,21 +125,24 @@ export function TouchSticks({ active }: { active: boolean }) {
     return (
       <>
         <span
-          className="border-alabaster/30 absolute rounded-full border"
+          className="border-alabaster/40 absolute rounded-full border-2"
           style={{
             left: stick.originX - RANGE,
             top: stick.originY - RANGE,
             width: RANGE * 2,
             height: RANGE * 2,
+            boxShadow: '0 0 16px rgba(211,211,211,0.3)',
           }}
         />
         <span
-          className="bg-alabaster/70 absolute rounded-full"
+          className="bg-alabaster absolute rounded-full shadow-lg"
           style={{
-            left: stick.originX + out.x * RANGE - 22,
-            top: stick.originY + out.y * RANGE - 22,
-            width: 44,
-            height: 44,
+            left: stick.originX + out.x * RANGE - 24,
+            top: stick.originY + out.y * RANGE - 24,
+            width: 48,
+            height: 48,
+            boxShadow: '0 4px 16px rgba(211,211,211,0.5)',
+            opacity: 0.85,
           }}
         />
       </>

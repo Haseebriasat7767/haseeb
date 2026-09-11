@@ -18,6 +18,8 @@ import { HourDial } from '@/components/experience/HourDial';
 import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
 import { SpaceRail } from './SpaceRail';
+import { TouchSticks } from '@/components/tower/TouchSticks';
+import { WalkPad } from '@/components/tower/WalkPad';
 
 const DEFAULT_SPACE = SPACES[0]!;
 
@@ -39,6 +41,7 @@ export function ResidenceExplorer() {
   const [framedId, setFramedId] = useState<string>(DEFAULT_SPACE.id);
   const [openId, setOpenId] = useState<string | null>(null);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(DEFAULT_TIME_OF_DAY);
+  const [walking, setWalking] = useState(false);
 
   /**
    * Which of the three levels the visitor has framed.
@@ -117,9 +120,9 @@ export function ResidenceExplorer() {
         <ExperienceViewport
           className="absolute inset-0 h-full w-full"
           view={framed.view}
-          mode="journey"
+          mode={walking ? 'walk' : 'journey'}
           timeOfDay={timeOfDay}
-          parallax={reducedMotion || coarsePointer ? 0 : 4.0}
+          parallax={walking ? 0 : reducedMotion || coarsePointer ? 0 : 4.0}
           label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
           hotspots={{ activeId: openId, onSelect: select }}
         >
@@ -144,10 +147,31 @@ export function ResidenceExplorer() {
             className="from-obsidian/70 pointer-events-none absolute inset-y-0 left-0 hidden w-72 bg-gradient-to-r to-transparent lg:block"
           />
 
+          {/* Walk toggle button */}
+          {webgl === false ? null : (
+            <button
+              type="button"
+              onClick={() => setWalking((on) => !on)}
+              className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+            >
+              {walking ? 'Guided tour' : 'Walk the residence'}
+            </button>
+          )}
+
           {/* Touch only. Without a cursor there is nothing to tell a phone
               visitor the frame moves, and an interactive view mistaken for
               a photograph is scrolled past. */}
-          <TouchHint label="Drag to look around · Pinch to zoom" />
+          {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
+
+          {/* Walk mode instructions */}
+          {walking ? (
+            <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
+              <span className="hidden sm:inline">
+                Drag to look · arrows or W A S D to walk · Shift to run
+              </span>
+              <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
+            </div>
+          ) : null}
 
           {/* The same dial that stands on the landing page, in the same
               place, doing the same thing — the hour is one idea across the
@@ -171,6 +195,11 @@ export function ResidenceExplorer() {
             hidden={open !== null}
           />
         </ExperienceViewport>
+
+        {/* Thumb controls for walk mode */}
+        <TouchSticks active={walking} />
+        {/* Keyboard controls for walk mode */}
+        <WalkPad active={walking} />
 
         <SpacePanel space={open} onClose={close} onFocusSpace={frame} />
       </div>
