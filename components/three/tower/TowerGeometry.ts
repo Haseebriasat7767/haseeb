@@ -1388,6 +1388,95 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     placed += 1;
   }
 
+  // ── Doors ──────────────────────────────────────────────────────────────
+  const doors: BoxSpec[] = [];
+
+  // Apartment entry doors on each residential level
+  for (let level = 1; level < towerLevels; level += 1) {
+    const levelY = towerBaseY + level * towerLevelHeight;
+    const doorX = towerX[0] + coreWidth + 0.4; // Just inside the core wall
+    const doorZ = towerZ[0] + 0.3;
+    const doorHeight = 2.1;
+
+    // Door frame opening
+    doors.push(
+      box(
+        `apt-door-frame-${level}`,
+        [doorX - 0.05, doorX + 1.1],
+        [levelY + slabThickness + 0.1, levelY + slabThickness + doorHeight + 0.1],
+        [doorZ - 0.08, doorZ + 0.08],
+      ),
+    );
+  }
+
+  // Stairwell doors on each level
+  for (let level = 0; level < towerLevels + podiumLevels; level += 1) {
+    const isResidential = level >= podiumLevels;
+    const baseY = isResidential ? towerBaseY : 0;
+    const levelIndex = isResidential ? level - podiumLevels : level;
+    const levelHeight = isResidential ? towerLevelHeight : podiumLevelHeight;
+    const levelY = baseY + levelIndex * levelHeight;
+
+    const doorHeight = 2.0;
+    const doorX = stairX[1] - 0.15;
+    const doorZ = stairZ[1] - 0.15;
+
+    doors.push(
+      box(
+        `stair-door-${level}`,
+        [doorX - 0.04, doorX + 0.9],
+        [levelY + 0.1, levelY + doorHeight + 0.1],
+        [doorZ - 0.08, doorZ + 0.08],
+      ),
+    );
+  }
+
+  // ── Common Area Furniture ──────────────────────────────────────────────
+  const commonFurniture: BoxSpec[] = [];
+
+  // Lobby seating - bench-style furniture in atrium
+  const lobbySeatingX = (atriumX[0] + atriumX[1]) / 2;
+  const lobbySeatingZ = atriumZ[0] + 2;
+  const seatingY = podiumLevelHeight * 0.5 + 0.4;
+
+  // Add several seating blocks in the atrium lobby
+  for (let i = 0; i < 3; i += 1) {
+    commonFurniture.push(
+      box(
+        `lobby-bench-${i}`,
+        [lobbySeatingX - 1.5 + i * 1.8, lobbySeatingX - 0.8 + i * 1.8],
+        [seatingY - 0.3, seatingY + 0.5],
+        [lobbySeatingZ - 0.5, lobbySeatingZ + 1.2],
+      ),
+    );
+  }
+
+  // Reception desk in lobby
+  const receptionX = atriumX[1] - 2.5;
+  const receptionZ = (atriumZ[0] + atriumZ[1]) / 2;
+  commonFurniture.push(
+    box(
+      'reception-desk',
+      [receptionX - 2, receptionX + 0.5],
+      [0.8, 1.1],
+      [receptionZ - 0.8, receptionZ + 0.8],
+    ),
+  );
+
+  // Coffee table / accent furniture scattered in atrium
+  for (let i = 0; i < 2; i += 1) {
+    const furnitureX = atriumX[0] + 3 + i * 8;
+    const furnitureZ = atriumZ[0] + 3 + i * 4;
+    commonFurniture.push(
+      box(
+        `accent-furniture-${i}`,
+        [furnitureX - 0.6, furnitureX + 0.6],
+        [0.35, 0.65],
+        [furnitureZ - 0.6, furnitureZ + 0.6],
+      ),
+    );
+  }
+
   return {
     plan,
     podium: {
@@ -1420,6 +1509,8 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
       water,
       furniture,
     },
+    doors,
+    commonFurniture,
     palms,
   };
 }

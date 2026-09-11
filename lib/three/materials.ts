@@ -1669,7 +1669,7 @@ function createMaterials() {
       emissive: '#ffdcae',
       emissiveIntensity: 0,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.88,
     }),
     /** Tree trunks and major branches — vertical grain, like the entrance wood. */
     bark: withVariation(standard({ color: '#453a2f', roughness: 0.9, metalness: 0 }), {

@@ -22,6 +22,18 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
 
   return (
     <group name="Tower">
+      {/* ── Doors ─────────────────────────────────────────────────────── */}
+      <MergedBoxes name="doors" specs={layout.doors} material={materials.darkMetal} />
+
+      {/* ── Common Area Furniture ─────────────────────────────────────── */}
+      <MergedBoxes
+        name="common-furniture"
+        specs={layout.commonFurniture}
+        material={materials.bronze}
+        chamfer={0.004}
+        chamferSegments={1}
+      />
+
       {/* ── Retail podium ─────────────────────────────────────────────── */}
       <MergedBoxes
         name="podium-shell"

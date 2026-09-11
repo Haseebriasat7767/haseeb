@@ -198,6 +198,10 @@ export type TowerLayout = {
     water: BoxSpec[];
     furniture: BoxSpec[];
   };
+  /** Apartment entry doors in corridor walls. */
+  doors: BoxSpec[];
+  /** Common area furniture: lobby seating, reception desk, etc. */
+  commonFurniture: BoxSpec[];
   palms: PalmSpec[];
 };
 
