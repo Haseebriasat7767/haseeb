@@ -23,7 +23,13 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
   return (
     <group name="Tower">
       {/* ── Retail podium ─────────────────────────────────────────────── */}
-      <MergedBoxes name="podium-shell" specs={podium.mass} material={materials.stone} />
+      <MergedBoxes
+        name="podium-shell"
+        specs={podium.mass}
+        material={materials.stone}
+        chamfer={0.008}
+        chamferSegments={2}
+      />
       {/* The retail floor plates. Polished stone, because the atrium floor
           is the surface every one of those lit coves is reflecting in. */}
       <MergedBoxes name="podium-floors" specs={podium.floors} material={materials.marble} />
@@ -92,7 +98,13 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
       <MergedBoxes name="stair-steps" specs={stair.steps} material={materials.concrete} />
 
       {/* ── Residential tower ─────────────────────────────────────────── */}
-      <MergedBoxes name="tower-core" specs={tower.core} material={materials.stone} />
+      <MergedBoxes
+        name="tower-core"
+        specs={tower.core}
+        material={materials.stone}
+        chamfer={0.006}
+        chamferSegments={2}
+      />
       <MergedBoxes name="tower-slabs" specs={tower.slabs} material={materials.concrete} />
       {/* The apartment floors. Stone rather than concrete: this is the one
           surface of the tower a resident stands on. */}
@@ -109,18 +121,36 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
         material={materials.plaster}
         castShadow={false}
       />
-      <MergedBoxes name="tower-fins" specs={tower.fins} material={materials.bronze} />
+      <MergedBoxes
+        name="tower-fins"
+        specs={tower.fins}
+        material={materials.bronze}
+        chamfer={0.012}
+        chamferSegments={2}
+      />
       <MergedBoxes name="tower-spandrels" specs={tower.spandrels} material={materials.concrete} />
 
       {/* ── Balconies ─────────────────────────────────────────────────── */}
-      <MergedBoxes name="balcony-slabs" specs={balconies.slabs} material={materials.concrete} />
+      <MergedBoxes
+        name="balcony-slabs"
+        specs={balconies.slabs}
+        material={materials.concrete}
+        chamfer={0.008}
+        chamferSegments={2}
+      />
       <MergedBoxes
         name="balcony-glass"
         specs={balconies.glass}
         material={materials.glazing}
         castShadow={false}
       />
-      <MergedBoxes name="balcony-rails" specs={balconies.rails} material={materials.bronze} />
+      <MergedBoxes
+        name="balcony-rails"
+        specs={balconies.rails}
+        material={materials.bronze}
+        chamfer={0.008}
+        chamferSegments={2}
+      />
 
       {/* ── Crown ─────────────────────────────────────────────────────── */}
       <MergedBoxes name="crown-parapet" specs={crown.parapets} material={materials.concrete} />
