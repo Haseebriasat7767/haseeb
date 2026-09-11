@@ -39,6 +39,37 @@
  * form as the single way through, which is a complete answer on its own.
  */
 
+function readEnv(name: string): string | null {
+  const raw = process.env[name];
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+/** Validates international phone — digits only after stripping, 7-15 chars per E.164 */
+function normalizePhoneDigits(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.length < 7 || digits.length > 15) return null;
+  return digits;
+}
+
+function normalizeTel(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = raw.replace(/[^+\d]/g, '').replace(/(?!^)\+/g, '');
+  const digits = cleaned.replace(/\D/g, '');
+  if (digits.length < 7 || digits.length > 15) return null;
+  return cleaned;
+}
+
+function normalizeEmail(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) return null;
+  return trimmed;
+}
+
 export type ClientConfig = {
   /** The listing itself. */
   property: {
@@ -70,12 +101,21 @@ export type ClientConfig = {
      * call affordance. The dial string is derived below.
      */
     phone: string | null;
+    /** Original display form for UI, may contain spaces */
+    phoneDisplay: string | null;
     /**
      * WhatsApp number in full international form, digits only, no plus and
      * no spaces — `wa.me` accepts nothing else. `null` hides every WhatsApp
      * affordance in the product rather than linking somewhere wrong.
+     * Can be set separately via NEXT_PUBLIC_ENQUIRY_WHATSAPP, falls back to phone.
      */
     whatsapp: string | null;
+  };
+
+  /** Contact address — env-driven, null means "by appointment" fallback handled in UI */
+  contact: {
+    address: string | null;
+    addressDisplay: string;
   };
 
   /**
@@ -88,6 +128,13 @@ export type ClientConfig = {
    */
   brochurePath: string | null;
 };
+
+const rawEmail = normalizeEmail(readEnv('NEXT_PUBLIC_ENQUIRY_EMAIL'));
+const rawPhone = readEnv('NEXT_PUBLIC_ENQUIRY_PHONE');
+const rawWhatsappEnv = readEnv('NEXT_PUBLIC_ENQUIRY_WHATSAPP');
+const rawPhoneNormalized = normalizeTel(rawPhone);
+const rawWhatsappNormalized = normalizePhoneDigits(rawWhatsappEnv ?? rawPhone);
+const rawAddress = readEnv('NEXT_PUBLIC_CONTACT_ADDRESS');
 
 export const CLIENT: ClientConfig = {
   property: {
@@ -119,17 +166,18 @@ export const CLIENT: ClientConfig = {
      * card omits any line it has no value for. A client rebranding this
      * sets all three from the environment.
      */
-    name: process.env.NEXT_PUBLIC_AGENT_NAME ?? 'Haseeb Riasat',
-    title: process.env.NEXT_PUBLIC_AGENT_TITLE ?? 'Direct enquiries',
-    agency: process.env.NEXT_PUBLIC_AGENT_AGENCY ?? null,
-    email: process.env.NEXT_PUBLIC_ENQUIRY_EMAIL ?? null,
-    phone: process.env.NEXT_PUBLIC_ENQUIRY_PHONE ?? null,
-    // The same number the phone link uses. It was hard-coded to null, which
-    // meant setting NEXT_PUBLIC_ENQUIRY_PHONE switched on the telephone
-    // link and silently left WhatsApp off — a channel that looked
-    // configured and was not. If a separate WhatsApp number is ever needed
-    // it gets its own variable; until then one number is one number.
-    whatsapp: process.env.NEXT_PUBLIC_ENQUIRY_PHONE ?? null,
+    name: readEnv('NEXT_PUBLIC_AGENT_NAME') ?? 'Haseeb Riasat',
+    title: readEnv('NEXT_PUBLIC_AGENT_TITLE') ?? 'Direct enquiries',
+    agency: readEnv('NEXT_PUBLIC_AGENT_AGENCY'),
+    email: rawEmail,
+    phone: rawPhoneNormalized,
+    phoneDisplay: rawPhone,
+    whatsapp: rawWhatsappNormalized,
+  },
+
+  contact: {
+    address: rawAddress,
+    addressDisplay: rawAddress ?? 'By private appointment',
   },
 
   brochurePath: '/brochure',
@@ -137,7 +185,7 @@ export const CLIENT: ClientConfig = {
 
 /**
  * A `wa.me` link with the enquiry already written, or `null` when no number
- * is configured.
+ * is configured or invalid.
  *
  * The pre-filled message matters more than it looks: a buyer who taps
  * through with the property name already in the thread has effectively
@@ -145,11 +193,7 @@ export const CLIENT: ClientConfig = {
  * instead of "hi".
  */
 export function whatsappLink(message?: string): string | null {
-  // `wa.me` takes digits only: a leading `+`, spaces, brackets or dashes all
-  // produce a link that opens WhatsApp on an error rather than a chat. The
-  // number is written by a human into an environment variable, so it is
-  // normalised here instead of being demanded in that format.
-  const number = CLIENT.agent.whatsapp?.replace(/\D/g, '');
+  const number = CLIENT.agent.whatsapp;
   if (!number) return null;
 
   const text =
@@ -157,11 +201,11 @@ export function whatsappLink(message?: string): string | null {
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
 
-/** The phone number as a dial string, or `null` when none is configured. */
+/** The phone number as a dial string, or `null` when none is configured/invalid. */
 export function telLink(): string | null {
   const phone = CLIENT.agent.phone;
   if (!phone) return null;
-  return `tel:${phone.replace(/[^\d+]/g, '')}`;
+  return `tel:${phone}`;
 }
 
 /** A pre-addressed enquiry, or `null` when no address is configured. */
@@ -171,4 +215,9 @@ export function mailtoLink(subject?: string): string | null {
 
   const line = subject ?? `Enquiry — ${CLIENT.property.name}`;
   return `mailto:${email}?subject=${encodeURIComponent(line)}`;
+}
+
+/** Returns true if at least one contact channel is valid and configured */
+export function hasContactChannel(): boolean {
+  return Boolean(CLIENT.agent.email || CLIENT.agent.phone || CLIENT.agent.whatsapp);
 }

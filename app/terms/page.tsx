@@ -35,7 +35,9 @@ export default function TermsPage() {
       </p>
       <p>
         Dimensions, layouts and areas shown are indicative and are not a substitute for a measured
-        survey, a floor plan issued by the seller, or any contract document.
+        survey, a floor plan issued by the seller, or any contract document. All areas are computed
+        from the same procedural generator that builds the 3D scene — see the accommodation schedule
+        for the source.
       </p>
 
       <h2>Nothing here is an offer</h2>
@@ -46,10 +48,12 @@ export default function TermsPage() {
         contract and on the buyer&rsquo;s own enquiries, survey and legal advice.
       </p>
 
-      <h2>Availability</h2>
+      <h2>Availability & performance</h2>
       <p>
         We try to keep the site available and correct, and cannot guarantee either. It may be
-        unavailable while it is maintained, and details may change without notice.
+        unavailable while it is maintained, and details may change without notice. The 3D experience
+        requires WebGL and performs best on modern hardware — a static fallback is provided where
+        WebGL is unavailable.
       </p>
 
       <h2>The site itself</h2>
@@ -57,19 +61,32 @@ export default function TermsPage() {
         The design, the code, the three-dimensional model and all imagery on this site are original
         works and remain the property of their owner. You are welcome to look at them, link to them
         and share them. You may not copy, redistribute or reuse them commercially without written
-        permission.
+        permission. Procedural generation code is provided as demonstration — reuse requires a
+        licence.
       </p>
 
       <h2>Third-party links</h2>
       <p>
-        Where this site links elsewhere, we are not responsible for what is on the other end of the
-        link.
+        Where this site links elsewhere (e.g. WhatsApp, email client, brochure PDF), we are not
+        responsible for what is on the other end of the link or how that third party handles your
+        data.
+      </p>
+
+      <h2>Liability</h2>
+      <p>
+        To the extent permitted by law, we exclude liability for loss arising from use of this site,
+        including from reliance on generated imagery or from unavailability of the 3D experience on
+        particular devices. Nothing excludes liability for death or personal injury caused by
+        negligence, fraud, or that cannot be excluded by law.
       </p>
 
       <h2>Contact</h2>
       {SITE.contact.email ? (
         <p>
           <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a>
+          {SITE.contact.phoneDisplay ? <span> · {SITE.contact.phoneDisplay}</span> : null}
+          <br />
+          <span className="text-stone text-sm">{SITE.contact.addressDisplay}</span>
         </p>
       ) : (
         <p>

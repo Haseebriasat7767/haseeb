@@ -26,6 +26,10 @@ export const metadata: Metadata = {
  * should be reviewed by a lawyer in the operator's jurisdiction before launch.
  */
 export default function PrivacyPage() {
+  const hasEmail = Boolean(SITE.contact.email);
+  const smtpHost = process.env.SMTP_HOST;
+  const hasWeb3Forms = Boolean(process.env.WEB3FORMS_ACCESS_KEY);
+
   return (
     <LegalPage
       eyebrow="Privacy"
@@ -55,7 +59,8 @@ export default function PrivacyPage() {
       </p>
       <p>
         The result is a count of how many people looked at a page and how quickly it loaded for
-        them. It is not a profile, and it cannot be turned into one.
+        them. It is not a profile, and it cannot be turned into one. You can opt out by enabling
+        Do Not Track in your browser — Vercel Analytics respects DNT.
       </p>
 
       <h2>What you send us</h2>
@@ -67,7 +72,7 @@ export default function PrivacyPage() {
       </p>
       <p>
         The form is protected against automated abuse by a hidden field and a timing check. Neither
-        collects anything about you.
+        collects anything about you. All submissions are rate-limited per IP and email.
       </p>
 
       <h2>Where it goes</h2>
@@ -78,30 +83,49 @@ export default function PrivacyPage() {
         by <a href="https://vercel.com">Vercel</a>, which processes the ordinary technical logs any
         web host keeps in order to serve a page.
       </p>
-      <p>
-        <strong>This section is not yet complete.</strong> The company that hosts our mailbox is a
-        processor of your enquiry and has to be named here — as does its country, if it is outside
-        the UK and the EU. No mail provider has been configured for this deployment, so there is
-        nothing accurate to name. The operator must complete this before the site is published.
-      </p>
+      {hasWeb3Forms ? (
+        <p>
+          This deployment uses <a href="https://web3forms.com">Web3Forms</a> to deliver enquiries.
+          Your message is forwarded through their service to our mailbox. See their privacy policy
+          for how they handle forwarded messages.
+        </p>
+      ) : null}
+      {smtpHost ? (
+        <p>
+          Enquiries are delivered via SMTP host <code>{smtpHost}</code> to our mailbox provider.
+          That provider is a processor of your enquiry. The operator should name the provider and
+          its country here before publishing.
+        </p>
+      ) : !hasWeb3Forms ? (
+        <p className="border-alabaster/10 border-l-2 pl-4 text-sm">
+          <strong>Operator note:</strong> No mail provider has been configured for this deployment
+          (set SMTP_HOST or WEB3FORMS_ACCESS_KEY). This paragraph must name the mailbox host and its
+          country before the site is published for a real property.
+        </p>
+      ) : null}
 
       <h2>How long it is kept</h2>
       <p>
         Enquiries are kept for as long as the conversation they belong to is live, and then no
-        longer. Analytics figures are aggregate counts with nothing in them that identifies anybody.
+        longer — typically 12 months after last contact unless a longer retention is required by
+        law or agreed with you. Analytics figures are aggregate counts with nothing in them that
+        identifies anybody.
       </p>
 
       <h2>Your rights</h2>
       <p>
         If you are in the UK or the EU you may ask for a copy of what we hold about you, ask for it
         to be corrected, or ask for it to be deleted. In practice that means the enquiry you sent,
-        because it is the only thing there is. Write to us and we will do it.
+        because it is the only thing there is. Write to us and we will do it within 30 days.
       </p>
 
       <h2>Who to write to</h2>
-      {SITE.contact.email ? (
+      {hasEmail ? (
         <p>
           <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a>
+          {SITE.contact.phoneDisplay ? <span> · {SITE.contact.phoneDisplay}</span> : null}
+          <br />
+          <span className="text-stone text-sm">{SITE.contact.addressDisplay}</span>
         </p>
       ) : (
         <p>
@@ -113,6 +137,14 @@ export default function PrivacyPage() {
           and this notice reviewed by a lawyer in that controller&rsquo;s jurisdiction.
         </p>
       )}
+
+      <h2>Security</h2>
+      <p>
+        Enquiries are transmitted over TLS and stored in a mailbox that requires authentication.
+        While we take reasonable measures to protect your data, no transmission over the internet is
+        completely secure. If you have concerns, use the direct contact channels on the contact page
+        or request to discuss security arrangements before sending sensitive information.
+      </p>
     </LegalPage>
   );
 }

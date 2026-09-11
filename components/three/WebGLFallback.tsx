@@ -1,4 +1,5 @@
 import { Eyebrow } from '@/components/ui/Eyebrow';
+import { Button } from '@/components/ui/Button';
 
 type WebGLFallbackProps = {
   /** Distinguishes "no WebGL at all" from "the scene failed to start". */
@@ -9,24 +10,31 @@ const COPY = {
   unsupported: {
     eyebrow: 'Static Presentation',
     title: 'Real-time rendering is unavailable on this device.',
-    body: 'Your browser does not expose WebGL, so the interactive residence cannot be rendered. Everything else on this page remains fully available.',
+    body: 'Your browser does not expose WebGL, so the interactive residence cannot be rendered. Everything else on this page — floor plans, gallery, specifications, and the enquiry form — remains fully available.',
   },
   error: {
     eyebrow: 'Static Presentation',
     title: 'The interactive residence could not be started.',
-    body: 'Rendering was interrupted on this device. You can continue exploring the residence through the written and drawn material.',
+    body: 'Rendering was interrupted on this device. You can continue exploring the residence through the floor plans, gallery, and written material. Try reloading, or view on a device with WebGL support.',
   },
 } as const;
 
 /**
  * Elegant, on-brand substitute for the 3D canvas — an intentional
  * architectural plate rather than an error box.
+ *
+ * Includes alternative navigation so a visitor without WebGL is not stranded
+ * on a page whose main content is the 3D view.
  */
 export function WebGLFallback({ reason = 'unsupported' }: WebGLFallbackProps) {
   const copy = COPY[reason];
 
   return (
-    <div className="bg-ink absolute inset-0 flex items-center justify-center overflow-hidden">
+    <div
+      role="status"
+      aria-live="polite"
+      className="bg-ink absolute inset-0 flex items-center justify-center overflow-hidden"
+    >
       <div
         aria-hidden="true"
         className="absolute inset-0 opacity-[0.18]"
@@ -43,6 +51,14 @@ export function WebGLFallback({ reason = 'unsupported' }: WebGLFallbackProps) {
           {copy.title}
         </p>
         <p className="text-mist text-sm leading-relaxed">{copy.body}</p>
+        <div className="mt-2 flex flex-wrap justify-center gap-3">
+          <Button href="/floor-plan" variant="outline">
+            View floor plan
+          </Button>
+          <Button href="/gallery" variant="outline">
+            View gallery
+          </Button>
+        </div>
       </div>
     </div>
   );

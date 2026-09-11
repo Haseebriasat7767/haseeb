@@ -16,8 +16,8 @@ import { TrackedLink } from './TrackedLink';
  * ## Why the channels can vanish
  *
  * Every affordance below is driven by `lib/constants/client.ts` and is
- * simply not rendered when unconfigured. A WhatsApp button linking to a
- * number nobody owns, or a brochure button downloading nothing, does more
+ * simply not rendered when unconfigured or invalid. A WhatsApp button linking
+ * to a number nobody owns, or a brochure button downloading nothing, does more
  * damage in a client meeting than the absence of the feature — so the
  * absence is what happens. See the honesty note in that file.
  */
@@ -29,16 +29,6 @@ export function AgentCard() {
 
   return (
     <div className="border-alabaster/10 bg-alabaster/[0.03] flex flex-col gap-8 border p-8 sm:p-10">
-      {/* Only when a real person is configured. The card used to name an
-          invented one, which was harmless beside unset channels and became
-          a false claim the moment a real address sat under it.
-
-          The eyebrow read "Private client" whenever a name was set, which
-          was written for a card naming an agent at a private-client desk.
-          Over the name of the person the enquiry actually reaches it says
-          the opposite of what it means — that he is the client — and it
-          repeats the title directly beneath it. It is a section label, so
-          it labels the section. */}
       <div className="flex flex-col gap-1">
         <p className="text-eyebrow text-stone uppercase">Enquiries</p>
         {agent.name ? (
@@ -67,6 +57,7 @@ export function AgentCard() {
               target="_blank"
               rel="noopener noreferrer"
               data-cursor="link"
+              aria-label="Contact via WhatsApp"
               className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
             >
               WhatsApp
@@ -81,11 +72,12 @@ export function AgentCard() {
               onTrack={() => trackContactChannelClick('call')}
               href={tel}
               data-cursor="link"
+              aria-label={`Call ${agent.phoneDisplay ?? ''}`}
               className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
             >
               Call
               <span aria-hidden="true" className="text-stone normal-case">
-                {agent.phone}
+                {agent.phoneDisplay ?? agent.phone}
               </span>
             </TrackedLink>
           </li>
@@ -97,6 +89,7 @@ export function AgentCard() {
               onTrack={() => trackContactChannelClick('email')}
               href={mailto}
               data-cursor="link"
+              aria-label={`Email ${agent.email ?? ''}`}
               className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
             >
               Email
@@ -105,13 +98,10 @@ export function AgentCard() {
           </li>
         ) : null}
 
-        {/* With no direct channel configured this card would otherwise name
-            a person and offer no way to reach them. It says how instead —
-            a line of type, not a button back to the form this card is
-            already sitting beside. */}
         {whatsapp || tel || mailto ? null : (
           <li className="text-mist text-sm leading-relaxed">
-            Enquiries are taken through the form.
+            Enquiries are taken through the form. Direct channels appear once
+            contact details are configured.
           </li>
         )}
 
@@ -122,6 +112,7 @@ export function AgentCard() {
               href={brochurePath}
               download
               data-cursor="link"
+              aria-label="Download brochure PDF"
               className="text-eyebrow ease-luxe border-alabaster/20 text-alabaster hover:border-gold hover:text-gold flex items-center justify-between border px-5 py-4 uppercase transition-colors duration-300"
             >
               Download brochure

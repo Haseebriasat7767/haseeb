@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { submitEnquiry, validateEnquiry, type Enquiry } from '@/lib/contact/enquiry';
+import {
+  MAX_MESSAGE_LENGTH,
+  MAX_NAME_LENGTH,
+  submitEnquiry,
+  validateEnquiry,
+  type Enquiry,
+} from '@/lib/contact/enquiry';
 
 const base: Enquiry = {
   name: 'Ada Lovelace',
@@ -26,6 +32,10 @@ describe('validateEnquiry', () => {
     expect(validateEnquiry({ ...base, name })).toHaveProperty('name');
   });
 
+  it('rejects a name that is too long', () => {
+    expect(validateEnquiry({ ...base, name: 'A'.repeat(MAX_NAME_LENGTH + 1) })).toHaveProperty('name');
+  });
+
   it.each(['not-an-address', 'missing@tld', '@example.com', 'spaces in@example.com', ''])(
     'rejects %s as an email address',
     (email) => {
@@ -40,6 +50,18 @@ describe('validateEnquiry', () => {
   it('asks for a message with something in it', () => {
     expect(validateEnquiry({ ...base, message: 'hi' })).toHaveProperty('message');
     expect(validateEnquiry({ ...base, message: '          ' })).toHaveProperty('message');
+  });
+
+  it('rejects a message that is too long', () => {
+    expect(
+      validateEnquiry({ ...base, message: 'A'.repeat(MAX_MESSAGE_LENGTH + 1) }),
+    ).toHaveProperty('message');
+  });
+
+  it('validates optional phone when provided', () => {
+    expect(validateEnquiry({ ...base, phone: '123' })).toHaveProperty('phone');
+    expect(validateEnquiry({ ...base, phone: '+971501234567' })).not.toHaveProperty('phone');
+    expect(validateEnquiry({ ...base, phone: '' })).not.toHaveProperty('phone');
   });
 
   it('reports every problem at once rather than one at a time', () => {
@@ -69,8 +91,6 @@ describe('submitEnquiry', () => {
     respondWith(503);
     const result = await submitEnquiry(base, 'to@example.com');
 
-    // The visitor still wants to send it, so they are handed something that
-    // works — never a success that did not happen.
     expect(result.status).toBe('unconfigured');
     if (result.status !== 'unconfigured') throw new Error('unreachable');
     expect(result.mailto).toContain('mailto:to@example.com');
@@ -82,7 +102,6 @@ describe('submitEnquiry', () => {
     respondWith(503);
     const result = await submitEnquiry(base, null);
 
-    // Somebody who has filled in a form should never be left holding nothing.
     expect(result.status).toBe('undeliverable');
     if (result.status !== 'undeliverable') throw new Error('unreachable');
     expect(result.body).toContain(base.message);
