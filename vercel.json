@@ -1,0 +1,13 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": {
+      "description": "API endpoint for backend services"
+    }
+  },
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+}
