@@ -119,7 +119,7 @@ export function ResidenceExplorer() {
           view={framed.view}
           mode="journey"
           timeOfDay={timeOfDay}
-          parallax={reducedMotion || coarsePointer ? 0 : 2.5}
+          parallax={reducedMotion || coarsePointer ? 0 : 4.0}
           label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
           hotspots={{ activeId: openId, onSelect: select }}
         >

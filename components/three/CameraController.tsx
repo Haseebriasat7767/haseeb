@@ -232,8 +232,8 @@ export function CameraController({
       framed.current.y += pointer.y * parallax * 0.45;
     }
 
-    // Aggressive smoothing for much faster camera transitions on all devices
-    const smoothing = mode === 'journey' ? 0.008 : 0.004;
+    // Maximum smoothing for instant-feeling camera transitions on mobile and tablet
+    const smoothing = mode === 'journey' ? 0.015 : 0.008;
     camera.position.lerp(framed.current, 1 - Math.pow(smoothing, step));
 
     // Easing the look-at target as well is what keeps a long move reading as
@@ -295,8 +295,8 @@ export function CameraController({
           maxDistance={130}
           minPolarAngle={0.2}
           maxPolarAngle={Math.PI / 2.15}
-          rotateSpeed={0.55}
-          zoomSpeed={0.6}
+          rotateSpeed={0.85}
+          zoomSpeed={0.95}
           autoRotate={!reducedMotion}
           autoRotateSpeed={0.25}
         />
