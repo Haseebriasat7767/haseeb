@@ -150,7 +150,11 @@ export function TouchSticks({ active }: { active: boolean }) {
   };
 
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-30 select-none" style={{ touchAction: 'none' }}>
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-30 select-none"
+      style={{ touchAction: 'none' }}
+    >
       {/* The zones sit below the chrome so the walk toggle and floor picker
           still take a tap, and stop short of the very bottom edge, which on
           iOS is the home indicator's swipe area. */}

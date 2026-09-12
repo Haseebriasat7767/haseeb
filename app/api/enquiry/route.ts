@@ -1,7 +1,7 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { NextResponse } from 'next/server';
 import { validateEnquiry, type Enquiry } from '@/lib/contact/enquiry';
-import { rateLimited } from '@/lib/server/rate-limit';
+import { getClientIP, rateLimited } from '@/lib/server/rate-limit';
 
 /**
  * Where a private-viewing enquiry actually goes.
@@ -60,6 +60,9 @@ const MIN_ELAPSED_MS = 3000;
 /** Enquiries per address per window, and the window. */
 const LIMIT = { limit: 4, windowMs: 10 * 60 * 1000 };
 
+/** Maximum JSON body size — prevents large payload abuse */
+const MAX_BODY_SIZE = 10 * 1024;
+
 /** Escapes text bound for an HTML mail body. */
 function escape(value: string): string {
   return value
@@ -86,17 +89,18 @@ type SmtpConfig = {
  * at all rather than being allowed to fail later at send time.
  */
 function readSmtpConfig(): SmtpConfig | null {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const password = process.env.SMTP_PASSWORD;
-  const to = process.env.ENQUIRY_TO;
-  const from = process.env.ENQUIRY_FROM;
+  const host = process.env.SMTP_HOST?.trim();
+  const user = process.env.SMTP_USER?.trim();
+  const password = process.env.SMTP_PASSWORD?.trim();
+  const to = process.env.ENQUIRY_TO?.trim();
+  const from = process.env.ENQUIRY_FROM?.trim();
 
   // 587 with STARTTLS is what virtually every provider wants; 465 is implicit
   // TLS and is the other one worth supporting. Anything else has to be named.
   const port = Number(process.env.SMTP_PORT ?? 587);
 
   if (!host || !user || !password || !to || !from || !Number.isFinite(port)) return null;
+  if (port < 1 || port > 65535) return null;
   return { host, port, user, password, to, from };
 }
 
@@ -121,6 +125,10 @@ function getTransport(config: SmtpConfig): Transporter {
     auth: { user: config.user, pass: config.password },
     pool: true,
     maxConnections: 2,
+    // Timeouts to prevent hanging connections
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
   });
   return transport;
 }
@@ -134,25 +142,36 @@ function getTransport(config: SmtpConfig): Transporter {
  * failure this whole route exists to prevent.
  */
 async function sendViaWeb3Forms(accessKey: string, enquiry: Enquiry): Promise<void> {
-  const response = await fetch('https://api.web3forms.com/submit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({
-      access_key: accessKey,
-      subject: `Private viewing enquiry — ${enquiry.name}`,
-      from_name: 'AURELIA',
-      // Named so the forwarded email is readable rather than a field dump.
-      name: enquiry.name,
-      email: enquiry.email,
-      telephone: enquiry.phone || '—',
-      preferred_viewing: enquiry.preferredDate || '—',
-      message: enquiry.message,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  const body = (await response.json().catch(() => ({}))) as { success?: boolean; message?: string };
-  if (!response.ok || body.success !== true) {
-    throw new Error(`Web3Forms ${response.status}: ${body.message ?? 'rejected'}`);
+  try {
+    const response = await fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        access_key: accessKey,
+        subject: `Private viewing enquiry — ${enquiry.name}`,
+        from_name: 'AURELIA',
+        // Named so the forwarded email is readable rather than a field dump.
+        name: enquiry.name,
+        email: enquiry.email,
+        telephone: enquiry.phone || '—',
+        preferred_viewing: enquiry.preferredDate || '—',
+        message: enquiry.message,
+      }),
+      signal: controller.signal,
+    });
+
+    const body = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      message?: string;
+    };
+    if (!response.ok || body.success !== true) {
+      throw new Error(`Web3Forms ${response.status}: ${body.message ?? 'rejected'}`);
+    }
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -163,6 +182,31 @@ function row(label: string, value: string): string {
 export async function POST(request: Request) {
   const smtp = readSmtpConfig();
   const web3FormsKey = process.env.WEB3FORMS_ACCESS_KEY?.trim() || null;
+
+  // Check content length early
+  const contentLength = request.headers.get('content-length');
+  if (contentLength && Number(contentLength) > MAX_BODY_SIZE) {
+    return NextResponse.json({ status: 'invalid', error: 'Payload too large' }, { status: 413 });
+  }
+
+  // Origin check — allow same-origin and configured site URL
+  const origin = request.headers.get('origin');
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (origin && siteUrl) {
+    try {
+      const originHost = new URL(origin).host;
+      const siteHost = new URL(siteUrl).host;
+      // Allow same host and localhost for dev
+      const isLocalhost =
+        originHost.startsWith('localhost:') || originHost.startsWith('127.0.0.1:');
+      if (originHost !== siteHost && !isLocalhost) {
+        console.warn('[enquiry] blocked origin', origin);
+        return NextResponse.json({ status: 'invalid' }, { status: 403 });
+      }
+    } catch {
+      // Invalid origin header — ignore, let other checks handle
+    }
+  }
 
   let body: unknown;
   try {
@@ -209,7 +253,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: 'unconfigured' }, { status: 503 });
   }
 
-  if (rateLimited('enquiry', enquiry.email.trim().toLowerCase(), LIMIT)) {
+  const clientIP = getClientIP(request);
+  const rateKey = `${clientIP}:${enquiry.email.trim().toLowerCase()}`;
+
+  if (rateLimited('enquiry', rateKey, LIMIT)) {
     return NextResponse.json({ status: 'rateLimited' }, { status: 429 });
   }
 

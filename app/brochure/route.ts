@@ -134,8 +134,13 @@ function drawPlate(page: PDFPage, image: PDFImage, caption: string, font: PDFFon
   page.drawImage(image, { x: MARGIN, y: bottom + 14, width: CONTENT, height });
 }
 
-async function plate(file: string): Promise<Buffer> {
-  return readFile(path.join(process.cwd(), 'public', 'assets', 'brochure', file));
+async function plate(file: string): Promise<Buffer | null> {
+  try {
+    return await readFile(path.join(process.cwd(), 'public', 'assets', 'brochure', file));
+  } catch (error) {
+    console.warn(`[brochure] missing plate ${file}:`, error);
+    return null;
+  }
 }
 
 export async function GET(): Promise<Response> {
@@ -155,18 +160,25 @@ export async function GET(): Promise<Response> {
   // Full bleed down to the title block: scaled to the height it has to
   // fill and centred, so the overflow is cropped off the sides rather than
   // leaving the bottom third of the cover empty.
-  const arrival = await pdf.embedJpg(await plate('arrival.jpg'));
-  const coverTop = 268;
-  const coverHeight = A4.height - coverTop;
-  const coverWidth = (coverHeight * arrival.width) / arrival.height;
-  cover.drawImage(arrival, {
-    x: (A4.width - coverWidth) / 2,
-    y: coverTop,
-    width: coverWidth,
-    height: coverHeight,
-  });
+  const arrivalBuffer = await plate('arrival.jpg');
+  if (arrivalBuffer) {
+    try {
+      const arrival = await pdf.embedJpg(arrivalBuffer);
+      const coverTop = 268;
+      const coverHeight = A4.height - coverTop;
+      const coverWidth = (coverHeight * arrival.width) / arrival.height;
+      cover.drawImage(arrival, {
+        x: (A4.width - coverWidth) / 2,
+        y: coverTop,
+        width: coverWidth,
+        height: coverHeight,
+      });
+    } catch (error) {
+      console.warn('[brochure] failed to embed arrival.jpg', error);
+    }
+  }
 
-  let y = coverTop - 56;
+  let y = 268 - 56;
   drawEyebrow(cover, property.collection, MARGIN, y, regular);
   y -= 30;
   cover.drawText(property.name, { x: MARGIN, y, size: 26, font: bold, color: INK });
@@ -210,8 +222,15 @@ export async function GET(): Promise<Response> {
     y -= 18;
   }
 
-  const living = await pdf.embedJpg(await plate(PLATES.living.file));
-  drawPlate(spec, living, PLATES.living.caption, regular, MARGIN);
+  const livingBuffer = await plate(PLATES.living.file);
+  if (livingBuffer) {
+    try {
+      const living = await pdf.embedJpg(livingBuffer);
+      drawPlate(spec, living, PLATES.living.caption, regular, MARGIN);
+    } catch (error) {
+      console.warn(`[brochure] failed to embed ${PLATES.living.file}`, error);
+    }
+  }
 
   // --- Materials ---------------------------------------------------------
   const materials = pdf.addPage([A4.width, A4.height]);
@@ -236,22 +255,25 @@ export async function GET(): Promise<Response> {
     y -= 12;
   }
 
-  const pool = await pdf.embedJpg(await plate(PLATES.pool.file));
-  drawPlate(materials, pool, PLATES.pool.caption, regular, MARGIN);
+  const poolBuffer = await plate(PLATES.pool.file);
+  if (poolBuffer) {
+    try {
+      const pool = await pdf.embedJpg(poolBuffer);
+      drawPlate(materials, pool, PLATES.pool.caption, regular, MARGIN);
+    } catch (error) {
+      console.warn(`[brochure] failed to embed ${PLATES.pool.file}`, error);
+    }
+  }
 
   // --- Closing plate and disclosure -------------------------------------
   const closing = pdf.addPage([A4.width, A4.height]);
   closing.drawRectangle({ x: 0, y: 0, width: A4.width, height: A4.height, color: PAPER });
 
-  // Contact details are printed only when they are configured — the same
-  // null-means-don't-render rule the rest of the product follows. A
-  // brochure with an invented number in it is worse than one with none.
-  const channels = [CLIENT.agent.email, CLIENT.agent.phone].filter(Boolean) as string[];
+  const channels = [CLIENT.agent.email, CLIENT.agent.phoneDisplay ?? CLIENT.agent.phone].filter(
+    Boolean,
+  ) as string[];
   const disclosureLines = wrapText(DISCLOSURE, regular, 8, CONTENT);
 
-  // Built from the foot upward, because the disclosure says the studio is
-  // credited *below* it — that sentence is the site's own and is not being
-  // reworded to suit a layout, so the layout follows the sentence.
   let foot = MARGIN;
   drawEyebrow(closing, `${PROPERTY.architect} · ${PROPERTY.year}`, MARGIN, foot, regular);
   foot += 22;
@@ -276,15 +298,22 @@ export async function GET(): Promise<Response> {
     foot += 30;
   }
 
-  const master = await pdf.embedJpg(await plate(PLATES.master.file));
-  const masterHeight = (CONTENT * master.height) / master.width;
-  drawPlate(
-    closing,
-    master,
-    PLATES.master.caption,
-    regular,
-    A4.height - MARGIN - masterHeight - 14,
-  );
+  const masterBuffer = await plate(PLATES.master.file);
+  if (masterBuffer) {
+    try {
+      const master = await pdf.embedJpg(masterBuffer);
+      const masterHeight = (CONTENT * master.height) / master.width;
+      drawPlate(
+        closing,
+        master,
+        PLATES.master.caption,
+        regular,
+        A4.height - MARGIN - masterHeight - 14,
+      );
+    } catch (error) {
+      console.warn(`[brochure] failed to embed ${PLATES.master.file}`, error);
+    }
+  }
 
   const bytes = await pdf.save();
   return new Response(Buffer.from(bytes), {

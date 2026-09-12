@@ -32,7 +32,9 @@ export const SITE = {
   contact: {
     email: CLIENT.agent.email,
     phone: CLIENT.agent.phone,
-    address: 'By private appointment',
+    phoneDisplay: CLIENT.agent.phoneDisplay,
+    address: CLIENT.contact.address,
+    addressDisplay: CLIENT.contact.addressDisplay,
   },
 } as const;
 
