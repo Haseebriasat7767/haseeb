@@ -120,8 +120,7 @@ export default function AccessibilityPage() {
           <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a> and describe what
           happened, what you were using (browser, OS, assistive tech), and the page URL. Reports of
           accessibility barriers are treated as faults, not as feature requests, and we aim to
-          respond within 5 working days. You can also use the{' '}
-          <a href="/contact">contact form</a>.
+          respond within 5 working days. You can also use the <a href="/contact">contact form</a>.
         </p>
       ) : (
         <p>

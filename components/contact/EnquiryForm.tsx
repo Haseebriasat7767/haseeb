@@ -88,7 +88,11 @@ export function EnquiryForm() {
 
   if (status.kind === 'sent') {
     return (
-      <div role="status" aria-live="polite" className="border-alabaster/10 flex flex-col gap-4 border p-8">
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-alabaster/10 flex flex-col gap-4 border p-8"
+      >
         <p className="text-eyebrow text-gold uppercase">Enquiry received</p>
         <p className="font-display text-alabaster text-2xl font-light">Thank you.</p>
         <p className="text-mist text-sm leading-relaxed">
@@ -101,7 +105,11 @@ export function EnquiryForm() {
 
   if (status.kind === 'rateLimited') {
     return (
-      <div role="status" aria-live="polite" className="border-alabaster/10 flex flex-col gap-4 border p-8">
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-alabaster/10 flex flex-col gap-4 border p-8"
+      >
         <p className="text-eyebrow text-gold uppercase">Already received</p>
         <p className="text-mist text-sm leading-relaxed">
           We have your enquiry — several, in fact. There is no need to send another; the team will
@@ -123,7 +131,11 @@ export function EnquiryForm() {
 
   if (status.kind === 'unconfigured') {
     return (
-      <div role="status" aria-live="polite" className="border-alabaster/10 flex flex-col gap-5 border p-8">
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-alabaster/10 flex flex-col gap-5 border p-8"
+      >
         <p className="text-eyebrow text-gold uppercase">Ready to send</p>
         <p className="font-display text-alabaster text-2xl font-light">Your enquiry is composed.</p>
         <p className="text-mist text-sm leading-relaxed">
@@ -144,7 +156,11 @@ export function EnquiryForm() {
 
   if (status.kind === 'undeliverable') {
     return (
-      <div role="status" aria-live="polite" className="border-alabaster/10 flex flex-col gap-5 border p-8">
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-alabaster/10 flex flex-col gap-5 border p-8"
+      >
         <p className="text-eyebrow text-gold uppercase">Enquiry ready</p>
         <p className="font-display text-alabaster text-2xl font-light">
           Your details are ready to send.
@@ -166,7 +182,12 @@ export function EnquiryForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-8" aria-label="Private viewing enquiry">
+    <form
+      onSubmit={onSubmit}
+      noValidate
+      className="flex flex-col gap-8"
+      aria-label="Private viewing enquiry"
+    >
       <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
         <label htmlFor="company-ref">Company</label>
         <input

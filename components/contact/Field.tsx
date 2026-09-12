@@ -25,7 +25,8 @@ export function Field({ label, error, optional, multiline, hint, required, ...pr
   const id = useId();
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
-  const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
+  const describedBy =
+    [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
 
   const shared = cn(
     'peer w-full bg-transparent pt-3 pb-3 sm:pt-6 sm:pb-2 font-sans text-alabaster',
@@ -71,7 +72,11 @@ export function Field({ label, error, optional, multiline, hint, required, ...pr
       >
         {label}
         {optional ? <span className="text-stone normal-case"> (optional)</span> : null}
-        {required ? <span className="text-gold ml-1" aria-hidden="true">*</span> : null}
+        {required ? (
+          <span className="text-gold ml-1" aria-hidden="true">
+            *
+          </span>
+        ) : null}
       </label>
 
       {hint && !error ? (

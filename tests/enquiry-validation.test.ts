@@ -33,7 +33,9 @@ describe('validateEnquiry', () => {
   });
 
   it('rejects a name that is too long', () => {
-    expect(validateEnquiry({ ...base, name: 'A'.repeat(MAX_NAME_LENGTH + 1) })).toHaveProperty('name');
+    expect(validateEnquiry({ ...base, name: 'A'.repeat(MAX_NAME_LENGTH + 1) })).toHaveProperty(
+      'name',
+    );
   });
 
   it.each(['not-an-address', 'missing@tld', '@example.com', 'spaces in@example.com', ''])(

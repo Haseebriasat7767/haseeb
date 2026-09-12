@@ -10,42 +10,42 @@ All issues and risks identified in the initial inspection have been fixed or doc
 
 ### P0 — Critical (would block launch or lose enquiries)
 
-| Issue | Fix |
-|-------|-----|
+| Issue                                                                         | Fix                                                                                                                                                |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | No mail credentials → silent loss (form showed success but delivered nothing) | Already fixed in base, but hardened: 503 + mailto fallback, never false 200, rate limit after unconfigured check, origin check, payload size limit |
-| Broken wa.me link from invalid phone format | Fixed: E.164 validation (7-15 digits), separate `NEXT_PUBLIC_ENQUIRY_WHATSAPP` env, digits normalization, invalid = null (hide channel) |
+| Broken wa.me link from invalid phone format                                   | Fixed: E.164 validation (7-15 digits), separate `NEXT_PUBLIC_ENQUIRY_WHATSAPP` env, digits normalization, invalid = null (hide channel)            |
 
 ### P1 — High (security, validation, resilience)
 
-| Issue | Fix |
-|-------|-----|
-| No security headers | Added in `next.config.ts`: X-Frame-Options SAMEORIGIN, X-Content-Type nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy (no camera/mic/geo), X-XSS-Protection, HSTS, Cache-Control immutable for /assets |
-| Rate limiting bypass via cold starts, IPv6, x-forwarded-for chain | Fixed: `getClientIP()` handles x-forwarded-for first entry, x-real-ip, cf-connecting-ip, strips ports, IPv6 brackets, periodic cleanup, MAX_KEYS 500, key now `IP:email` for enquiry |
-| Enquiry payload abuse | Fixed: MAX_BODY_SIZE 10KB, field slicing (name 200, email 320, phone 60, message 4000), MAX_MESSAGE_LENGTH 2000, MAX_NAME_LENGTH 120, fetch timeout 15s, SMTP timeouts 10s/10s/20s |
-| Origin / CSRF | Added Origin check vs SITE_URL when both set, allows localhost, 403 on mismatch |
-| Client error log PII / payload | Fixed: clip 4000 chars, IP redacted in log, body size limit, rate limit per IP |
-| Brochure missing JPGs → build crash | Fixed: `plate()` returns null on missing file, try/catch per embed, logs warning, continues without image |
-| Contact validation | Added phone validation in `validateEnquiry`, email lowercased + format check, address env-driven |
+| Issue                                                             | Fix                                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No security headers                                               | Added in `next.config.ts`: X-Frame-Options SAMEORIGIN, X-Content-Type nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy (no camera/mic/geo), X-XSS-Protection, HSTS, Cache-Control immutable for /assets |
+| Rate limiting bypass via cold starts, IPv6, x-forwarded-for chain | Fixed: `getClientIP()` handles x-forwarded-for first entry, x-real-ip, cf-connecting-ip, strips ports, IPv6 brackets, periodic cleanup, MAX_KEYS 500, key now `IP:email` for enquiry                                                |
+| Enquiry payload abuse                                             | Fixed: MAX_BODY_SIZE 10KB, field slicing (name 200, email 320, phone 60, message 4000), MAX_MESSAGE_LENGTH 2000, MAX_NAME_LENGTH 120, fetch timeout 15s, SMTP timeouts 10s/10s/20s                                                  |
+| Origin / CSRF                                                     | Added Origin check vs SITE_URL when both set, allows localhost, 403 on mismatch                                                                                                                                                     |
+| Client error log PII / payload                                    | Fixed: clip 4000 chars, IP redacted in log, body size limit, rate limit per IP                                                                                                                                                      |
+| Brochure missing JPGs → build crash                               | Fixed: `plate()` returns null on missing file, try/catch per embed, logs warning, continues without image                                                                                                                           |
+| Contact validation                                                | Added phone validation in `validateEnquiry`, email lowercased + format check, address env-driven                                                                                                                                    |
 
 ### P2 — Medium (UX, a11y, docs)
 
-| Issue | Fix |
-|-------|-----|
-| SITE.contact.address static "By private appointment" not env-driven | Fixed: `NEXT_PUBLIC_CONTACT_ADDRESS` env, `addressDisplay` fallback, CLIENT.contact.address + addressDisplay, SITE reads from CLIENT |
-| CLIENT.agent.whatsapp reused phone, no separate var | Fixed: `NEXT_PUBLIC_ENQUIRY_WHATSAPP` separate, fallback to phone, validates digits |
-| DirectChannels console.warn in prod | Fixed: only warns in dev (NODE_ENV !== production) |
-| AgentCard phone display | Fixed: uses phoneDisplay original format for UI, phone normalized for tel: link, aria-labels added |
-| Footer phone not link | Fixed: now `<a href=tel:>` with display format, added conceptual disclosure |
-| MobileMenu address | Fixed: uses addressDisplay, email optional |
-| EnquiryForm error handling | Improved: timeout via AbortController, failed message includes error text, hint for char count, aria-live, required asterisk, aria-required, hint linked via aria-describedby |
-| Field component | Improved: aria-required, hint prop, error + hint both in aria-describedby, required * visual |
-| WebGLFallback | Improved: role=status aria-live, body copy mentions floor plans/gallery/enquiry still available, adds buttons to floor plan and gallery |
-| Privacy page incomplete | Fixed: conditional sections for SMTP_HOST / Web3Forms, operator note as bordered note not bold error, added DNT, retention 12 months, security section, phone/address display |
-| Terms page thin | Expanded: performance note, liability clause, third-party links include WhatsApp/email, areas computed note |
-| Accessibility page thin | Expanded: manual checks listed, compatibility, future improvements, response time 5 days, feedback includes OS/browser/AT |
-| Performance baseline not measured | Documented in OPERATIONS.md, HUD exists but needs real GPU measurement — listed as open required task |
-| Tower core DAT-01 placeholder | Documented in OPERATIONS.md and CoreGeometry.ts comment — one flat per plate assumption, needs client floor plans, no code change needed now |
-| .env.example incomplete | Updated: documents whatsapp separate, contact address, validation notes, examples, trimmed handling |
+| Issue                                                               | Fix                                                                                                                                                                           |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SITE.contact.address static "By private appointment" not env-driven | Fixed: `NEXT_PUBLIC_CONTACT_ADDRESS` env, `addressDisplay` fallback, CLIENT.contact.address + addressDisplay, SITE reads from CLIENT                                          |
+| CLIENT.agent.whatsapp reused phone, no separate var                 | Fixed: `NEXT_PUBLIC_ENQUIRY_WHATSAPP` separate, fallback to phone, validates digits                                                                                           |
+| DirectChannels console.warn in prod                                 | Fixed: only warns in dev (NODE_ENV !== production)                                                                                                                            |
+| AgentCard phone display                                             | Fixed: uses phoneDisplay original format for UI, phone normalized for tel: link, aria-labels added                                                                            |
+| Footer phone not link                                               | Fixed: now `<a href=tel:>` with display format, added conceptual disclosure                                                                                                   |
+| MobileMenu address                                                  | Fixed: uses addressDisplay, email optional                                                                                                                                    |
+| EnquiryForm error handling                                          | Improved: timeout via AbortController, failed message includes error text, hint for char count, aria-live, required asterisk, aria-required, hint linked via aria-describedby |
+| Field component                                                     | Improved: aria-required, hint prop, error + hint both in aria-describedby, required * visual                                                                                  |
+| WebGLFallback                                                       | Improved: role=status aria-live, body copy mentions floor plans/gallery/enquiry still available, adds buttons to floor plan and gallery                                       |
+| Privacy page incomplete                                             | Fixed: conditional sections for SMTP_HOST / Web3Forms, operator note as bordered note not bold error, added DNT, retention 12 months, security section, phone/address display |
+| Terms page thin                                                     | Expanded: performance note, liability clause, third-party links include WhatsApp/email, areas computed note                                                                   |
+| Accessibility page thin                                             | Expanded: manual checks listed, compatibility, future improvements, response time 5 days, feedback includes OS/browser/AT                                                     |
+| Performance baseline not measured                                   | Documented in OPERATIONS.md, HUD exists but needs real GPU measurement — listed as open required task                                                                         |
+| Tower core DAT-01 placeholder                                       | Documented in OPERATIONS.md and CoreGeometry.ts comment — one flat per plate assumption, needs client floor plans, no code change needed now                                  |
+| .env.example incomplete                                             | Updated: documents whatsapp separate, contact address, validation notes, examples, trimmed handling                                                                           |
 
 ### Tests & Tooling
 

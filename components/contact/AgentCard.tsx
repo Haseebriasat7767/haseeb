@@ -100,8 +100,8 @@ export function AgentCard() {
 
         {whatsapp || tel || mailto ? null : (
           <li className="text-mist text-sm leading-relaxed">
-            Enquiries are taken through the form. Direct channels appear once
-            contact details are configured.
+            Enquiries are taken through the form. Direct channels appear once contact details are
+            configured.
           </li>
         )}
 

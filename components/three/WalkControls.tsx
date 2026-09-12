@@ -37,8 +37,8 @@ const EYE = 1.68;
 /** How wide the visitor is. Wide enough not to slip through a mullion. */
 const RADIUS = 0.32;
 const GRAVITY = -22;
-const WALK_SPEED = 12.0;  // Increased from 3.4 for responsive mobile navigation
-const RUN_SPEED = 20.0;   // Increased from 7.0 for responsive mobile sprinting
+const WALK_SPEED = 12.0; // Increased from 3.4 for responsive mobile navigation
+const RUN_SPEED = 20.0; // Increased from 7.0 for responsive mobile sprinting
 /**
  * Furthest the capsule may move before collision is resolved again.
  *

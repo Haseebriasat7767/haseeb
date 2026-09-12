@@ -163,7 +163,10 @@ async function sendViaWeb3Forms(accessKey: string, enquiry: Enquiry): Promise<vo
       signal: controller.signal,
     });
 
-    const body = (await response.json().catch(() => ({}))) as { success?: boolean; message?: string };
+    const body = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      message?: string;
+    };
     if (!response.ok || body.success !== true) {
       throw new Error(`Web3Forms ${response.status}: ${body.message ?? 'rejected'}`);
     }
@@ -194,7 +197,8 @@ export async function POST(request: Request) {
       const originHost = new URL(origin).host;
       const siteHost = new URL(siteUrl).host;
       // Allow same host and localhost for dev
-      const isLocalhost = originHost.startsWith('localhost:') || originHost.startsWith('127.0.0.1:');
+      const isLocalhost =
+        originHost.startsWith('localhost:') || originHost.startsWith('127.0.0.1:');
       if (originHost !== siteHost && !isLocalhost) {
         console.warn('[enquiry] blocked origin', origin);
         return NextResponse.json({ status: 'invalid' }, { status: 403 });

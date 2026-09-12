@@ -59,8 +59,8 @@ export default function PrivacyPage() {
       </p>
       <p>
         The result is a count of how many people looked at a page and how quickly it loaded for
-        them. It is not a profile, and it cannot be turned into one. You can opt out by enabling
-        Do Not Track in your browser — Vercel Analytics respects DNT.
+        them. It is not a profile, and it cannot be turned into one. You can opt out by enabling Do
+        Not Track in your browser — Vercel Analytics respects DNT.
       </p>
 
       <h2>What you send us</h2>
@@ -107,8 +107,8 @@ export default function PrivacyPage() {
       <h2>How long it is kept</h2>
       <p>
         Enquiries are kept for as long as the conversation they belong to is live, and then no
-        longer — typically 12 months after last contact unless a longer retention is required by
-        law or agreed with you. Analytics figures are aggregate counts with nothing in them that
+        longer — typically 12 months after last contact unless a longer retention is required by law
+        or agreed with you. Analytics figures are aggregate counts with nothing in them that
         identifies anybody.
       </p>
 

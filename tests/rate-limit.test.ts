@@ -52,7 +52,9 @@ describe('getClientIP', () => {
   }
 
   it('reads x-forwarded-for first entry', () => {
-    expect(getClientIP(req({ 'x-forwarded-for': '203.0.113.1, 198.51.100.2' }))).toBe('203.0.113.1');
+    expect(getClientIP(req({ 'x-forwarded-for': '203.0.113.1, 198.51.100.2' }))).toBe(
+      '203.0.113.1',
+    );
   });
 
   it('falls back to x-real-ip', () => {
