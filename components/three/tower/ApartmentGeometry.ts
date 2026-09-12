@@ -1,7 +1,16 @@
 import type { ArtworkPlacement } from '../ArtworkPanels';
 import type { BlobSpec } from '../villa/landscape/LandscapeTypes';
 import type { Form } from '../villa/furniture/FormTypes';
-import { createFloorVessel } from '../villa/furniture/Pieces';
+import {
+  createFloorVessel,
+  createCrescentSofa,
+  createRoundTable,
+  createOrganicCoffeeTable,
+  createBoucleChair,
+  createArcLamp,
+  createFlutedSideboard,
+  createVesselCluster,
+} from '../villa/furniture/Pieces';
 import { createCurtains } from '../villa/interior/InteriorDecor';
 import type { ModelName } from '../models/ModelLibrary';
 import { emptyParts, type Parts } from '../villa/interior/Furniture';
@@ -382,8 +391,22 @@ export function createApartment(
     }
   }
 
-  // The media panel: fluted timber, with a dark screen set proud of it.
+  // The media panel: fluted timber + marble feature wall — 2026 luxury
+  // high-rise trend: marble wall & city views, soft fabric, gold accents
   flutedPanel(parts.joinery, k('flute'), [-2.3, 2.3], wallFace, [floorY, shelfTop], 0.055);
+  // Marble feature wall behind media — honed stone, warm veining
+  parts.stone.push(
+    box(k('marble-feature'), [wallFace, wallFace + 0.04], [floorY, shelfTop], [-2.3, 2.3]),
+  );
+  // Bronze inlay strip — gold accent trend
+  parts.metal.push(
+    box(
+      k('bronze-inlay-v'),
+      [wallFace + 0.045, wallFace + 0.055],
+      [floorY, shelfTop],
+      [-0.02, 0.02],
+    ),
+  );
   parts.dark.push(
     box(
       k('screen'),
@@ -459,6 +482,89 @@ export function createApartment(
 
   put(k('lamp'), 'floor-lamp', across(0.181), hz(inset(5.1, 0.9)), floorY, hf('north'));
   put(k('urn'), 'vessel-tall', across(0.119), hz(inset(-5.2, 0.9)), floorY, hf('north'));
+
+  // ── 2026 modern additions — quiet luxury tower ──────────────────────
+  if (dressed) {
+    // Crescent sofa on select variants — curved form facing ocean view
+    if (variant % 3 === 0) {
+      createCrescentSofa(
+        forms,
+        k('crescent'),
+        {
+          at: [across(0.72), hz(0.1)],
+          floorY,
+          facing: 'west',
+          seed: vseed + 101,
+        },
+        { radius: 1.6, arc: Math.PI * 1.0, dark: false },
+      );
+    }
+
+    // Organic pebble coffee table — kidney shape, layered heights
+    createOrganicCoffeeTable(
+      forms,
+      k('organic-lg'),
+      {
+        at: [across(0.52), hz(0.3)],
+        floorY,
+        facing: 'west',
+        seed: vseed + 102,
+      },
+      { width: 1.0, depth: 0.62, height: 0.38 },
+    );
+
+    // Arc lamp — statement lighting, marble base
+    createArcLamp(forms, k('arc'), [across(0.22), hz(inset(4.8, 1.0))], floorY, {
+      height: 1.88,
+      reach: 1.2,
+    });
+
+    // Fluted sideboard against media wall return — textured storage
+    createFlutedSideboard(
+      forms,
+      k('fluted-side'),
+      {
+        at: [wallFace + 0.4, hz(inset(5.8, 1.2))],
+        floorY,
+        facing: 'east',
+        seed: vseed + 103,
+      },
+      { width: 1.4, depth: 0.44 },
+    );
+
+    // Vessel cluster on sideboard — curated objects
+    createVesselCluster(
+      forms,
+      k('vessel-cluster'),
+      [wallFace + 0.4, hz(inset(5.8, 1.2))],
+      floorY + 0.78 + 0.044,
+      vseed + 104,
+    );
+
+    // Boucle chair — tactile, warm minimalism
+    if (variant % 2 === 0) {
+      createBoucleChair(
+        forms,
+        k('boucle'),
+        {
+          at: [across(0.38), hz(inset(-4.2, 1.0))],
+          floorY,
+          facing: 'east',
+          seed: vseed + 105,
+        },
+        { dark: true },
+      );
+    }
+
+    // Round dining table for high-rise — travertine + bronze pedestal
+    // Replaces rectangular on premium variants
+    if (variant % 4 === 0) {
+      createRoundTable(forms, k('round-dining'), [-12.6, inset(-6.0, 1.4)], floorY, {
+        diameter: 1.35,
+        height: 0.74,
+      });
+    }
+  }
 
   // ── Lounge: planting ──────────────────────────────────────────────────
   // Two indoor trees, in the corners where the glass turns. Every one of

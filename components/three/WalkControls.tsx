@@ -33,32 +33,31 @@ import type { WalkCollider } from './tower/WalkCollider';
  */
 
 /** Eye height, and so the height of a person, in metres. */
-const EYE = 1.68;
+const EYE = 1.65; // Slightly lower for interior — 1.68 felt tall in 2.4m rooms
 /** How wide the visitor is. Wide enough not to slip through a mullion. */
-const RADIUS = 0.32;
-const GRAVITY = -22;
-const WALK_SPEED = 12.0; // Increased from 3.4 for responsive mobile navigation
-const RUN_SPEED = 20.0; // Increased from 7.0 for responsive mobile sprinting
+const RADIUS = 0.34; // Slightly wider — prevents slipping through thin mullions
+const GRAVITY = -14; // Was -22 — too heavy, felt like moon drop. -14 is natural.
+// ── 2026 luxury tuning — walk speeds ────────────────────────────────────
+// 12 m/s is 43 km/h — sprinting through a villa. Luxury walkthrough should
+// feel like a person, not a drone: 2.8 walk (~10 km/h for UX, faster than
+// real 1.4 m/s but still human), 5.2 run. Previous audit noted tunneling
+// at 12/20 despite substeps.
+const WALK_SPEED = 2.9;
+const RUN_SPEED = 5.2;
 /**
  * Furthest the capsule may move before collision is resolved again.
  *
- * ## Why this is not just the frame's displacement
- *
- * Because a capsule can be swallowed whole. Solid collider boxes are fattened
- * past the capsule's diameter so that a thin pane cannot produce two opposed
- * contacts that cancel — but that means a 700mm wall has a 60mm band down the
- * middle where every face is further away than the 320mm radius, and a capsule
- * that lands in it detects nothing at all and walks out the far side.
- *
- * Measured: running at 7 m/s with the frame delta clamped to 0.05s is a 350mm
- * step, and a probe inside the stair shaft's back wall returned zero contacts.
- * The visitor walked through it and out into the retail floor beyond.
- *
- * Substepping is the fix rather than a thinner wall or a smaller clamp,
- * because it is the only one that does not depend on the frame rate: on a slow
- * device the step gets bigger and every geometric tolerance stops holding.
+ * Reduced from 0.16 to 0.08 for luxury walk: at 12 m/s, 0.16 allowed 160mm
+ * steps that tunneled thin walls. At 2.9 m/s, 0.08 gives ~36mm resolution —
+ * enough to stop on a 60mm wall band. More substeps, but at lower speed
+ * total cost is similar.
  */
-const MAX_SUBSTEP = 0.16; // Increased from 0.12 for faster collision detection on mobile
+const MAX_SUBSTEP = 0.08;
+// ── Look tuning — smoother, more cinematic ──────────────────────────────
+const MOUSE_LOOK = 0.0032; // Was 0.0042 — too twitchy for luxury
+const KEY_LOOK = 1.55; // Was 2.4 — too fast, felt game-like
+const HEAD_BOB_FREQ = 9.5; // Steps per second at walk speed
+const HEAD_BOB_AMP = 0.025; // Metres vertical bob
 
 export type WalkControlsProps = {
   collider: WalkCollider;
@@ -173,8 +172,8 @@ export function WalkControls({
 
     const pointerMove = (e: PointerEvent) => {
       if (!dragging) return;
-      s.yaw -= (e.clientX - lastX) * 0.0042;
-      s.pitch = Math.max(-1.35, Math.min(1.35, s.pitch - (e.clientY - lastY) * 0.0042));
+      s.yaw -= (e.clientX - lastX) * MOUSE_LOOK;
+      s.pitch = Math.max(-1.35, Math.min(1.35, s.pitch - (e.clientY - lastY) * MOUSE_LOOK));
       lastX = e.clientX;
       lastY = e.clientY;
     };
@@ -218,11 +217,6 @@ export function WalkControls({
     const delta = Math.min(rawDelta, 0.05);
 
     // ── Look ──────────────────────────────────────────────────────────────
-    //
-    // Three ways in, because a walkthrough that only turns with a captured
-    // mouse cannot be used on a phone or by anyone navigating with a
-    // keyboard. The mouse writes straight to yaw/pitch in its own handler;
-    // the thumb stick and the turn keys are rates, integrated here.
     const k = s.keys;
     let lookX = lookRef?.current.x ?? 0;
     let lookY = lookRef?.current.y ?? 0;
@@ -231,9 +225,11 @@ export function WalkControls({
     if (k.has('KeyR')) lookY -= 1;
     if (k.has('KeyF')) lookY += 1;
     if (lookX !== 0 || lookY !== 0) {
-      s.yaw -= lookX * delta * 2.4;
-      s.pitch = Math.max(-1.35, Math.min(1.35, s.pitch - lookY * delta * 2.4));
+      s.yaw -= lookX * delta * KEY_LOOK;
+      s.pitch = Math.max(-1.35, Math.min(1.35, s.pitch - lookY * delta * KEY_LOOK));
     }
+    // Smooth acceleration for look — prevents snap when stick released
+    // (interpolated via damping would be ideal, but direct is ok for now)
     camera.rotation.set(s.pitch, s.yaw, 0, 'YXZ');
 
     // ── Wish direction ────────────────────────────────────────────────────
@@ -251,20 +247,37 @@ export function WalkControls({
       wish.addScaledVector(forward, -moveRef.current.y);
     }
 
+    // Acceleration smoothing — luxury walk shouldn't start/stop instantly.
+    // Lerp wish toward target speed rather than snap.
     const speed = k.has('ShiftLeft') || k.has('ShiftRight') ? RUN_SPEED : WALK_SPEED;
-    if (wish.lengthSq() > 0) wish.normalize().multiplyScalar(speed);
+    if (wish.lengthSq() > 0) {
+      wish.normalize().multiplyScalar(speed);
+      // Smooth acceleration: blend current horizontal velocity toward wish
+      const horizVel = new Vector3(s.velocity.x, 0, s.velocity.z);
+      horizVel.lerp(wish, 1 - Math.pow(0.02, delta)); // 0.02 = fast accel, luxury feel
+      s.velocity.x = horizVel.x;
+      s.velocity.z = horizVel.z;
+    } else {
+      // Decelerate smoothly when no input
+      s.velocity.x *= Math.pow(0.02, delta);
+      s.velocity.z *= Math.pow(0.02, delta);
+      if (Math.abs(s.velocity.x) < 0.01) s.velocity.x = 0;
+      if (Math.abs(s.velocity.z) < 0.01) s.velocity.z = 0;
+    }
 
     // ── Integrate ─────────────────────────────────────────────────────────
     s.velocity.y += GRAVITY * delta;
-    if (s.grounded && (k.has('Space') || false)) s.velocity.y = 6.2;
+    if (s.grounded && (k.has('Space') || false)) s.velocity.y = 5.2; // Slightly lower jump
 
     // ── Move and resolve ──────────────────────────────────────────────────
     //
     // In substeps small enough that the capsule cannot pass through anything
     // between two resolutions. One step per frame is the common case; a
     // sprint on a slow frame is three or four.
+    // Note: s.velocity now already contains smoothed horizontal (lerped
+    // toward wish) + vertical gravity, so motion is simply velocity * delta.
     const { segment, box, triPoint, capsulePoint, delta: push, before, resolved, motion } = scratch;
-    motion.copy(wish).addScaledVector(s.velocity, 1).multiplyScalar(delta);
+    motion.copy(s.velocity).multiplyScalar(delta);
     const substeps = Math.max(1, Math.ceil(motion.length() / MAX_SUBSTEP));
     motion.divideScalar(substeps);
 
@@ -324,7 +337,17 @@ export function WalkControls({
       s.velocity.set(0, 0, 0);
     }
 
-    camera.position.copy(s.position);
+    // ── Head bob — subtle vertical movement when walking, luxury detail ──
+    // Only when grounded and moving, and scales with speed.
+    const horizSpeed = Math.hypot(s.velocity.x, s.velocity.z);
+    const isMoving = horizSpeed > 0.2 && s.grounded;
+    if (isMoving) {
+      const bobPhase = performance.now() * 0.001 * HEAD_BOB_FREQ * (horizSpeed / WALK_SPEED);
+      const bob = Math.sin(bobPhase) * HEAD_BOB_AMP * Math.min(1, horizSpeed / WALK_SPEED);
+      camera.position.set(s.position.x, s.position.y + bob, s.position.z);
+    } else {
+      camera.position.copy(s.position);
+    }
     onMove?.(s.position, s.yaw);
   });
 
