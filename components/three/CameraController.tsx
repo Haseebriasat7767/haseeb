@@ -232,21 +232,29 @@ export function CameraController({
       framed.current.y += pointer.y * parallax * 0.45;
     }
 
-    // Maximum smoothing for instant-feeling camera transitions on mobile and tablet
-    const smoothing = mode === 'journey' ? 0.015 : 0.008;
-    camera.position.lerp(framed.current, 1 - Math.pow(smoothing, step));
+    // ── 2026 luxury tuning — cinematic, slow, quiet ──────────────────
+    // Previous smoothing 0.015/0.008 felt instant/game-like. Luxury
+    // architecture film uses slow, critically damped moves: 0.06-0.08 for
+    // journey (framing changes), 0.04-0.05 for fixed/cinematic drift.
+    // Higher smoothing = slower, more weight, more expensive feeling.
+    const isJourney = mode === 'journey';
+    const posSmoothing = isJourney ? 0.068 : 0.045;
+    const targetSmoothing = isJourney ? 0.052 : 0.038;
+    const fovSmoothing = isJourney ? 0.06 : 0.042;
+
+    camera.position.lerp(framed.current, 1 - Math.pow(posSmoothing, step));
 
     // Easing the look-at target as well is what keeps a long move reading as
     // a single camera gesture instead of a pan snapped onto a dolly.
     current.current.set(
-      damp(current.current.x, target.current.x, smoothing, step),
-      damp(current.current.y, target.current.y, smoothing, step),
-      damp(current.current.z, target.current.z, smoothing, step),
+      damp(current.current.x, target.current.x, targetSmoothing, step),
+      damp(current.current.y, target.current.y, targetSmoothing, step),
+      damp(current.current.z, target.current.z, targetSmoothing, step),
     );
     camera.lookAt(current.current);
 
     if (Math.abs(camera.fov - targetFov) > 0.01) {
-      camera.fov = damp(camera.fov, targetFov, smoothing, step);
+      camera.fov = damp(camera.fov, targetFov, fovSmoothing, step);
       camera.updateProjectionMatrix();
     }
 
@@ -288,17 +296,20 @@ export function CameraController({
           target={view.target}
           enablePan={false}
           enableDamping
-          dampingFactor={0.06}
-          // Rotation is deliberately bounded: an architectural camera stays
-          // above the horizon and outside the building envelope.
-          minDistance={24}
-          maxDistance={130}
-          minPolarAngle={0.2}
-          maxPolarAngle={Math.PI / 2.15}
-          rotateSpeed={0.85}
-          zoomSpeed={0.95}
+          dampingFactor={0.052}
+          // ── 2026 luxury orbit tuning ─────────────────────────────────
+          // Previous min 24 blocked interior inspection — 1.5 allows walk
+          // into rooms. Max 85 keeps tighter, more intimate. Slower rotate
+          // and zoom for weighted, expensive feel. AutoRotate 0.12 vs 0.25
+          // so drift doesn't compete with drag-to-look.
+          minDistance={1.5}
+          maxDistance={85}
+          minPolarAngle={0.12}
+          maxPolarAngle={Math.PI / 2.05}
+          rotateSpeed={0.52}
+          zoomSpeed={0.62}
           autoRotate={!reducedMotion}
-          autoRotateSpeed={0.25}
+          autoRotateSpeed={0.12}
         />
       ) : null}
     </>

@@ -54,6 +54,15 @@ import {
   createPedestalTable,
   createSofa as buildSofa,
   createTableLamp,
+  createDiningChair as buildDiningChair,
+  createCrescentSofa,
+  createRoundTable,
+  createOrganicCoffeeTable,
+  createBoucleChair,
+  createArcLamp,
+  createFlutedSideboard,
+  createVesselCluster,
+  type Facing,
 } from '../furniture/Pieces';
 import {
   createBoardedWall,
@@ -497,17 +506,36 @@ export function createInteriorLayout(
   // metres of bare rug in the middle of the shot. A third seat turned in
   // from the west closes the U, and it is the piece that makes the group
   // read as somewhere people sit rather than as a showroom set.
-  buildSofa(
-    forms,
-    'living-sofa-west',
-    {
-      at: [livingWest + 2.1, mid(living.z) + 0.25],
-      floorY: living.floorY,
-      facing: 'east',
-      seed: 25,
-    },
-    { width: 2.0, depth: 0.98 },
-  );
+  //
+  // 2026 update: crescent sofa — the defining silhouette of quiet luxury.
+  // Replaces the boxy west sofa with a curved form that closes the U more
+  // organically and reads as bespoke. The straight sofa stays on the low
+  // tier; the crescent is the hero on medium/high.
+  if (detail === 'low') {
+    buildSofa(
+      forms,
+      'living-sofa-west',
+      {
+        at: [livingWest + 2.1, mid(living.z) + 0.25],
+        floorY: living.floorY,
+        facing: 'east',
+        seed: 25,
+      },
+      { width: 2.0, depth: 0.98 },
+    );
+  } else {
+    createCrescentSofa(
+      forms,
+      'living-crescent',
+      {
+        at: [livingWest + 1.8, mid(living.z) + 0.35],
+        floorY: living.floorY,
+        facing: 'east',
+        seed: 25,
+      },
+      { radius: 1.9, arc: Math.PI * 1.15, dark: false },
+    );
+  }
 
   // A stool at the open corner, which is where one actually ends up.
   createOttoman(
@@ -552,6 +580,70 @@ export function createInteriorLayout(
     [living.floorY + 1.0, living.floorY + 2.4],
   );
   // ── Living room styling ───────────────────────────────────────────────
+  // ── 2026 modern additions — sculptural, biophilic, layered ──────────
+  if (tier.decor) {
+    // Organic pebble coffee table — kidney shape, 2026 sculptural stone
+    createOrganicCoffeeTable(
+      forms,
+      'living-organic-table',
+      {
+        at: [livingCx + 0.9, mid(living.z) + 0.15],
+        floorY: living.floorY,
+        facing: 'south',
+        seed: 27,
+      },
+      { width: 1.1, depth: 0.68, height: 0.36 },
+    );
+
+    // Arc floor lamp — statement lighting, marble base + bronze arc
+    createArcLamp(forms, 'living-arc', [livingEast - 0.9, mid(living.z) + 0.2], living.floorY, {
+      height: 1.92,
+      reach: 1.35,
+    });
+
+    // Fluted sideboard — textured oak, invisible joinery trend
+    createFlutedSideboard(
+      forms,
+      'living-fluted',
+      {
+        at: [livingEast - 0.28, livingRearZ + 0.38],
+        floorY: living.floorY,
+        facing: 'west',
+        seed: 28,
+      },
+      { width: 1.6, depth: 0.46 },
+    );
+
+    // Vessel cluster on the fluted sideboard — curated objects at varying heights
+    const flutedTop = living.floorY + 0.78 + 0.044;
+    createVesselCluster(
+      forms,
+      'living-fluted-cluster',
+      [livingEast - 0.28, livingRearZ + 0.5],
+      flutedTop,
+      28,
+    );
+
+    // Additional biophilic — tall fiddle leaf fig in the corner
+    createPlanted(forms, parts.foliageClusters, 'living-plant-b', {
+      at: [livingWest + 0.7, living.z[1] - 0.9],
+      floorY: living.floorY,
+      height: 1.85,
+      seed: 29,
+    });
+
+    // Second artwork — layered art, curated gallery wall
+    createArtwork(
+      parts,
+      'living-art-b',
+      [livingEast - 2.2, livingEast - 0.5],
+      [living.floorY + 1.2, living.floorY + 2.3],
+      [livingRearZ + 0.14, livingRearZ + 0.2],
+      'z',
+      42,
+    );
+  }
+
   // Everything below is Phase 7F: the room was correctly planned and
   // completely unstaged, which is why it read as generated. Curtains first,
   // because they are the largest soft mass and the one that gives the
@@ -613,16 +705,44 @@ export function createInteriorLayout(
   const dining = rooms.dining;
   const diningCx = mid(dining.x);
   createRug(parts, 'dining-rug', diningCx, mid(dining.z) + 0.4, dining.floorY, 3.6, 2.6);
-  createDiningSet(
-    parts,
-    'dining-set',
-    diningCx,
-    mid(dining.z) + 0.4,
-    dining.floorY,
-    2.8,
-    1.15,
-    tier.seatDensity,
-  );
+  // Table — 2026: rectangular trestle set on the low tier, round travertine
+  // top on a bronze pedestal for medium/high — quiet luxury, intimacy.
+  const diningRound = tier.decor && detail !== 'low';
+  if (!diningRound) {
+    createDiningSet(
+      parts,
+      'dining-set',
+      diningCx,
+      mid(dining.z) + 0.4,
+      dining.floorY,
+      2.8,
+      1.15,
+      tier.seatDensity,
+    );
+  } else {
+    const diningCz = mid(dining.z) + 0.4;
+    createRoundTable(forms, 'dining-round', [diningCx, diningCz], dining.floorY, {
+      diameter: 1.55,
+      height: 0.74,
+      seed: 31,
+    });
+    // Five chairs around the circumference, each turned toward the table.
+    for (let i = 0; i < 5; i += 1) {
+      const angle = (i / 5) * Math.PI * 2;
+      const r = 1.15;
+      const cx = diningCx + Math.cos(angle) * r;
+      const cz = diningCz + Math.sin(angle) * r;
+      const deg = ((angle * 180) / Math.PI) % 360;
+      const facing: Facing =
+        deg < 45 || deg >= 315 ? 'west' : deg < 135 ? 'north' : deg < 225 ? 'east' : 'south';
+      buildDiningChair(
+        forms,
+        `dining-chair-${i}`,
+        { at: [cx, cz], floorY: dining.floorY, facing, seed: 31 + i },
+        false,
+      );
+    }
+  }
   if (tier.decor) {
     // A centrepiece and a low run of objects on the sideboard: enough that
     // the table reads as laid for the photograph, not for a meal.
@@ -914,16 +1034,18 @@ export function createInteriorLayout(
 
   createPileRug(forms, 'master-rug', [masterCx, masterBedCz + 0.5], master.floorY, 4.6, 3.8, 92);
 
-  // A pair of chairs in the window bay with a pedestal table between them,
-  // turned toward each other rather than squared to the room.
+  // A pair of chairs in the window bay with a pedestal table between them.
+  // 2026: boucle armchairs — tactile, enveloping, on a hidden plinth —
+  // on medium/high; the lounge chairs remain on the low tier.
   const masterChairZ = master.z[1] - 1.05;
-  createLoungeChair(
+  const masterChair = tier.decor && detail !== 'low' ? createBoucleChair : createLoungeChair;
+  masterChair(
     forms,
     'master-chair-a',
     { at: [masterCx - 1.15, masterChairZ], floorY: master.floorY, facing: 'north', seed: 63 },
     { dark: true },
   );
-  createLoungeChair(
+  masterChair(
     forms,
     'master-chair-b',
     { at: [masterCx + 1.15, masterChairZ], floorY: master.floorY, facing: 'north', seed: 64 },
@@ -934,6 +1056,22 @@ export function createInteriorLayout(
     radius: 0.21,
     seed: 65,
   });
+  // 2026 addition: organic side table and a vessel cluster in the bay
+  if (tier.decor) {
+    createOrganicCoffeeTable(
+      forms,
+      'master-organic',
+      { at: [masterCx - 1.8, masterChairZ + 0.6], floorY: master.floorY, facing: 'east', seed: 67 },
+      { width: 0.72, depth: 0.52, height: 0.42 },
+    );
+    createVesselCluster(
+      forms,
+      'master-cluster',
+      [masterCx + 1.8, master.z[0] + clear + 0.62],
+      master.floorY + 0.52,
+      67,
+    );
+  }
 
   if (tier.decor) {
     createDressedWindow(forms, 'master-curtain', {
@@ -1194,25 +1332,36 @@ export function createInteriorLayout(
   // hardest is the wrong place to be saving polygons.
   createPileRug(forms, 'lounge-rug', [loungeCx, mid(lounge.z) + 0.4], lounge.floorY, 4.4, 3.7, 77);
 
-  buildSofa(
+  // 2026: the upper lounge gets a crescent sofa for the ocean view —
+  // low-profile, facing the glazing, quiet luxury.
+  if (tier.decor && detail !== 'low') {
+    createCrescentSofa(
+      forms,
+      'lounge-crescent',
+      { at: [loungeCx, lounge.z[0] + 1.5], floorY: lounge.floorY, facing: 'south', seed: 71 },
+      { radius: 2.0, arc: Math.PI * 1.0, dark: false },
+    );
+  } else {
+    buildSofa(
+      forms,
+      'lounge-sofa',
+      { at: [loungeCx, lounge.z[0] + 1.6], floorY: lounge.floorY, facing: 'south', seed: 71 },
+      { width: 2.7, depth: 1.02 },
+    );
+  }
+  createOrganicCoffeeTable(
     forms,
-    'lounge-sofa',
-    { at: [loungeCx, lounge.z[0] + 1.6], floorY: lounge.floorY, facing: 'south', seed: 71 },
-    { width: 2.7, depth: 1.02 },
-  );
-  createLowTable(
-    forms,
-    'lounge-table',
+    'lounge-organic',
     { at: [loungeCx, mid(lounge.z) + 0.6], floorY: lounge.floorY, facing: 'south', seed: 72 },
-    { width: 1.35, depth: 0.78, height: 0.37 },
+    { width: 1.25, depth: 0.72, height: 0.36 },
   );
-  createLoungeChair(
+  createBoucleChair(
     forms,
     'lounge-chair-a',
     { at: [loungeCx + 2.5, mid(lounge.z) + 0.9], floorY: lounge.floorY, facing: 'west', seed: 73 },
     { dark: true },
   );
-  createLoungeChair(
+  createBoucleChair(
     forms,
     'lounge-chair-b',
     { at: [loungeCx - 2.5, mid(lounge.z) + 0.9], floorY: lounge.floorY, facing: 'east', seed: 74 },
@@ -1229,6 +1378,23 @@ export function createInteriorLayout(
     radius: 0.21,
     seed: 76,
   });
+  if (tier.decor) {
+    createArcLamp(forms, 'lounge-arc', [loungeCx - 2.2, lounge.z[1] - 1.2], lounge.floorY, {
+      height: 1.85,
+      reach: 1.1,
+    });
+    createFlutedSideboard(
+      forms,
+      'lounge-fluted',
+      {
+        at: [lounge.x[1] - 0.5, lounge.z[0] + 0.6],
+        floorY: lounge.floorY,
+        facing: 'west',
+        seed: 77,
+      },
+      { width: 1.5, depth: 0.44 },
+    );
+  }
 
   const library = rooms.library;
   // The library's north edge is open to the hall rather than walled, so the
@@ -1242,41 +1408,90 @@ export function createInteriorLayout(
     [library.floorY + 0.05, library.floorY + 2.1],
     tier.shelves,
   );
-  createSofa(
-    parts,
-    'library-sofa',
-    mid(library.x) + 0.6,
-    library.z[1] - 3.4,
-    library.floorY,
-    2.8,
-    1.05,
-    'south',
-  );
-  createCoffeeTable(
-    parts,
-    'library-table',
-    mid(library.x) + 0.6,
-    library.z[1] - 1.9,
-    library.floorY,
-    1.5,
-    0.85,
-  );
-  createArmchair(
-    parts,
-    'library-chair-a',
-    mid(library.x) - 0.8,
-    library.z[1] - 0.9,
-    library.floorY,
-    'north',
-  );
-  createArmchair(
-    parts,
-    'library-chair-b',
-    mid(library.x) + 2.0,
-    library.z[1] - 0.9,
-    library.floorY,
-    'north',
-  );
+  // 2026: on medium/high the library is furnished from the soft catalogue —
+  // crescent sofa, organic table, boucle chairs. Box builders on low.
+  if (tier.decor && detail !== 'low') {
+    createCrescentSofa(
+      forms,
+      'library-crescent',
+      {
+        at: [mid(library.x) + 0.6, library.z[1] - 3.4],
+        floorY: library.floorY,
+        facing: 'south',
+        seed: 141,
+      },
+      { radius: 1.8, arc: Math.PI * 0.95, dark: false },
+    );
+    createOrganicCoffeeTable(
+      forms,
+      'library-organic',
+      {
+        at: [mid(library.x) + 0.6, library.z[1] - 1.9],
+        floorY: library.floorY,
+        facing: 'south',
+        seed: 142,
+      },
+      { width: 1.35, depth: 0.78, height: 0.37 },
+    );
+    createBoucleChair(
+      forms,
+      'library-chair-a',
+      {
+        at: [mid(library.x) - 0.8, library.z[1] - 0.9],
+        floorY: library.floorY,
+        facing: 'north',
+        seed: 143,
+      },
+      { dark: true },
+    );
+    createBoucleChair(
+      forms,
+      'library-chair-b',
+      {
+        at: [mid(library.x) + 2.0, library.z[1] - 0.9],
+        floorY: library.floorY,
+        facing: 'north',
+        seed: 144,
+      },
+      { dark: true },
+    );
+  } else {
+    createSofa(
+      parts,
+      'library-sofa',
+      mid(library.x) + 0.6,
+      library.z[1] - 3.4,
+      library.floorY,
+      2.8,
+      1.05,
+      'south',
+    );
+    createCoffeeTable(
+      parts,
+      'library-table',
+      mid(library.x) + 0.6,
+      library.z[1] - 1.9,
+      library.floorY,
+      1.5,
+      0.85,
+    );
+    createArmchair(
+      parts,
+      'library-chair-a',
+      mid(library.x) - 0.8,
+      library.z[1] - 0.9,
+      library.floorY,
+      'north',
+    );
+    createArmchair(
+      parts,
+      'library-chair-b',
+      mid(library.x) + 2.0,
+      library.z[1] - 0.9,
+      library.floorY,
+      'north',
+    );
+  }
   createRug(
     parts,
     'library-rug',

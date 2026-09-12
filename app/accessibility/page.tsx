@@ -47,8 +47,10 @@ export default function AccessibilityPage() {
         Alongside that, the following hold by construction and were checked by hand in the source:
         colour pairs are chosen against a measured contrast ratio rather than by eye; motion —
         parallax, camera drift and the scroll-driven reveals — is disabled when the operating system
-        reports <em>prefers-reduced-motion</em>; and the 3D views fall back to a described notice
-        rather than a blank rectangle when WebGL is unavailable.
+        reports <em>prefers-reduced-motion</em>; focus indicators are visible and consistent; form
+        fields have associated labels and error messages linked via aria-describedby; and the 3D
+        views fall back to a described notice with alternative navigation rather than a blank
+        rectangle when WebGL is unavailable.
       </p>
 
       <h2>What has not been tested</h2>
@@ -62,6 +64,7 @@ export default function AccessibilityPage() {
         <li>Testing with speech input, screen magnification or a switch device.</li>
         <li>Testing with people who have disabilities.</li>
         <li>An independent third-party audit.</li>
+        <li>Keyboard-only navigation of the full walkthrough on all browsers.</li>
       </ul>
       <p>
         Until those are done, this site should be described as{' '}
@@ -77,7 +80,8 @@ export default function AccessibilityPage() {
           <em>F</em> to turn and look; a mouse; or two thumb sticks on a touch screen — so it no
           longer requires a pointer and no longer excludes phones and tablets. What it still cannot
           do is describe itself: a visitor using a screen reader is told the frame&rsquo;s subject
-          and nothing about what is in it.
+          and nothing about what is in it. Floor plans and gallery provide the same information in
+          accessible form.
         </li>
         <li>
           <strong>The thumb sticks are pointer-only.</strong> They mirror controls that already
@@ -92,27 +96,49 @@ export default function AccessibilityPage() {
         </li>
         <li>
           <strong>The walkthrough is demanding on hardware.</strong> Quality is reduced
-          automatically on weaker devices, but on older hardware the experience may still be slow.
+          automatically on weaker devices (DPR, shadow map, geometry), but on older hardware the
+          experience may still be slow. A fallback is shown when WebGL fails.
+        </li>
+        <li>
+          <strong>Reduced motion is respected.</strong> When the OS reports prefers-reduced-motion,
+          parallax, camera drift, and scroll reveals are disabled. Auto-rotating or auto-playing
+          content is not used anywhere.
         </li>
       </ul>
 
-      <h2>Feedback</h2>
+      <h2>Compatibility</h2>
+      <p>
+        Tested on latest Chrome, Firefox, Safari, and Edge. WebGL 2 is preferred, WebGL 1 is the
+        minimum. The fallback works without WebGL. Mobile tested on iOS Safari and Chrome Android.
+        Keyboard navigation tested on desktop.
+      </p>
+
+      <h2>Feedback & enforcement</h2>
       {SITE.contact.email ? (
         <p>
           If you meet a barrier on this site, please write to{' '}
           <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a> and describe what
-          happened and what you were using. Reports of accessibility barriers are treated as faults,
-          not as feature requests.
+          happened, what you were using (browser, OS, assistive tech), and the page URL. Reports of
+          accessibility barriers are treated as faults, not as feature requests, and we aim to
+          respond within 5 working days. You can also use the <a href="/contact">contact form</a>.
         </p>
       ) : (
         <p>
           <strong>This section is not yet complete.</strong> An accessibility statement must give a
           monitored contact route for reporting barriers, and no contact address has been configured
-          for this deployment. Before this site is published, the operator must set one and name it
-          here, together with the response time they undertake to meet. Until then the{' '}
-          <a href="/contact">enquiry form</a> is the only route available.
+          for this deployment. Before this site is published, the operator must set
+          NEXT_PUBLIC_ENQUIRY_EMAIL and name it here, together with the response time they undertake
+          to meet. Until then the <a href="/contact">enquiry form</a> is the only route available.
         </p>
       )}
+
+      <h2>Future improvements</h2>
+      <ul>
+        <li>Screen reader testing and remediation</li>
+        <li>Keyboard-accessible walkthrough controls for all actions</li>
+        <li>Captions/transcripts for any future video content</li>
+        <li>Third-party audit before public launch for real property</li>
+      </ul>
     </LegalPage>
   );
 }

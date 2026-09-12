@@ -28,16 +28,40 @@ const ENDPOINT = process.env.NEXT_PUBLIC_ENQUIRY_ENDPOINT || '/api/enquiry';
  */
 export const MIN_HUMAN_MS = 3000;
 
+/** Maximum enquiry payload size client will send */
+export const MAX_MESSAGE_LENGTH = 2000;
+export const MAX_NAME_LENGTH = 120;
+export const MAX_EMAIL_LENGTH = 254;
+
 /** Pragmatic address check: shape only, since the real test is delivery. */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export function validateEnquiry(enquiry: Enquiry): EnquiryErrors {
   const errors: EnquiryErrors = {};
 
-  if (enquiry.name.trim().length < 2) errors.name = 'Please enter your name.';
-  if (!EMAIL.test(enquiry.email.trim())) errors.email = 'Please enter a valid email address.';
-  if (enquiry.message.trim().length < 10) {
+  const name = enquiry.name.trim();
+  if (name.length < 2) errors.name = 'Please enter your name.';
+  else if (name.length > MAX_NAME_LENGTH)
+    errors.name = `Name is too long (max ${MAX_NAME_LENGTH} characters).`;
+
+  const email = enquiry.email.trim();
+  if (!EMAIL.test(email)) errors.email = 'Please enter a valid email address.';
+  else if (email.length > MAX_EMAIL_LENGTH)
+    errors.email = `Email is too long (max ${MAX_EMAIL_LENGTH} characters).`;
+
+  const message = enquiry.message.trim();
+  if (message.length < 10) {
     errors.message = 'Please tell us a little about your enquiry.';
+  } else if (message.length > MAX_MESSAGE_LENGTH) {
+    errors.message = `Message is too long (max ${MAX_MESSAGE_LENGTH} characters).`;
+  }
+
+  // Optional phone validation — if provided, must be plausible
+  if (enquiry.phone.trim().length > 0) {
+    const digits = enquiry.phone.replace(/\D/g, '');
+    if (digits.length < 7 || digits.length > 15) {
+      errors.phone = 'Please enter a valid telephone number.';
+    }
   }
 
   return errors;
@@ -74,7 +98,7 @@ function composeMailto(enquiry: Enquiry, to: string): string {
 }
 
 /**
- * Submits an enquiry.
+ * Submits an enquiry with timeout and proper error handling.
  *
  * A JSON POST to the route, which answers with a status rather than a bare
  * code so the form can tell apart the three things a visitor needs told
@@ -96,14 +120,28 @@ export async function submitEnquiry(
       ? { status: 'unconfigured', mailto: composeMailto(enquiry, fallbackTo) }
       : { status: 'undeliverable', body: composeBody(enquiry) };
 
-  const response = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...enquiry, ...guard }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  if (response.status === 503) return unsent();
-  if (response.status === 429) return { status: 'rateLimited' };
-  if (!response.ok) throw new Error(`Enquiry failed with status ${response.status}`);
-  return { status: 'sent' };
+  try {
+    const response = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...enquiry, ...guard }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.status === 503) return unsent();
+    if (response.status === 429) return { status: 'rateLimited' };
+    if (!response.ok) throw new Error(`Enquiry failed with status ${response.status}`);
+    return { status: 'sent' };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Request timed out — please try again.');
+    }
+    throw error;
+  }
 }

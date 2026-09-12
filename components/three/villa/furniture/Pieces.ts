@@ -1325,3 +1325,409 @@ export function createDiningChair(
     }
   }
 }
+
+// ── Modern 2026 Collection ────────────────────────────────────────────
+// Based on websearch trends: quiet luxury, warm minimalism, sculptural
+// forms, curves & organic shapes, layered texture, biophilic, invisible
+// aesthetics. All pieces use existing Form system (soft/turned) — no new deps.
+
+/**
+ * Crescent sofa — 2026's defining silhouette. A 210° arc of deep seating
+ * with continuous back, low and wide. Built from 5 overlapping soft segments
+ * following a circular arc, so the curve is real geometry, not a texture.
+ * Inspired by Minotti & Fendi Casa curved collections.
+ */
+export function createCrescentSofa(
+  forms: Form[],
+  key: string,
+  placement: Placement,
+  options: { radius?: number; arc?: number; dark?: boolean } = {},
+): void {
+  const { at, floorY, facing, seed } = placement;
+  const arcRadius = options.radius ?? 1.8;
+  const arc = options.arc ?? Math.PI * 1.1; // ~200°
+  const fabric = options.dark ? 'upholsteryDark' : 'upholstery';
+  const origin: Vector3Tuple = [at[0], floorY, at[1]];
+  const baseYaw = YAW[facing];
+  const segments = 5;
+  const put = (across: number, up: number, forward: number) =>
+    place(origin, facing, across, up, forward);
+
+  // Recessed dark plinth following the same arc — shadow gap
+  forms.push({
+    kind: 'soft',
+    key: `${key}-plinth`,
+    material: 'darkMetal',
+    position: put(0, 0.035, arcRadius * 0.15),
+    rotationY: baseYaw,
+    size: [arcRadius * 2.2, 0.07, arcRadius * 1.6],
+    radius: 0.18,
+    detail: 2,
+    seed: seed + 1,
+  });
+
+  // 5 overlapping seat modules in arc
+  for (let i = 0; i < segments; i += 1) {
+    const t = (i / (segments - 1) - 0.5) * arc;
+    const x = Math.sin(t) * arcRadius * 0.65;
+    const z = Math.cos(t) * arcRadius * 0.32 - arcRadius * 0.15;
+    const yaw = baseYaw + t * 0.55;
+    forms.push({
+      kind: 'soft',
+      key: `${key}-seat-${i}`,
+      material: fabric,
+      position: put(x, 0.38, z),
+      rotationY: yaw,
+      size: [0.78, 0.18, 0.88],
+      radius: 0.095,
+      detail: 3,
+      sag: 0.28 + wobble(seed, i) * 0.06,
+      crease: 0.011,
+      seed: seed + 10 + i,
+    });
+    forms.push({
+      kind: 'soft',
+      key: `${key}-back-${i}`,
+      material: fabric,
+      position: put(x + Math.sin(t) * 0.18, 0.62, z + Math.cos(t) * 0.18 - 0.12),
+      rotationY: yaw,
+      tiltX: -0.18 - wobble(seed, i + 5) * 0.06,
+      size: [0.76, 0.48, 0.22],
+      radius: 0.11,
+      detail: 3,
+      sag: 0.14,
+      crease: 0.009,
+      seed: seed + 20 + i,
+    });
+  }
+}
+
+/**
+ * Round dining table — travertine top on sculptural bronze pedestal.
+ * 2026 trend: round/oval tables replacing rectangular for intimacy.
+ */
+export function createRoundTable(
+  forms: Form[],
+  key: string,
+  at: readonly [number, number],
+  floorY: number,
+  options: { diameter?: number; height?: number; seed?: number } = {},
+): void {
+  const d = options.diameter ?? 1.4;
+  const h = options.height ?? 0.74;
+  const radius = d / 2;
+
+  // Sculptural pedestal — waisted hourglass, not a cylinder
+  forms.push({
+    kind: 'turned',
+    key: `${key}-pedestal`,
+    material: 'bronze',
+    position: [at[0], floorY, at[1]],
+    profile: [
+      [radius * 0.52, 0],
+      [radius * 0.55, 0.02],
+      [radius * 0.38, h * 0.28],
+      [radius * 0.28, h * 0.55],
+      [radius * 0.36, h * 0.78],
+      [radius * 0.48, h - 0.04],
+    ],
+    segments: 32,
+  });
+
+  // Stone top with soft eased edge — catches highlight
+  forms.push({
+    kind: 'turned',
+    key: `${key}-top`,
+    material: 'stone',
+    position: [at[0], floorY + h - 0.04, at[1]],
+    profile: [
+      [radius * 0.92, 0],
+      [radius, 0.012],
+      [radius, 0.048],
+      [radius * 0.94, 0.056],
+      [0, 0.056],
+    ],
+    segments: 36,
+  });
+}
+
+/**
+ * Organic coffee table — kidney/pebble shape, 2026 sculptural trend.
+ * Low, wide, with thick rounded edge, travertine or marble.
+ */
+export function createOrganicCoffeeTable(
+  forms: Form[],
+  key: string,
+  placement: Placement,
+  options: { width?: number; depth?: number; height?: number } = {},
+): void {
+  const { at, floorY, facing, seed } = placement;
+  const w = options.width ?? 1.25;
+  const d = options.depth ?? 0.75;
+  const h = options.height ?? 0.38;
+  const origin: Vector3Tuple = [at[0], floorY, at[1]];
+  const yaw = YAW[facing];
+  const put = (across: number, up: number, forward: number) =>
+    place(origin, facing, across, up, forward);
+
+  // Pebble top — large radius so corners are fully round
+  forms.push({
+    kind: 'soft',
+    key: `${key}-top`,
+    material: 'marble',
+    position: put(0, h - 0.03, 0),
+    rotationY: yaw,
+    size: [w, 0.06, d],
+    radius: 0.28,
+    detail: 3,
+    seed: seed + 1,
+  });
+
+  // Two organic blob legs, not four sticks
+  for (const side of [-1, 1] as const) {
+    forms.push({
+      kind: 'soft',
+      key: `${key}-leg-${side}`,
+      material: 'stone',
+      position: put(side * w * 0.28, (h - 0.06) / 2, 0),
+      rotationY: yaw + side * 0.12,
+      size: [0.22, h - 0.08, d * 0.42],
+      radius: 0.09,
+      detail: 2,
+      seed: seed + 10 + side,
+    });
+  }
+}
+
+/**
+ * Boucle armchair — 2026's tactile hero. Deep boucle fabric, fully
+ * enveloping, on hidden plinth. Warmer and more textured than linen.
+ */
+export function createBoucleChair(
+  forms: Form[],
+  key: string,
+  placement: Placement,
+  options: { dark?: boolean } = {},
+): void {
+  const { at, floorY, facing, seed } = placement;
+  const fabric = options.dark ? 'upholsteryDark' : 'upholstery';
+  const origin: Vector3Tuple = [at[0], floorY, at[1]];
+  const yaw = YAW[facing];
+  const put = (across: number, up: number, forward: number) =>
+    place(origin, facing, across, up, forward);
+
+  forms.push({
+    kind: 'soft',
+    key: `${key}-plinth`,
+    material: 'darkMetal',
+    position: put(0, 0.03, 0),
+    rotationY: yaw,
+    size: [0.82, 0.06, 0.82],
+    radius: 0.22,
+    detail: 2,
+    seed: seed + 1,
+  });
+
+  // Tub body — fully round, high back
+  forms.push({
+    kind: 'soft',
+    key: `${key}-body`,
+    material: fabric,
+    position: put(0, 0.42, -0.04),
+    rotationY: yaw,
+    size: [0.92, 0.72, 0.88],
+    radius: 0.26,
+    detail: 3,
+    crease: 0.007,
+    seed: seed + 2,
+  });
+
+  forms.push({
+    kind: 'soft',
+    key: `${key}-seat`,
+    material: fabric,
+    position: put(0, 0.42, 0.08),
+    rotationY: yaw,
+    size: [0.72, 0.16, 0.62],
+    radius: 0.095,
+    detail: 3,
+    sag: 0.32,
+    crease: 0.014,
+    seed: seed + 3,
+  });
+}
+
+/**
+ * Arc floor lamp — marble base, bronze arc, linen shade.
+ * 2026 statement lighting, replaces straight column lamp.
+ */
+export function createArcLamp(
+  forms: Form[],
+  key: string,
+  at: readonly [number, number],
+  floorY: number,
+  options: { height?: number; reach?: number } = {},
+): void {
+  const h = options.height ?? 1.85;
+  const reach = options.reach ?? 1.1;
+
+  // Marble cylindrical base — heavy, grounding
+  forms.push({
+    kind: 'turned',
+    key: `${key}-base`,
+    material: 'marble',
+    position: [at[0], floorY, at[1]],
+    profile: [
+      [0.22, 0],
+      [0.22, 0.08],
+      [0.21, 0.09],
+      [0, 0.09],
+    ],
+    segments: 28,
+  });
+
+  // Arc — approximated as tilted turned segments forming a curve
+  const segs = 5;
+  for (let i = 0; i < segs; i += 1) {
+    const t = i / (segs - 1);
+    const angle = t * (Math.PI * 0.52);
+    const x = Math.sin(angle) * reach * 0.15;
+    const y = floorY + 0.09 + Math.sin(angle) * (h - 0.5) + t * 0.3;
+    const z = Math.cos(angle) * reach * t - reach * 0.15;
+    forms.push({
+      kind: 'turned',
+      key: `${key}-arc-${i}`,
+      material: 'bronze',
+      position: [at[0] + x, y, at[1] + z],
+      rotationY: -angle * 0.3,
+      tiltX: angle * 0.6,
+      profile: [
+        [0.018, -0.18],
+        [0.016, 0.18],
+      ],
+      segments: 8,
+    });
+  }
+
+  // Shade at end of arc
+  forms.push({
+    kind: 'turned',
+    key: `${key}-shade`,
+    material: 'paper',
+    position: [at[0], floorY + h - 0.22, at[1] + reach],
+    profile: [
+      [0.26, 0],
+      [0.26, 0.005],
+      [0.21, 0.28],
+      [0.21, 0.285],
+    ],
+    segments: 24,
+  });
+
+  forms.push({
+    kind: 'turned',
+    key: `${key}-liner`,
+    material: 'glow',
+    position: [at[0], floorY + h - 0.215, at[1] + reach],
+    profile: [
+      [0.24, 0],
+      [0.195, 0.27],
+    ],
+    segments: 20,
+  });
+}
+
+/**
+ * Fluted sideboard — 2026 modern storage, handle-free, fluted oak front.
+ * Replaces boxy console with textured, sculptural piece.
+ */
+export function createFlutedSideboard(
+  forms: Form[],
+  key: string,
+  placement: Placement,
+  options: { width?: number; depth?: number } = {},
+): void {
+  const { at, floorY, facing, seed } = placement;
+  const w = options.width ?? 1.8;
+  const d = options.depth ?? 0.48;
+  const h = 0.78;
+  const origin: Vector3Tuple = [at[0], floorY, at[1]];
+  const yaw = YAW[facing];
+  const put = (across: number, up: number, forward: number) =>
+    place(origin, facing, across, up, forward);
+
+  // Carcase
+  forms.push({
+    kind: 'soft',
+    key: `${key}-carcase`,
+    material: 'joinery',
+    position: put(0, h / 2, 0),
+    rotationY: yaw,
+    size: [w, h, d],
+    radius: 0.02,
+    detail: 2,
+    seed: seed + 1,
+  });
+
+  // Fluting — 12-16 vertical ribs across front
+  const flutes = Math.max(10, Math.round(w / 0.14));
+  const fluteW = w / flutes;
+  for (let i = 0; i < flutes; i += 1) {
+    const across = -w / 2 + fluteW * (i + 0.5);
+    forms.push({
+      kind: 'soft',
+      key: `${key}-flute-${i}`,
+      material: 'joinery',
+      position: put(across, h / 2 + 0.02, d / 2 + 0.008),
+      rotationY: yaw,
+      size: [fluteW - 0.01, h - 0.08, 0.022],
+      radius: 0.011,
+      detail: 2,
+      seed: seed + 10 + i,
+    });
+  }
+
+  // Stone top with overhang
+  forms.push({
+    kind: 'soft',
+    key: `${key}-top`,
+    material: 'stone',
+    position: put(0, h + 0.022, 0),
+    rotationY: yaw,
+    size: [w + 0.04, 0.044, d + 0.03],
+    radius: 0.012,
+    detail: 2,
+    seed: seed + 2,
+  });
+}
+
+/**
+ * Sculptural ceramic cluster — group of 3 vessels at varying heights,
+ * 2026 styling trend: curated objects of different scales.
+ */
+export function createVesselCluster(
+  forms: Form[],
+  key: string,
+  at: readonly [number, number],
+  baseY: number,
+  seed: number,
+): void {
+  const scales = [
+    { h: 0.42, r: 0.13, dx: -0.18, dz: 0.06 },
+    { h: 0.28, r: 0.09, dx: 0.14, dz: -0.08 },
+    { h: 0.18, r: 0.07, dx: 0.02, dz: 0.15 },
+  ];
+  scales.forEach((s, i) => {
+    createFloorVessel(forms, `${key}-${i}`, [at[0] + s.dx, at[1] + s.dz], baseY, {
+      height: s.h,
+      radius: s.r,
+      material: i === 0 ? 'ceramic' : i === 1 ? 'stone' : 'bronze',
+    });
+    // Add wobble to position
+    const last = forms[forms.length - 1];
+    if (last) {
+      last.position[0] += (wobble(seed, i * 3) - 0.5) * 0.06;
+      last.position[2] += (wobble(seed, i * 3 + 1) - 0.5) * 0.06;
+    }
+  });
+}

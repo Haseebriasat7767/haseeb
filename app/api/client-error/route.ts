@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rateLimited } from '@/lib/server/rate-limit';
+import { getClientIP, rateLimited } from '@/lib/server/rate-limit';
 
 /**
  * Where a browser error goes.
@@ -38,12 +38,18 @@ const LIMIT = { limit: 20, windowMs: 5 * 60 * 1000 };
 
 /** Long enough for a real stack, short enough not to be a payload. */
 const MAX_FIELD = 4000;
+const MAX_BODY_SIZE = 10 * 1024;
 
 function clip(value: unknown): string {
   return typeof value === 'string' ? value.slice(0, MAX_FIELD) : '';
 }
 
 export async function POST(request: Request) {
+  const contentLength = request.headers.get('content-length');
+  if (contentLength && Number(contentLength) > MAX_BODY_SIZE) {
+    return NextResponse.json({ status: 'invalid' }, { status: 413 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -55,12 +61,7 @@ export async function POST(request: Request) {
   const message = clip(payload.message);
   if (message.trim() === '') return NextResponse.json({ status: 'invalid' }, { status: 400 });
 
-  // Keyed by the forwarded address where the host sets one. It is used to
-  // group a burst of errors and is not stored.
-  const key =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+  const key = getClientIP(request);
 
   if (rateLimited('client-error', key, LIMIT)) {
     // 204, not 429: the browser cannot act on this and should not retry.
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
       kind: clip(payload.kind) || 'error',
       userAgent: (request.headers.get('user-agent') ?? '').slice(0, 300),
       at: new Date().toISOString(),
+      ip: key === 'unknown' ? undefined : 'redacted',
     }),
   );
 

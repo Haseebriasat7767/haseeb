@@ -63,9 +63,6 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
       <nav aria-label="Mobile" className="px-gutter flex flex-1 flex-col justify-center pb-24">
         <NavLinks orientation="vertical" onNavigate={onClose} />
 
-        {/* The same standing call to action the desktop header carries. A
-            phone is where most of this will actually be viewed, and the
-            menu is the one place a buyer on a phone is definitely looking. */}
         <Link
           href="/contact"
           onClick={onClose}
@@ -83,9 +80,10 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           >
             {SITE.contact.email}
           </a>
-        ) : (
-          <span className="text-eyebrow text-stone mt-8 uppercase">{SITE.contact.address}</span>
-        )}
+        ) : null}
+        <span className="text-eyebrow text-stone mt-4 uppercase">
+          {SITE.contact.addressDisplay}
+        </span>
       </nav>
     </div>
   );

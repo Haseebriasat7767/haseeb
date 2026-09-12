@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { SITE } from '@/lib/constants/site';
 import {
+  MAX_MESSAGE_LENGTH,
   submitEnquiry,
   validateEnquiry,
   type Enquiry,
@@ -21,7 +22,7 @@ type Status =
   | { kind: 'unconfigured'; mailto: string }
   | { kind: 'undeliverable'; body: string }
   | { kind: 'rateLimited' }
-  | { kind: 'failed' };
+  | { kind: 'failed'; message?: string };
 
 /**
  * The enquiry form.
@@ -43,9 +44,6 @@ export function EnquiryForm() {
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [company, setCompany] = useState('');
   const openedAt = useRef(Date.now());
-  // Fires once, on the first keystroke — a form somebody typed into and
-  // abandoned is a different fact than a page that loaded and was never
-  // touched, and only this tells the two apart.
   const started = useRef(false);
 
   const set = (key: keyof Enquiry) => (event: { target: { value: string } }) => {
@@ -81,15 +79,20 @@ export function EnquiryForm() {
               : { kind: 'undeliverable', body: result.body },
       );
       trackEnquirySubmitted(result.status);
-    } catch {
-      setStatus({ kind: 'failed' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : undefined;
+      setStatus({ kind: 'failed', message });
       trackEnquirySubmitted('failed');
     }
   }
 
   if (status.kind === 'sent') {
     return (
-      <div role="status" className="border-alabaster/10 flex flex-col gap-4 border p-8">
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-alabaster/10 flex flex-col gap-4 border p-8"
+      >
         <p className="text-eyebrow text-gold uppercase">Enquiry received</p>
         <p className="font-display text-alabaster text-2xl font-light">Thank you.</p>
         <p className="text-mist text-sm leading-relaxed">
@@ -102,7 +105,11 @@ export function EnquiryForm() {
 
   if (status.kind === 'rateLimited') {
     return (
-      <div role="status" className="border-alabaster/10 flex flex-col gap-4 border p-8">
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-alabaster/10 flex flex-col gap-4 border p-8"
+      >
         <p className="text-eyebrow text-gold uppercase">Already received</p>
         <p className="text-mist text-sm leading-relaxed">
           We have your enquiry — several, in fact. There is no need to send another; the team will
@@ -124,7 +131,11 @@ export function EnquiryForm() {
 
   if (status.kind === 'unconfigured') {
     return (
-      <div role="status" className="border-alabaster/10 flex flex-col gap-5 border p-8">
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-alabaster/10 flex flex-col gap-5 border p-8"
+      >
         <p className="text-eyebrow text-gold uppercase">Ready to send</p>
         <p className="font-display text-alabaster text-2xl font-light">Your enquiry is composed.</p>
         <p className="text-mist text-sm leading-relaxed">
@@ -144,12 +155,12 @@ export function EnquiryForm() {
   }
 
   if (status.kind === 'undeliverable') {
-    // Neither an endpoint nor an enquiry address is configured. Saying so
-    // plainly and handing the visitor their own composed message is the
-    // only honest ending: a "thank you" here would be a message that was
-    // never going anywhere, which is the one failure a buyer never forgives.
     return (
-      <div role="status" className="border-alabaster/10 flex flex-col gap-5 border p-8">
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-alabaster/10 flex flex-col gap-5 border p-8"
+      >
         <p className="text-eyebrow text-gold uppercase">Enquiry ready</p>
         <p className="font-display text-alabaster text-2xl font-light">
           Your details are ready to send.
@@ -171,11 +182,12 @@ export function EnquiryForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-8">
-      {/* The honeypot. Off-screen rather than `display: none`, because some
-          bots skip anything a browser would not render at all; out of the tab
-          order and hidden from assistive technology, so no real visitor ever
-          meets it. */}
+    <form
+      onSubmit={onSubmit}
+      noValidate
+      className="flex flex-col gap-8"
+      aria-label="Private viewing enquiry"
+    >
       <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
         <label htmlFor="company-ref">Company</label>
         <input
@@ -215,6 +227,7 @@ export function EnquiryForm() {
           autoComplete="tel"
           value={values.phone}
           onChange={set('phone')}
+          error={errors.phone}
           optional
         />
         <Field
@@ -235,11 +248,12 @@ export function EnquiryForm() {
         onChange={set('message')}
         error={errors.message}
         required
+        hint={`${values.message.length}/${MAX_MESSAGE_LENGTH} characters`}
       />
 
       {status.kind === 'failed' ? (
         <p role="alert" className="text-sm text-red-400">
-          The enquiry could not be sent. Please try again
+          {status.message ?? 'The enquiry could not be sent. Please try again'}
           {SITE.contact.email ? (
             <>
               , or email{' '}
@@ -257,7 +271,7 @@ export function EnquiryForm() {
           {status.kind === 'sending' ? 'Sending…' : 'Request private viewing'}
         </Button>
         <p aria-live="polite" className="text-stone text-xs">
-          {status.kind === 'sending' ? 'Submitting your enquiry…' : ''}
+          {status.kind === 'sending' ? 'Submitting your enquiry…' : 'Secure enquiry — no spam'}
         </p>
       </div>
     </form>

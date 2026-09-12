@@ -16,7 +16,7 @@ import { TrackedLink } from './TrackedLink';
  *
  * ## Why it can still be empty
  *
- * Each channel renders only when its variable is set. A WhatsApp button
+ * Each channel renders only when its variable is set and valid. A WhatsApp button
  * pointing at a number nobody owns is worse than no button: it looks like
  * a working channel right up to the moment it swallows an enquiry. So an
  * unconfigured deployment shows nothing to the visitor rather than a
@@ -29,26 +29,17 @@ export function DirectChannels() {
   );
   const { agent } = CLIENT;
 
-  const hasAny = Boolean(mailto || whatsapp);
+  const hasAny = Boolean(mailto || whatsapp || agent.phone);
 
-  // The operator note used to render on screen for every visitor, spelling
-  // out the exact env vars to set. That is useful information, but it
-  // belongs to whoever deploys this, not to a buyer evaluating the page —
-  // so it goes to the console instead, and the block simply does not
-  // render for visitors until a real channel exists. This follows the same
-  // null-means-do-not-render rule the rest of this file already applies to
-  // the brochure button and the agent identity block.
   if (!hasAny) {
-    // Warned on the server, not the client. This is a server component, so
-    // a `typeof window !== 'undefined'` guard is never true here and the
-    // note would never be printed at all. The contact page is statically
-    // prerendered, so this fires once during the build and lands in the
-    // deploy log — which is exactly where somebody deploying it is looking.
-    console.warn(
-      '[AURELIA] No direct contact channel configured. Set NEXT_PUBLIC_ENQUIRY_EMAIL ' +
-        'and, optionally, NEXT_PUBLIC_ENQUIRY_PHONE to show an email address and a ' +
-        'WhatsApp link on the contact page.',
-    );
+    // Only warn in development — production logs should not contain setup hints
+    // that could be scraped. The deploy log already shows this during build.
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        '[AURELIA] No direct contact channel configured. Set NEXT_PUBLIC_ENQUIRY_EMAIL ' +
+          'and optionally NEXT_PUBLIC_ENQUIRY_PHONE / NEXT_PUBLIC_ENQUIRY_WHATSAPP to show direct contact.',
+      );
+    }
     return null;
   }
 
@@ -59,26 +50,40 @@ export function DirectChannels() {
         If the form gives you any trouble, these reach us just as well.
       </p>
       <div className="flex flex-col gap-2.5">
-        {agent.email ? (
+        {agent.email && mailto ? (
           <TrackedLink
             onTrack={() => trackContactChannelClick('email')}
-            href={mailto ?? `mailto:${agent.email}`}
+            href={mailto}
             data-cursor="link"
+            aria-label={`Email ${agent.email}`}
             className="text-alabaster hover:text-gold text-sm break-all transition-colors"
           >
             {agent.email}
           </TrackedLink>
         ) : null}
-        {whatsapp && agent.phone ? (
+        {whatsapp ? (
           <TrackedLink
             onTrack={() => trackContactChannelClick('whatsapp')}
             href={whatsapp}
             target="_blank"
             rel="noopener noreferrer"
             data-cursor="link"
+            aria-label={`WhatsApp ${agent.phoneDisplay ?? ''}`}
             className="text-alabaster hover:text-gold text-sm transition-colors"
           >
-            WhatsApp {agent.phone}
+            WhatsApp {agent.phoneDisplay ?? agent.phone}
+          </TrackedLink>
+        ) : null}
+        {/* Phone as fallback when whatsapp not configured but phone is */}
+        {!whatsapp && agent.phone && agent.phoneDisplay ? (
+          <TrackedLink
+            onTrack={() => trackContactChannelClick('call')}
+            href={`tel:${agent.phone}`}
+            data-cursor="link"
+            aria-label={`Call ${agent.phoneDisplay}`}
+            className="text-alabaster hover:text-gold text-sm transition-colors"
+          >
+            Call {agent.phoneDisplay}
           </TrackedLink>
         ) : null}
       </div>
