@@ -138,7 +138,15 @@ export function GalleryLightbox({
             lingers on a finished image is chrome competing with the
             architecture, which is the one thing this page must not do. */}
         {converged < 1 ? (
-          <div className="pointer-events-none absolute right-6 bottom-6 flex items-center gap-3">
+          <div
+            // Read by `scripts/brochure-stills.mjs` to wait for the traced
+            // image to converge before it takes the screenshot, rather than
+            // capturing on a fixed timer. This element is only ever mounted
+            // while `converged < 1`, so its absence *is* the convergence
+            // signal — no separate "done" state to keep in sync.
+            data-cinematic-progress
+            className="pointer-events-none absolute right-6 bottom-6 flex items-center gap-3"
+          >
             <div className="bg-alabaster/20 h-px w-24 overflow-hidden">
               <div
                 className="bg-gold h-px transition-[width] duration-300"

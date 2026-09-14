@@ -43,8 +43,14 @@ const OUT = 'public/assets/brochure';
  *
  * A brochure needs the building, a principal room, the water, and a
  * bedroom — the four things a buyer looks for and in that order. Every id
- * below is a real entry in `lib/experience/spaces.ts`, so these are the
- * same framings the site offers, not camera positions invented for print.
+ * below is a real entry in `lib/experience/spaces.ts` and therefore also a
+ * tile on `/gallery`, which is how each plate is opened: this script drives
+ * the same cinematic lightbox (`GalleryLightbox`) a visitor would, rather
+ * than a capture path of its own.
+ *
+ * The tower has no equivalent gallery yet — `TowerWalkthrough` never wires
+ * `cinematic` — so it has no plates here either. Nothing below invents a
+ * capture path the live site doesn't have.
  */
 const PLATES = [
   { space: 'arrival', file: 'arrival.jpg', caption: 'The residence from the approach' },
@@ -53,8 +59,11 @@ const PLATES = [
   { space: 'master', file: 'master.jpg', caption: 'Master suite' },
 ];
 
-/** Long enough for the scene, its textures and its shadows to settle. */
-const SETTLE_MS = 30_000;
+/** Generous — path tracing 320 samples of an 8-megapixel frame through
+ *  SwiftShader's software rasteriser is slow, measured in tens of minutes
+ *  rather than seconds, and a plate that never converges should time out
+ *  loudly rather than hang the run indefinitely. */
+const CONVERGE_TIMEOUT_MS = 40 * 60_000;
 
 mkdirSync(OUT, { recursive: true });
 
@@ -93,27 +102,49 @@ try {
   });
 
   for (const plate of PLATES) {
-    // 3:2, the proportion the PDF lays them out at.
-    const page = await browser.newPage({ viewport: { width: 1800, height: 1200 } });
-    await page.goto(`${ORIGIN}/experience?space=${plate.space}`, {
-      waitUntil: 'load',
-      timeout: 200_000,
-    });
-    await page.waitForTimeout(SETTLE_MS);
+    // At least 4K, per the site's own cinematic gallery target: a brochure
+    // plate is a still someone can zoom, where the live page is seen in
+    // motion, so it earns more pixels than the on-screen frame does.
+    const page = await browser.newPage({ viewport: { width: 3840, height: 2160 } });
 
-    // The canvas only. Screenshotting the page would print the navigation,
-    // the hour dial and the space panel across the middle of the plate.
+    // The gallery, not a direct `?space=` deep link: `GalleryLightbox` is
+    // the one place on the site that already runs `cinematic` — the raster
+    // journey view `/experience` opens does not. Opening the same tile a
+    // visitor would click exercises the real cinematic path end to end
+    // rather than a capture-only route that could quietly drift from it.
+    await page.goto(`${ORIGIN}/gallery`, { waitUntil: 'load', timeout: 200_000 });
+    await page.click(`[data-space="${plate.space}"]`, { timeout: 30_000 });
+
+    // Wait for convergence rather than a fixed timer. `PathTracer` reports
+    // its own sample count up through `GalleryLightbox`, which mounts
+    // `[data-cinematic-progress]` for exactly as long as the trace is
+    // still resolving — its removal from the DOM *is* the "done" signal.
+    // Waiting for it to attach first guards against a race where tracing
+    // finishes inside the couple of frames it takes Playwright to look.
+    await page
+      .waitForSelector('[data-cinematic-progress]', { state: 'attached', timeout: 15_000 })
+      .catch(() => {});
+    await page.waitForSelector('[data-cinematic-progress]', {
+      state: 'detached',
+      timeout: CONVERGE_TIMEOUT_MS,
+    });
+    // One more frame so the denoiser's final pass and the display quad's
+    // cross-fade are both fully composited before the shutter.
+    await page.waitForTimeout(200);
+
+    // The canvas only. Screenshotting the page would print the dialog
+    // chrome — the frame counter, the close button, the caption — across
+    // the plate.
     //
-    // Captured through CDP rather than Playwright's own screenshot: the
-    // camera drifts continuously, so every Playwright capture path waits
-    // for a "stable" frame that never arrives and times out at thirty
-    // seconds. `Page.captureScreenshot` takes the frame in front of it.
-    // Strip the interface before the shutter. The canvas is full bleed and
-    // the chrome sits over it, so clipping to the canvas still composites
-    // the navigation, the hour dial, the space panel and the hotspot
-    // markers into the plate. Hiding everything and un-hiding the canvas
-    // leaves the frame and nothing else — the markers are drei `Html`,
-    // siblings of the canvas rather than children, so they go with it.
+    // Captured through CDP rather than Playwright's own screenshot: a
+    // traced frame is still technically live (the tracer keeps rendering
+    // past `maxSamples` at the same sample count), so every Playwright
+    // capture path waits for a "stable" frame that never arrives and times
+    // out at thirty seconds. `Page.captureScreenshot` takes the frame in
+    // front of it. Strip the interface before the shutter — the canvas
+    // sits inside the dialog and the caption, counter and buttons are
+    // siblings of it, so clipping to the canvas alone still composites
+    // them into the plate otherwise.
     await page.addStyleTag({
       content:
         'body * { visibility: hidden !important; } canvas { visibility: visible !important; }',
@@ -137,7 +168,7 @@ try {
     const cdp = await page.context().newCDPSession(page);
     const shot = await cdp.send('Page.captureScreenshot', {
       format: 'jpeg',
-      quality: 88,
+      quality: 92,
       clip: box,
       captureBeyondViewport: false,
     });

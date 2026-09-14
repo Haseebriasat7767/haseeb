@@ -47,6 +47,10 @@ export function Gallery() {
               type="button"
               onClick={() => setOpenIndex(index)}
               data-cursor="view"
+              // Read by `scripts/brochure-stills.mjs`, which opens the
+              // cinematic lightbox for a given space by clicking its tile
+              // rather than driving React state directly.
+              data-space={space.id}
               className={cn(
                 'group ease-luxe flex aspect-[4/3] w-full flex-col items-start p-7 text-left sm:p-8',
                 'hover:bg-ink transition-colors duration-500',
