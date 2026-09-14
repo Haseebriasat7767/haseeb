@@ -9,15 +9,16 @@ type Variant = 'primary' | 'outline' | 'ghost';
 type Size = 'sm' | 'md';
 
 const BASE =
-  'inline-flex items-center justify-center gap-2.5 font-sans uppercase tracking-[0.18em] ' +
-  'rounded-xs transition-[color,background-color,border-color,transform] duration-300 ease-luxe ' +
-  'disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap will-change-transform';
+  'inline-flex items-center justify-center gap-2.5 font-sans uppercase tracking-[0.2em] ' +
+  'rounded-none transition-[color,background-color,border-color,transform] duration-200 ease-luxe ' +
+  'disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap will-change-transform ' +
+  'text-xs font-medium';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-alabaster text-obsidian hover:bg-gold hover:text-obsidian',
+  primary: 'bg-alabaster text-obsidian hover:bg-gold hover:text-obsidian active:scale-95',
   outline:
-    'border border-alabaster/25 text-alabaster hover:border-gold hover:text-gold backdrop-blur-[2px]',
-  ghost: 'text-mist hover:text-alabaster',
+    'border border-alabaster/40 text-alabaster hover:border-gold hover:text-gold',
+  ghost: 'text-mist hover:text-alabaster transition-opacity',
 };
 
 const SIZES: Record<Size, string> = {

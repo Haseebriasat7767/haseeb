@@ -53,9 +53,9 @@ export function Header() {
             <Link
               href="/contact"
               data-cursor="link"
-              className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold border px-4 py-2.5 whitespace-nowrap uppercase transition-colors duration-300 xl:px-5"
+              className="text-eyebrow ease-luxe border-alabaster/40 text-alabaster hover:border-gold hover:text-gold border px-5 py-3 whitespace-nowrap uppercase transition-colors duration-200 font-medium tracking-wide xl:px-6"
             >
-              Request private viewing
+              Request viewing
             </Link>
           </div>
 

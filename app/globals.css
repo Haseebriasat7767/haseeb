@@ -27,41 +27,41 @@
   --font-display: var(--font-cormorant), 'Times New Roman', serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  --text-display-xl: clamp(3.25rem, 11vw, 9.5rem);
-  --text-display-xl--line-height: 0.92;
-  --text-display-xl--letter-spacing: -0.03em;
-  --text-display-lg: clamp(2.5rem, 6.5vw, 5.5rem);
-  --text-display-lg--line-height: 0.98;
-  --text-display-lg--letter-spacing: -0.025em;
-  --text-display-md: clamp(2rem, 4vw, 3.25rem);
-  --text-display-md--line-height: 1.06;
-  --text-display-md--letter-spacing: -0.02em;
-  --text-lede: clamp(1.0625rem, 1.6vw, 1.375rem);
-  --text-lede--line-height: 1.65;
-  --text-eyebrow: 0.6875rem;
-  --text-eyebrow--line-height: 1.2;
-  --text-eyebrow--letter-spacing: 0.28em;
+  --text-display-xl: clamp(3.5rem, 12vw, 10rem);
+  --text-display-xl--line-height: 0.95;
+  --text-display-xl--letter-spacing: -0.02em;
+  --text-display-lg: clamp(2.75rem, 7vw, 6rem);
+  --text-display-lg--line-height: 1;
+  --text-display-lg--letter-spacing: -0.015em;
+  --text-display-md: clamp(2.125rem, 4.5vw, 3.5rem);
+  --text-display-md--line-height: 1.08;
+  --text-display-md--letter-spacing: -0.01em;
+  --text-lede: clamp(1.125rem, 1.8vw, 1.5rem);
+  --text-lede--line-height: 1.7;
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1.3;
+  --text-eyebrow--letter-spacing: 0.32em;
 
   /* Spacing scale (extends Tailwind's 0.25rem base) ------------------ */
-  --spacing-section: clamp(5rem, 12vh, 9.5rem);
-  --spacing-section-lg: clamp(7rem, 18vh, 14rem);
-  --spacing-gutter: clamp(1.25rem, 5vw, 4rem);
+  --spacing-section: clamp(5.5rem, 14vh, 10.5rem);
+  --spacing-section-lg: clamp(8rem, 20vh, 16rem);
+  --spacing-gutter: clamp(1.5rem, 5.5vw, 4.5rem);
 
   /* Containers ------------------------------------------------------ */
   --container-editorial: 46rem;
   --container-wide: 88rem;
 
   /* Radius ---------------------------------------------------------- */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 16px;
+  --radius-xs: 0px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
   --radius-pill: 999px;
 
-  /* Shadows — soft and architectural, never glossy ------------------- */
-  --shadow-subtle: 0 1px 2px rgb(0 0 0 / 0.12);
-  --shadow-raised: 0 12px 32px -12px rgb(0 0 0 / 0.45);
-  --shadow-cinematic: 0 40px 120px -40px rgb(0 0 0 / 0.8);
+  /* Shadows — minimal, refined, never gloss -------------------------  */
+  --shadow-subtle: 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-raised: 0 8px 24px -8px rgb(0 0 0 / 0.32);
+  --shadow-cinematic: 0 32px 96px -32px rgb(0 0 0 / 0.6);
 
   /* Motion ---------------------------------------------------------- */
   --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
@@ -95,6 +95,8 @@
     background-color: var(--surface);
     color: var(--content);
     font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.6;
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
