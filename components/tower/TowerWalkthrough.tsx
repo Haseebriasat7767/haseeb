@@ -14,7 +14,9 @@ import { getWalkFloors, subscribeWalkFloors, travelTo } from '@/lib/three/walk-f
 import type { WalkFloor } from '@/lib/three/walk-floors';
 import { DEFAULT_TOWER_VIEW, TOWER_VIEWS, TOWER_VIEW_NOTES } from '@/lib/three/tower-views';
 import { cn } from '@/lib/utils/cn';
-import type { TimeOfDay } from '@/types';
+import type { CameraView, TimeOfDay } from '@/types';
+import { InventoryPanel } from './InventoryPanel';
+import { unitFloorView, type Unit } from '@/lib/property/tower-inventory';
 
 /**
  * Golden hour, not the site-wide default's reasoning but the same
@@ -31,6 +33,16 @@ const OPENING_HOUR: TimeOfDay = 'goldenHour';
  */
 const NO_FLOORS: readonly WalkFloor[] = [];
 const serverFloors = () => NO_FLOORS;
+
+/**
+ * The flyover. Reuses the site's own aerial framing for its position and
+ * target rather than inventing a new vantage — `CameraController`'s
+ * `cinematic` mode then does all the work: it orbits at the radius and
+ * height that position already implies, around the target already composed
+ * for it, at its own damped, frame-rate-independent pace. Nothing here is
+ * new camera math, only a mode switch onto math that already exists.
+ */
+const FLYOVER_VIEW: CameraView = TOWER_VIEWS.find((entry) => entry.id === 'aerial')!;
 
 /**
  * The walkthrough.
@@ -72,6 +84,28 @@ export function TowerWalkthrough() {
   const [step, setStep] = useState(initial);
   const [hour, setHour] = useState<TimeOfDay>(OPENING_HOUR);
   const [walking, setWalking] = useState(false);
+  // The flyover, nested under "on foot" rather than a third top-level mode:
+  // it is the other way of moving through the building yourself, where the
+  // guided tour is composed *for* the visitor. Reset whenever the visitor
+  // leaves "on foot" entirely, so re-entering walk mode always opens on the
+  // ground rather than remembering the sky.
+  const [flying, setFlying] = useState(false);
+  useEffect(() => {
+    if (!walking) setFlying(false);
+  }, [walking]);
+  // The inventory, the guided tour's own counterpart to flying: a second
+  // way to choose a framing, open only while the tour is composing the
+  // camera rather than the visitor. Closed by entering walk mode, same as
+  // the selected unit it drives — arriving on foot should arrive at the
+  // building's own opening framing, not a floor picked minutes earlier.
+  const [showInventory, setShowInventory] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  useEffect(() => {
+    if (walking) {
+      setShowInventory(false);
+      setSelectedUnit(null);
+    }
+  }, [walking]);
   // Open with a mouse, closed under a thumb. Starts closed so the server's
   // markup matches the first client render.
   const [liftOpen, setLiftOpen] = useState(false);
@@ -96,6 +130,16 @@ export function TowerWalkthrough() {
   const note = TOWER_VIEW_NOTES[view.id] ?? '';
   const last = TOWER_VIEWS.length - 1;
 
+  // What the camera is actually shown, in priority order: flying overrides
+  // everything (it is its own exterior framing), a selected unit overrides
+  // the tour step (the same eased transition `CameraController` already
+  // gives a step change), and otherwise the step itself.
+  const activeView = flying
+    ? FLYOVER_VIEW
+    : selectedUnit
+      ? unitFloorView(selectedUnit.floor)
+      : view;
+
   const go = useCallback((next: number) => setStep(Math.min(last, Math.max(0, next))), [last]);
 
   const scrim = useMemo(
@@ -109,16 +153,23 @@ export function TowerWalkthrough() {
     <section aria-label="Tower walkthrough" className="relative">
       <ExperienceViewport
         className="h-[86svh] w-full"
-        view={view}
-        mode={walking ? 'walk' : 'fixed'}
+        view={activeView}
+        mode={walking ? (flying ? 'cinematic' : 'walk') : 'fixed'}
         // A slow move on every held framing. Eighteen dead-still shots in
         // sequence is a slideshow; the parallax between near and far is what
         // tells the eye this is a place and not a picture of one. Off on
-        // foot, where the visitor is doing the moving.
+        // foot, where the visitor is doing the moving — and off in flight,
+        // where `cinematic` mode's own orbit is already that movement.
         drift={walking ? 0 : 1.6}
         content="tower"
         timeOfDay={hour}
-        label={`Three-dimensional view of the oceanfront tower — ${view.label}`}
+        label={
+          flying
+            ? 'Three-dimensional aerial view, circling the oceanfront tower'
+            : selectedUnit
+              ? `Three-dimensional view of the oceanfront tower — Unit ${selectedUnit.id}`
+              : `Three-dimensional view of the oceanfront tower — ${view.label}`
+        }
       >
         {/* Readability ground for the caption and the controls. Dropped in
             walk mode: a gradient over the bottom half of a first-person view
@@ -146,7 +197,35 @@ export function TowerWalkthrough() {
           </button>
         )}
 
-        {walking ? (
+        {/* The second choice, once on foot: cross the plaza yourself, or
+            pull back to a drone's height and glide the exterior instead.
+            Nested under the first toggle rather than a third top-level
+            option — it is the other way of moving through the building
+            yourself, where the guided tour is composed for the visitor. */}
+        {webgl === false || !walking ? null : (
+          <button
+            type="button"
+            onClick={() => setFlying((on) => !on)}
+            className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-40 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+          >
+            {flying ? 'Ground view' : 'Fly over'}
+          </button>
+        )}
+
+        {/* The tour's own second choice, in the same slot the flyover toggle
+            takes on foot — the two never show together, since one only
+            appears walking and the other only composing. */}
+        {webgl === false || walking ? null : (
+          <button
+            type="button"
+            onClick={() => setShowInventory((on) => !on)}
+            className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-40 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+          >
+            {showInventory ? 'Back to tour' : 'Inventory'}
+          </button>
+        )}
+
+        {walking && !flying ? (
           <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
             <span className="hidden sm:inline">
               Drag to look · arrows or W A S D to walk · Shift to run
@@ -155,13 +234,20 @@ export function TowerWalkthrough() {
           </div>
         ) : null}
 
+        {flying ? (
+          <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
+            Circling the tower
+          </div>
+        ) : null}
+
         {/* Thumb controls. Outside the canvas because a touch target inside a
             WebGL scene has to be raycast, and they write to the same shared
-            input the controller already reads. */}
-        <TouchSticks active={walking} />
+            input the controller already reads. Neither applies in flight —
+            the orbit flies itself. */}
+        <TouchSticks active={walking && !flying} />
         {/* The mouse half of the same job: sticks under a thumb, arrows under
             a cursor. Each renders only for its own kind of pointer. */}
-        <WalkPad active={walking} />
+        <WalkPad active={walking && !flying} />
 
         {/* Guided tour only: in walk mode the thumb sticks carry their own
             instructions and a second hint would contradict them. */}
@@ -172,7 +258,7 @@ export function TowerWalkthrough() {
             top — so the stair is there to be walked and this is there to be
             used. It sets you down in the lift lobby of the floor you pick,
             which is where a lift leaves you. */}
-        {walking && floors.length > 0 ? (
+        {walking && !flying && floors.length > 0 ? (
           /* Collapsible, because on a phone twenty storeys of buttons filled
              the screen: the list covered the building it was meant to move
              you through, and sat directly over the left thumb zone. It opens
@@ -229,10 +315,12 @@ export function TowerWalkthrough() {
           />
         )}
 
-        {/* Step index down the right edge, doubling as navigation. */}
+        {/* Step index down the right edge, doubling as navigation. Hidden
+            with the inventory open too — a visitor choosing a unit from the
+            list is not also stepping through the composed sequence. */}
         <nav
           aria-label="Walkthrough steps"
-          hidden={walking}
+          hidden={walking || showInventory}
           className="absolute top-1/2 right-6 z-10 hidden -translate-y-1/2 lg:block"
         >
           <ol className="flex flex-col items-end gap-4">
@@ -271,49 +359,62 @@ export function TowerWalkthrough() {
           </ol>
         </nav>
 
-        {/* Caption and step controls. Gone entirely on foot: on a phone this
-            block plus the hour dial covers most of the frame, and none of it
-            means anything when the camera is no longer on a numbered step. */}
+        {/* Caption and step controls, or the inventory in their place. Gone
+            entirely on foot: on a phone this block plus the hour dial covers
+            most of the frame, and none of it means anything when the camera
+            is no longer on a numbered step. */}
         <div hidden={walking} className="px-gutter absolute inset-x-0 bottom-0 z-10 pb-6 lg:pb-10">
           <div className="max-w-wide mx-auto flex flex-col gap-4 lg:pl-[7.5rem]">
-            <div className="max-w-[56ch]">
-              <p className="text-eyebrow text-bone/70 flex items-center gap-4 uppercase">
-                <span className="text-gold tabular-nums">{String(step + 1).padStart(2, '0')}</span>
-                <span aria-hidden="true" className="bg-gold-dim h-px w-8" />
-                {view.label}
-              </p>
-              {/* aria-live so a screen-reader user hears the new caption
-                  when the step changes — the canvas itself cannot say it. */}
-              <p className="text-lede text-mist mt-3" aria-live="polite">
-                {note}
-              </p>
-            </div>
+            {showInventory ? (
+              <InventoryPanel
+                activeFloor={selectedUnit?.floor ?? null}
+                onSelect={(unit) => setSelectedUnit(unit)}
+                className="max-w-[56ch]"
+              />
+            ) : (
+              <div className="max-w-[56ch]">
+                <p className="text-eyebrow text-bone/70 flex items-center gap-4 uppercase">
+                  <span className="text-gold tabular-nums">
+                    {String(step + 1).padStart(2, '0')}
+                  </span>
+                  <span aria-hidden="true" className="bg-gold-dim h-px w-8" />
+                  {view.label}
+                </p>
+                {/* aria-live so a screen-reader user hears the new caption
+                    when the step changes — the canvas itself cannot say it. */}
+                <p className="text-lede text-mist mt-3" aria-live="polite">
+                  {note}
+                </p>
+              </div>
+            )}
 
             {/* The other building, reachable from inside this one. Hidden on
                 foot along with the rest of the tour chrome. */}
             <BuildingSwitch className="self-start" />
 
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => go(step - 1)}
-                disabled={step === 0}
-                className="text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={() => go(step + 1)}
-                disabled={step === last}
-                className="text-eyebrow text-obsidian bg-alabaster hover:bg-bone focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
-              >
-                {step === last ? 'End of walkthrough' : 'Continue'}
-              </button>
-              <span className="text-eyebrow text-stone uppercase tabular-nums">
-                {step + 1} / {TOWER_VIEWS.length}
-              </span>
-            </div>
+            {showInventory ? null : (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => go(step - 1)}
+                  disabled={step === 0}
+                  className="text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => go(step + 1)}
+                  disabled={step === last}
+                  className="text-eyebrow text-obsidian bg-alabaster hover:bg-bone focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  {step === last ? 'End of walkthrough' : 'Continue'}
+                </button>
+                <span className="text-eyebrow text-stone uppercase tabular-nums">
+                  {step + 1} / {TOWER_VIEWS.length}
+                </span>
+              </div>
+            )}
 
             {/* The compact hour dial. Below `lg` the vertical form would sit
                 under the thumb, so it moves to the foot of the frame. */}
