@@ -16,8 +16,7 @@ const BASE =
 
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-alabaster text-obsidian hover:bg-gold hover:text-obsidian active:scale-95',
-  outline:
-    'border border-alabaster/40 text-alabaster hover:border-gold hover:text-gold',
+  outline: 'border border-alabaster/40 text-alabaster hover:border-gold hover:text-gold',
   ghost: 'text-mist hover:text-alabaster transition-opacity',
 };
 
