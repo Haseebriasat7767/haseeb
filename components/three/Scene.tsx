@@ -285,7 +285,7 @@ export function Scene({
           ) : content === 'tower' ? (
             <TowerScene detail={quality.tier} walk={mode === 'walk'} />
           ) : (
-            <ProceduralVilla detail={quality.tier} lighting={lighting} />
+            <ProceduralVilla detail={quality.tier} lighting={lighting} walk={mode === 'walk'} />
           ))}
         {overlay}
         <ReadySignal onReady={onReady} />
