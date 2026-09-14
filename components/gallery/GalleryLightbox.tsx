@@ -7,6 +7,18 @@ import { useScrollLock } from '@/hooks/useScrollLock';
 import type { Space } from '@/lib/experience/spaces';
 import type { TimeOfDay } from '@/types';
 
+declare global {
+  interface Window {
+    /**
+     * Set only by `scripts/brochure-stills.mjs`, before it opens a plate.
+     * Lets batch capture on unaccelerated hardware ask for fewer samples
+     * than a real visitor's GPU would ever need to wait for, without
+     * touching the sample budget anyone else gets.
+     */
+    __AURELIA_STILL_SAMPLES__?: number;
+  }
+}
+
 type GalleryLightboxProps = {
   space: Space | null;
   index: number;
@@ -130,6 +142,9 @@ export function GalleryLightbox({
           view={space.view}
           mode="fixed"
           cinematic
+          cinematicMaxSamples={
+            typeof window === 'undefined' ? undefined : window.__AURELIA_STILL_SAMPLES__
+          }
           onCinematicProgress={handleProgress}
           timeOfDay={timeOfDay}
           label={`${space.name} — path-traced frame`}

@@ -59,11 +59,21 @@ const PLATES = [
   { space: 'master', file: 'master.jpg', caption: 'Master suite' },
 ];
 
-/** Generous — path tracing 320 samples of an 8-megapixel frame through
- *  SwiftShader's software rasteriser is slow, measured in tens of minutes
- *  rather than seconds, and a plate that never converges should time out
- *  loudly rather than hang the run indefinitely. */
-const CONVERGE_TIMEOUT_MS = 40 * 60_000;
+/** See `STILL_SAMPLES` below for why this is lower than `PathTracer`'s own
+ *  default — even so, generous: a plate that never converges should time
+ *  out loudly rather than hang the run indefinitely. */
+const CONVERGE_TIMEOUT_MS = 25 * 60_000;
+
+/**
+ * The sample budget for this run only — see the comment at the capture
+ * site. Chosen by measurement, not guessed: 320 samples at 3840×2160 did
+ * not converge inside 40 minutes under SwiftShader, so this is scaled down
+ * enough to fit inside `CONVERGE_TIMEOUT_MS` with headroom, while still
+ * being real path tracing — true global illumination, soft shadows and
+ * reflections a rasterizer cannot produce — rather than a rasterized
+ * fallback.
+ */
+const STILL_SAMPLES = 90;
 
 mkdirSync(OUT, { recursive: true });
 
@@ -113,6 +123,17 @@ try {
     // visitor would click exercises the real cinematic path end to end
     // rather than a capture-only route that could quietly drift from it.
     await page.goto(`${ORIGIN}/gallery`, { waitUntil: 'load', timeout: 200_000 });
+    // The full 320-sample budget converges in a couple of seconds on a real
+    // GPU, which is what it is tuned for. This machine has none — every
+    // sample goes through SwiftShader's software rasteriser — and at
+    // 3840×2160 that is measured in tens of minutes per hundred samples, not
+    // seconds. `STILL_SAMPLES` asks `GalleryLightbox` for a smaller budget
+    // for exactly this run, through the one hook built for it
+    // (`window.__AURELIA_STILL_SAMPLES__`), rather than lowering the
+    // default every real visitor's GPU renders at.
+    await page.evaluate((n) => {
+      window.__AURELIA_STILL_SAMPLES__ = n;
+    }, STILL_SAMPLES);
     await page.click(`[data-space="${plate.space}"]`, { timeout: 30_000 });
 
     // Wait for convergence rather than a fixed timer. `PathTracer` reports

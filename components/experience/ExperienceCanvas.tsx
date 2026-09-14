@@ -29,6 +29,8 @@ type ExperienceCanvasProps = {
   onReady?: () => void;
   /** Path-traces this framing instead of rasterizing it. Stills only. */
   cinematic?: boolean;
+  /** Overrides `PathTracer`'s own sample budget. Stills capture only. */
+  cinematicMaxSamples?: number;
   onCinematicProgress?: (samples: number, maxSamples: number) => void;
 };
 
@@ -47,6 +49,7 @@ export function ExperienceCanvas({
   hotspots,
   onReady,
   cinematic,
+  cinematicMaxSamples,
   onCinematicProgress,
 }: ExperienceCanvasProps) {
   const [ready, setReady] = useState(false);
@@ -79,6 +82,7 @@ export function ExperienceCanvas({
           ) : null
         }
         cinematic={cinematic}
+        cinematicMaxSamples={cinematicMaxSamples}
         onCinematicProgress={onCinematicProgress}
         onReady={handleReady}
         diagnosticsEnabled={diagnosticsEnabled}

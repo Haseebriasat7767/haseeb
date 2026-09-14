@@ -95,6 +95,8 @@ type SceneProps = {
    * moving camera.
    */
   cinematic?: boolean;
+  /** Overrides `PathTracer`'s own sample budget. Stills capture only. */
+  cinematicMaxSamples?: number;
   /** Convergence progress, so chrome can show it and then withdraw. */
   onCinematicProgress?: (samples: number, maxSamples: number) => void;
   /** Extra scene contents mounted alongside the building (hotspots, helpers). */
@@ -125,6 +127,7 @@ export function Scene({
   view = DEFAULT_VIEW,
   mode = 'orbit',
   cinematic = false,
+  cinematicMaxSamples,
   onCinematicProgress,
   onReady,
   content = 'villa',
@@ -265,7 +268,11 @@ export function Scene({
           already resolved its own exposure and tone curve, and running it
           through the composer would grade an already-graded image. */}
       {cinematic ? (
-        <PathTracer active onProgress={onCinematicProgress} />
+        <PathTracer
+          active
+          onProgress={onCinematicProgress}
+          {...(cinematicMaxSamples ? { maxSamples: cinematicMaxSamples } : {})}
+        />
       ) : post.enabled ? (
         <PostProcessing profile={post} grade={grade} />
       ) : null}
