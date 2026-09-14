@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { Container } from '@/components/ui/Container';
@@ -15,6 +16,9 @@ import { TouchHint } from '@/components/experience/TouchHint';
 import { VisitedCTA } from '@/components/experience/VisitedCTA';
 import { BuildingSwitch } from '@/components/navigation/BuildingSwitch';
 import { HourDial } from '@/components/experience/HourDial';
+import { FloorPlan } from '@/components/plan/FloorPlan';
+import { Gallery } from '@/components/gallery/Gallery';
+import { cn } from '@/lib/utils/cn';
 import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
 import { SpaceRail } from './SpaceRail';
@@ -23,13 +27,40 @@ import { WalkPad } from '@/components/tower/WalkPad';
 
 const DEFAULT_SPACE = SPACES[0]!;
 
+export type ExplorerTab = 'explore' | 'plan' | 'gallery';
+
+/**
+ * The three sections of the residence flow, kept on their own routes for
+ * canonical URLs and SEO — but rendered from this one component tree, with
+ * one shared header and one tab bar, the way `TowerWalkthrough` keeps its
+ * views, the lift picker and the hour dial in a single spine rather than
+ * spreading them across separate pages.
+ */
+const TABS: ReadonlyArray<{ id: ExplorerTab; label: string; href: string }> = [
+  { id: 'explore', label: 'Explore', href: '/experience' },
+  { id: 'plan', label: 'Floor plan', href: '/floor-plan' },
+  { id: 'gallery', label: 'Gallery', href: '/gallery' },
+];
+
+const TAB_COPY: Record<ExplorerTab, { eyebrow: string; title: string }> = {
+  explore: { eyebrow: 'Explore', title: 'Every space in the residence' },
+  plan: { eyebrow: 'Architecture', title: 'Plans and levels' },
+  gallery: { eyebrow: 'Gallery', title: 'Framings of the residence' },
+};
+
 /**
  * The residence explorer. One canvas, one camera, and a set of named
  * spaces: selecting a space in the rail or clicking its marker on the model
  * eases the camera to that framing and opens its details. Nothing here
  * navigates — the scene is never torn down and rebuilt.
+ *
+ * `tab` fixes which of the three sections this mount shows — set by the
+ * route it was rendered from (`/experience`, `/floor-plan`, `/gallery`).
+ * The tab bar below the heading moves between those routes directly, so
+ * the address bar, the metadata and the sitemap entry for each section stay
+ * real rather than becoming query-string state on one page.
  */
-export function ResidenceExplorer() {
+export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
   const reducedMotion = useReducedMotion();
   // Pointer parallax has no meaning without a pointer: on a touch screen the
   // camera would only shift while a thumb is already dragging it, which
@@ -106,158 +137,214 @@ export function ResidenceExplorer() {
 
   const openFramed = useCallback(() => setOpenId(framed.id), [framed.id]);
 
+  const copy = TAB_COPY[tab];
+
   return (
     <div className="relative">
       {/*
-        Full bleed. The reference language for a residence of this kind puts
-        the architecture edge to edge and lets nothing but hairline chrome
-        sit over it; a view boxed into two thirds of the viewport with its
-        controls stacked underneath reads as a product page instead. The
-        rail and the hour control still live below, for the visitor who
-        wants the whole set at once.
+        Full bleed, `explore` only. The reference language for a residence
+        of this kind puts the architecture edge to edge and lets nothing but
+        hairline chrome sit over it; a view boxed into two thirds of the
+        viewport with its controls stacked underneath reads as a product
+        page instead. The rail and the hour control still live below, for
+        the visitor who wants the whole set at once.
+
+        The plan and gallery sections have no canvas of their own to open
+        on — `FloorPlan` is a drawing and `Gallery` renders each framing
+        only once it's opened — so they skip straight to the heading below.
       */}
-      <div className="relative h-[86svh] w-full overflow-hidden lg:h-[92svh]">
-        <ExperienceViewport
-          className="absolute inset-0 h-full w-full"
-          view={framed.view}
-          mode={walking ? 'walk' : 'journey'}
-          timeOfDay={timeOfDay}
-          parallax={walking ? 0 : reducedMotion || coarsePointer ? 0 : 4.0}
-          label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
-          hotspots={{ activeId: openId, onSelect: select }}
-        >
-          {/* Ground for the chrome. Bottom-weighted and shallow: the
+      {tab !== 'explore' ? null : (
+        <>
+          <div className="relative h-[86svh] w-full overflow-hidden lg:h-[92svh]">
+            <ExperienceViewport
+              className="absolute inset-0 h-full w-full"
+              view={framed.view}
+              mode={walking ? 'walk' : 'journey'}
+              timeOfDay={timeOfDay}
+              parallax={walking ? 0 : reducedMotion || coarsePointer ? 0 : 4.0}
+              label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
+              hotspots={{ activeId: openId, onSelect: select }}
+            >
+              {/* Ground for the chrome. Bottom-weighted and shallow: the
               caption, the figures and the prev/next all sit in the lower
               band, and the architecture above it stays untouched. */}
-          <div
-            aria-hidden="true"
-            className="from-obsidian/85 via-obsidian/25 pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t to-transparent"
-          />
-          <div
-            aria-hidden="true"
-            className="from-obsidian/50 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b to-transparent"
-          />
-          {/* Ground for the dial. Without it the scale stands over open sky
+              <div
+                aria-hidden="true"
+                className="from-obsidian/85 via-obsidian/25 pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t to-transparent"
+              />
+              <div
+                aria-hidden="true"
+                className="from-obsidian/50 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b to-transparent"
+              />
+              {/* Ground for the dial. Without it the scale stands over open sky
               at the top of its travel and over sunlit grass at the bottom,
               and the two ends of the same control read at different
               strengths. Wide viewports only — that is the only place the
               vertical dial is shown. */}
-          <div
-            aria-hidden="true"
-            className="from-obsidian/70 pointer-events-none absolute inset-y-0 left-0 hidden w-72 bg-gradient-to-r to-transparent lg:block"
-          />
+              <div
+                aria-hidden="true"
+                className="from-obsidian/70 pointer-events-none absolute inset-y-0 left-0 hidden w-72 bg-gradient-to-r to-transparent lg:block"
+              />
 
-          {/* Walk toggle button */}
-          {webgl === false ? null : (
-            <button
-              type="button"
-              onClick={() => setWalking((on) => !on)}
-              className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
-            >
-              {walking ? 'Guided tour' : 'Walk the residence'}
-            </button>
-          )}
+              {/* Walk toggle button */}
+              {webgl === false ? null : (
+                <button
+                  type="button"
+                  onClick={() => setWalking((on) => !on)}
+                  className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+                >
+                  {walking ? 'Guided tour' : 'Walk the residence'}
+                </button>
+              )}
 
-          {/* Touch only. Without a cursor there is nothing to tell a phone
+              {/* Touch only. Without a cursor there is nothing to tell a phone
               visitor the frame moves, and an interactive view mistaken for
               a photograph is scrolled past. */}
-          {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
+              {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
 
-          {/* Walk mode instructions */}
-          {walking ? (
-            <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
-              <span className="hidden sm:inline">
-                Drag to look · arrows or W A S D to walk · Shift to run
-              </span>
-              <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
-            </div>
-          ) : null}
+              {/* Walk mode instructions */}
+              {walking ? (
+                <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
+                  <span className="hidden sm:inline">
+                    Drag to look · arrows or W A S D to walk · Shift to run
+                  </span>
+                  <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
+                </div>
+              ) : null}
 
-          {/* The same dial that stands on the landing page, in the same
+              {/* The same dial that stands on the landing page, in the same
               place, doing the same thing — the hour is one idea across the
               site, not a control that moves when the page does. */}
-          {webgl === false ? null : (
-            <HourDial
-              value={timeOfDay}
-              onChange={setTimeOfDay}
-              className="absolute top-1/2 left-7 z-10 hidden -translate-y-1/2 lg:block xl:left-10"
-            />
-          )}
+              {webgl === false ? null : (
+                <HourDial
+                  value={timeOfDay}
+                  onChange={setTimeOfDay}
+                  className="absolute top-1/2 left-7 z-10 hidden -translate-y-1/2 lg:block xl:left-10"
+                />
+              )}
 
-          <CinematicOverlay
-            space={framed}
-            index={position.index}
-            total={SPACES.length}
-            previous={position.previous}
-            next={position.next}
-            onSelect={select}
-            onOpen={openFramed}
-            hidden={open !== null}
-          />
-        </ExperienceViewport>
+              <CinematicOverlay
+                space={framed}
+                index={position.index}
+                total={SPACES.length}
+                previous={position.previous}
+                next={position.next}
+                onSelect={select}
+                onOpen={openFramed}
+                hidden={open !== null}
+              />
+            </ExperienceViewport>
 
-        {/* Thumb controls for walk mode */}
-        <TouchSticks active={walking} />
-        {/* Keyboard controls for walk mode */}
-        <WalkPad active={walking} />
+            {/* Thumb controls for walk mode */}
+            <TouchSticks active={walking} />
+            {/* Keyboard controls for walk mode */}
+            <WalkPad active={walking} />
 
-        <SpacePanel space={open} onClose={close} onFocusSpace={frame} />
-      </div>
+            <SpacePanel space={open} onClose={close} onFocusSpace={frame} />
+          </div>
 
-      {/* `min-w-0` on both columns: a grid item defaults to `min-width:
-          auto`, so without it the widest child sets the track width and the
-          whole page scrolls sideways on a narrow screen. */}
-      {/* Reads `?space=` and renders nothing. Its own boundary, so its
-          client-only nature cannot pull the rest of the page out of the
-          server-rendered HTML. */}
-      <Suspense fallback={null}>
-        <DeepLinkedSpace onSpace={openSpace} />
-      </Suspense>
+          {/* Reads `?space=` and renders nothing. Its own boundary, so its
+              client-only nature cannot pull the rest of the page out of the
+              server-rendered HTML. */}
+          <Suspense fallback={null}>
+            <DeepLinkedSpace onSpace={openSpace} />
+          </Suspense>
+        </>
+      )}
 
-      <Container className="pb-section">
-        {/* The page's only `h1`, and it belongs here rather than above the
-            frame: the view opens the page full bleed on purpose, so the
-            heading introduces the rail once the visitor has looked. It was
-            described that way in `app/experience/page.tsx` but never
-            actually written, which left this page with no `h1` at all —
-            invisible to a crawler reading the document outline, and a
-            document that starts at `h2` for anyone navigating by heading. */}
+      <Container className={cn('pb-section', tab === 'explore' ? undefined : 'pt-32 sm:pt-36')}>
+        {/* The page's only `h1`. On `explore` it belongs here rather than
+            above the frame: the view opens the page full bleed on purpose,
+            so the heading introduces the rail once the visitor has looked.
+            `plan` and `gallery` have no frame above them, so the same
+            header carries the extra top padding added above instead. */}
         <header className="border-alabaster/10 flex flex-col gap-6 border-t pt-10">
           {/* The pair, so the second building is visible from inside the
               first rather than only in the menu. */}
           <BuildingSwitch className="self-start" />
-          <p className="text-eyebrow text-stone uppercase">Explore</p>
+
+          {/* The spine's own navigation: three sections of one flow, kept
+              on their own routes (real URLs, real metadata) but presented
+              here as tabs rather than as three disconnected pages. */}
+          <nav aria-label="Residence sections" role="tablist" className="flex flex-wrap gap-px">
+            {TABS.map((entry) => {
+              const active = entry.id === tab;
+              return (
+                <Link
+                  key={entry.id}
+                  href={entry.href}
+                  role="tab"
+                  aria-selected={active}
+                  data-cursor="link"
+                  className={cn(
+                    'ease-luxe flex min-h-11 items-center px-5 font-sans text-[0.6875rem] tracking-[0.24em] uppercase transition-colors duration-200',
+                    active
+                      ? 'bg-alabaster text-obsidian'
+                      : 'border-alabaster/25 text-mist hover:text-alabaster border',
+                  )}
+                >
+                  {entry.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <p className="text-eyebrow text-stone uppercase">{copy.eyebrow}</p>
           <h1 className="font-display text-alabaster text-display-md mt-5 max-w-[24ch] font-light">
-            Every space in the residence
+            {copy.title}
           </h1>
         </header>
-        <div className="grid gap-10 pt-10 lg:grid-cols-12 lg:gap-16">
-          <div className="min-w-0 lg:col-span-7">
-            <SpaceRail activeId={framedId} onSelect={select} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-8 lg:col-span-5">
-            {/* Below `lg` the dial cannot live in the frame — that edge is
-                where the thumb drives the camera — so it takes the head of
-                this column instead, in its compact form. */}
-            {webgl === false ? null : (
-              <HourDial
-                value={timeOfDay}
-                onChange={setTimeOfDay}
-                orientation="horizontal"
-                className="max-w-md lg:hidden"
-              />
-            )}
-            <p className="text-stone max-w-[42ch] text-xs leading-relaxed">
-              Select a space to move the camera to it — markers on the model open the same details.
-              Moving the pointer across the frame shifts the camera slightly, the way a hand-held
-              architectural camera would. The hour changes the lighting state, not the geometry.
-            </p>
 
-            {/* Appears once the site, the ground floor and the upper floor
-                have all been framed — never before. */}
-            <VisitedCTA shown={seenEverything} />
+        {tab === 'explore' ? (
+          <div className="grid gap-10 pt-10 lg:grid-cols-12 lg:gap-16">
+            <div className="min-w-0 lg:col-span-7">
+              <SpaceRail activeId={framedId} onSelect={select} />
+            </div>
+            <div className="flex min-w-0 flex-col gap-8 lg:col-span-5">
+              {/* Below `lg` the dial cannot live in the frame — that edge is
+                  where the thumb drives the camera — so it takes the head of
+                  this column instead, in its compact form. */}
+              {webgl === false ? null : (
+                <HourDial
+                  value={timeOfDay}
+                  onChange={setTimeOfDay}
+                  orientation="horizontal"
+                  className="max-w-md lg:hidden"
+                />
+              )}
+              <p className="text-stone max-w-[42ch] text-xs leading-relaxed">
+                Select a space to move the camera to it — markers on the model open the same
+                details. Moving the pointer across the frame shifts the camera slightly, the way a
+                hand-held architectural camera would. The hour changes the lighting state, not the
+                geometry.
+              </p>
+
+              {/* Appears once the site, the ground floor and the upper floor
+                  have all been framed — never before. */}
+              <VisitedCTA shown={seenEverything} />
+            </div>
           </div>
-        </div>
+        ) : tab === 'plan' ? (
+          <div className="pt-10">
+            <p className="text-mist max-w-[64ch] pb-10 text-sm leading-relaxed">
+              Two levels stepped onto the ridge. The plans and the residence are drawn to one
+              schedule, so what you walk through in{' '}
+              <Link href="/experience" className="text-alabaster hover:text-gold underline">
+                Explore
+              </Link>{' '}
+              and what you read here are the same description.
+            </p>
+            <FloorPlan />
+          </div>
+        ) : (
+          <div className="pt-10">
+            <p className="text-mist max-w-[64ch] pb-10 text-sm leading-relaxed">
+              These are not photographs. Each framing opens as a live view of the residence — choose
+              an hour, and the whole set answers to it.
+            </p>
+            <Gallery />
+          </div>
+        )}
       </Container>
     </div>
   );
