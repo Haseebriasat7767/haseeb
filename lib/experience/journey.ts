@@ -33,9 +33,15 @@ export const JOURNEY: readonly JourneyChapter[] = [
   {
     id: 'exterior',
     index: '01',
-    eyebrow: 'Two buildings, generated in code',
-    title: 'Walk a building that has not been built.',
-    body: 'A private residence on a coastal ridge and a twenty-storey oceanfront tower — both generated from geometry rather than photographed, both walkable at any hour of the day. Neither exists.',
+    // Leads with what a buyer gets, not how it is made. "Generated in code"
+    // and "geometry rather than photographed" described the technique, which
+    // is the one thing the person paying for this does not need to know on
+    // the first screen — they are buying a way to sell a building before it
+    // exists. The last sentence stays: the residence is conceptual and
+    // saying so plainly is what makes the rest of the site believable.
+    eyebrow: 'Concept residence',
+    title: 'Let buyers walk the property before it is built.',
+    body: 'A private residence on a coastal ridge and a twenty-storey oceanfront tower, both walkable in real time at any hour of the day, from any device. Neither is a real listing — they are here to show what your property could become.',
     view: chapterView('arrival'),
     space: 'arrival',
   },

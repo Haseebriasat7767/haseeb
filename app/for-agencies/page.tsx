@@ -43,6 +43,73 @@ const WHO_ITS_FOR = [
   'Pre-launch sales campaigns',
 ] as const;
 
+/**
+ * How a project actually runs, in the order it happens.
+ *
+ * Four steps because that is how many there are, not because four reads
+ * well on a page. Nothing here describes work the current architecture
+ * cannot do: every step below is something this repository already
+ * performs for the two buildings on this site.
+ */
+const PROCESS: ReadonlyArray<{ step: string; title: string; body: string }> = [
+  {
+    step: '01',
+    title: 'Share the property',
+    body: 'Plans, elevations, renders, a material schedule, the specification — whatever exists. Drawings are enough; photography is not required, because nothing here is photographed.',
+  },
+  {
+    step: '02',
+    title: 'We build the experience',
+    body: 'The building is modelled, the rooms are named, the floor plan is drawn from the same model, and the hours of the day are lit. The figures on the page are counted from the model rather than typed beside it.',
+  },
+  {
+    step: '03',
+    title: 'Review it branded',
+    body: 'Your name, your advisor, your contact channels and your brochure, on your own link. You walk it before anybody else does and say what should change.',
+  },
+  {
+    step: '04',
+    title: 'Launch',
+    body: 'It goes live on your domain. Enquiries arrive in the inbox you nominate, carrying which building, which room and how far the visitor had gone before they wrote.',
+  },
+];
+
+/**
+ * What a client actually configures.
+ *
+ * Every line corresponds to something real in `lib/constants/client.ts`,
+ * `lib/experience/spaces.ts` or the generator — nothing is listed here that
+ * the product cannot currently do. Promising a capability on a sales page
+ * that the architecture does not have is the fastest way to lose the
+ * second meeting.
+ */
+const CONFIGURABLE: ReadonlyArray<{ title: string; body: string }> = [
+  {
+    title: 'Your property',
+    body: 'Name, collection, location and the opening statement a buyer reads first.',
+  },
+  {
+    title: 'Your spaces',
+    body: 'Which rooms exist, what each is called, what is worth saying about it, and the order the guided tour walks them in.',
+  },
+  {
+    title: 'Your plans and figures',
+    body: 'Floor plans and areas are drawn and counted from the model itself, so what a buyer reads cannot drift from what they are walking through.',
+  },
+  {
+    title: 'Your identity',
+    body: 'Logo beside the wordmark, advisor name, title, agency and portrait, and a link to your own site.',
+  },
+  {
+    title: 'Your contact channels',
+    body: 'Email, telephone, WhatsApp and a booking link. Each appears only when set — an unconfigured channel is hidden rather than shown broken.',
+  },
+  {
+    title: 'Your brochure',
+    body: 'Generated from the same model, so the document a buyer downloads states what the page they downloaded it from states.',
+  },
+];
+
 const OUTCOMES = [
   {
     title: 'Help buyers understand space',
@@ -197,6 +264,63 @@ export default function ForAgenciesPage() {
                 ))}
               </ul>
             </Reveal>
+          </div>
+        </Container>
+      </section>
+
+      <section className="py-section" aria-labelledby="process-heading">
+        <Container className="flex flex-col gap-14">
+          <Reveal>
+            <SectionHeading
+              eyebrow="How it works"
+              title={<span id="process-heading">Four steps, start to live</span>}
+              lede="No procurement exercise and no discovery phase. You send what you already
+                have, and you review it branded before anybody else sees it."
+            />
+          </Reveal>
+
+          <ol className="border-alabaster/10 bg-alabaster/10 grid gap-px border sm:grid-cols-2 lg:grid-cols-4">
+            {PROCESS.map((entry, index) => (
+              <Reveal
+                key={entry.step}
+                delay={index * 50}
+                className="bg-obsidian flex flex-col gap-3 p-7 sm:p-8"
+              >
+                <li className="flex flex-col gap-3">
+                  <p className="text-eyebrow text-gold tabular-nums">{entry.step}</p>
+                  <p className="font-display text-alabaster text-lg leading-tight font-semibold">
+                    {entry.title}
+                  </p>
+                  <p className="text-mist text-sm leading-relaxed">{entry.body}</p>
+                </li>
+              </Reveal>
+            ))}
+          </ol>
+        </Container>
+      </section>
+
+      <section className="py-section" aria-labelledby="configurable-heading">
+        <Container className="flex flex-col gap-14">
+          <Reveal>
+            <SectionHeading
+              eyebrow="Made yours"
+              title={<span id="configurable-heading">What carries your name</span>}
+              lede="The experience on this site is the product, configured for a residence that
+                does not exist. Configured for yours, these are the parts that change."
+            />
+          </Reveal>
+
+          <div className="grid gap-x-12 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {CONFIGURABLE.map((entry, index) => (
+              <Reveal
+                key={entry.title}
+                delay={index * 40}
+                className="border-alabaster/10 flex flex-col gap-2 border-t pt-5"
+              >
+                <p className="text-alabaster text-sm font-semibold">{entry.title}</p>
+                <p className="text-mist text-sm leading-relaxed">{entry.body}</p>
+              </Reveal>
+            ))}
           </div>
         </Container>
       </section>

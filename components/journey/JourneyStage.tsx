@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { HourDial } from '@/components/experience/HourDial';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { Button } from '@/components/ui/Button';
+import { primaryCtaLabel } from '@/lib/constants/client';
 import { Container } from '@/components/ui/Container';
 import { useActiveSection } from '@/hooks/useActiveSection';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -255,15 +256,24 @@ export function JourneyStage() {
                     )}
                     style={isFirst ? { animationDelay: '440ms' } : undefined}
                   >
-                    <Button href="/residence?tab=explore" magnetic>
-                      Explore residence
+                    {/*
+                      Ranked, not three of the same button. The opening
+                      screen offered "Explore residence" and "View floor
+                      plan" — two ways to look around and no way to act, so
+                      a buyer who had already decided had nowhere to go. The
+                      viewing is primary, building one for their own
+                      property is the second thing they might want, and
+                      exploring is the quiet third: it is what the whole
+                      page below already invites.
+                    */}
+                    <Button href="/contact" magnetic>
+                      {primaryCtaLabel()}
                     </Button>
-                    <Button
-                      href={isFirst ? '/residence?tab=plan' : '/contact'}
-                      variant="outline"
-                      magnetic
-                    >
-                      {isFirst ? 'View floor plan' : 'Request private viewing'}
+                    <Button href="/for-agencies#create" variant="outline" magnetic>
+                      Build this for your property
+                    </Button>
+                    <Button href="/residence?tab=explore" variant="ghost" size="sm">
+                      Explore the residence
                     </Button>
                   </div>
                 ) : chapter.space ? (
