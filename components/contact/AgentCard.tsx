@@ -1,3 +1,4 @@
+import { AgentPortrait } from '@/components/brand/ClientIdentity';
 import { CLIENT, mailtoLink, telLink, whatsappLink } from '@/lib/constants/client';
 import { trackBrochureDownload, trackContactChannelClick } from '@/lib/analytics/events';
 import { TrackedLink } from './TrackedLink';
@@ -32,13 +33,20 @@ export function AgentCard() {
       <div className="flex flex-col gap-1">
         <p className="text-eyebrow text-stone uppercase">Enquiries</p>
         {agent.name ? (
-          <>
-            <p className="font-display text-alabaster mt-3 text-2xl leading-tight font-semibold">
-              {agent.name}
-            </p>
-            {agent.title ? <p className="text-mist text-sm">{agent.title}</p> : null}
-            {agent.agency ? <p className="text-stone text-sm">{agent.agency}</p> : null}
-          </>
+          /* The portrait sits beside the name rather than above the card:
+             an advisor's photograph is an identity cue, not the headline.
+             It renders only when configured and removes itself if the file
+             fails to load — see `AgentPortrait`. */
+          <div className="mt-3 flex items-center gap-4">
+            <AgentPortrait />
+            <div className="flex flex-col gap-0.5">
+              <p className="font-display text-alabaster text-2xl leading-tight font-semibold">
+                {agent.name}
+              </p>
+              {agent.title ? <p className="text-mist text-sm">{agent.title}</p> : null}
+              {agent.agency ? <p className="text-stone text-sm">{agent.agency}</p> : null}
+            </div>
+          </div>
         ) : (
           <p className="text-mist mt-3 text-sm leading-relaxed">
             Every enquiry is read and answered personally.

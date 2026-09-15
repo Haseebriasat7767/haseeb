@@ -97,6 +97,12 @@ export function trackGuidedTourCompleted(): void {
   track('guided_tour_completed');
 }
 
+/** The tour run again from its completion card. Distinct from
+ *  `guided_tour_started`, which is the first time through. */
+export function trackGuidedTourReplayed(): void {
+  track('guided_tour_replayed');
+}
+
 export function trackGuidedTourSkipped(): void {
   track('guided_tour_skipped');
 }

@@ -32,11 +32,13 @@ import {
   trackBrochureDownload,
   trackSpaceEntered,
   trackGuidedTourCompleted,
+  trackGuidedTourReplayed,
   trackGuidedTourExited,
   trackGuidedTourSkipped,
   trackGuidedTourStarted,
   trackGuidedTourStepViewed,
 } from '@/lib/analytics/events';
+import { ClientIdentity } from '@/components/brand/ClientIdentity';
 import { SpaceSummary } from './SpaceSummary';
 import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
@@ -253,6 +255,21 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
   }, []);
 
   const beginTour = useCallback(() => setTourPhase('running'), []);
+
+  /**
+   * Runs the tour again from its first step.
+   *
+   * The same state the intro card drives, not a second tour: index back to
+   * zero and the phase back to `running`. It deliberately skips the intro —
+   * somebody asking to see it again has already read that card — and leaves
+   * `timeOfDay` alone, so the hour they finished on is the hour they start
+   * from until a step that owns the light sets it.
+   */
+  const replayTour = useCallback(() => {
+    setTourIndex(0);
+    setTourPhase('running');
+    trackGuidedTourReplayed();
+  }, []);
 
   const skipTour = useCallback(() => {
     setTourPhase(null);
@@ -492,6 +509,7 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
                 onNext={nextStep}
                 onExit={exitTour}
                 onFloorPlan={tourToFloorPlan}
+                onReplay={replayTour}
                 onCommercial={toCommercial}
                 onViewing={toViewing}
                 onBrochure={onBrochure}
@@ -686,6 +704,10 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
               {/* Appears once the site, the ground floor and the upper floor
                   have all been framed — never before. */}
               <VisitedCTA shown={seenEverything} />
+
+              {/* Who is presenting this, when a client has said. Renders
+                  nothing at all unconfigured, so the demo is unchanged. */}
+              <ClientIdentity className="border-alabaster/10 border-t pt-8" />
             </div>
           </div>
         ) : tab === 'plan' ? (

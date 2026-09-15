@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils/cn';
 import { MobileMenu } from './MobileMenu';
 import { NavLinks } from './NavLinks';
 import { Wordmark } from './Wordmark';
+import { ClientLogo } from '@/components/brand/ClientIdentity';
 
 /**
  * Transparent overlay header — it already sits on top of the page and will
@@ -53,7 +54,13 @@ export function Header() {
           className="from-obsidian/60 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b to-transparent"
         />
         <div className="max-w-wide px-gutter relative mx-auto flex h-20 items-center justify-between">
-          <Wordmark />
+          {/* The client's mark co-signs the wordmark rather than replacing
+              it, and renders nothing at all when none is configured — so
+              the unbranded masthead is unchanged. */}
+          <div className="flex items-center gap-3">
+            <Wordmark />
+            <ClientLogo />
+          </div>
 
           <div className="hidden items-center gap-8 lg:flex xl:gap-10">
             <nav aria-label="Primary">

@@ -31,6 +31,10 @@ type GuidedTourProps = {
   onExit: () => void;
   onFloorPlan: () => void;
   /** Records the lead's context before leaving for the commercial form. */
+  /** Runs the tour again from step one. Secondary to the commercial asks
+   *  below it — a visitor who wants another look is welcome to one, but the
+   *  page's job at this moment is still to ask. */
+  onReplay: () => void;
   onCommercial: () => void;
   /** The same, for the buyer's viewing form. */
   onViewing: () => void;
@@ -50,6 +54,7 @@ export function GuidedTour({
   onNext,
   onExit,
   onFloorPlan,
+  onReplay,
   onCommercial,
   onViewing,
   onBrochure,
@@ -139,6 +144,13 @@ export function GuidedTour({
               </Button>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              <button
+                type="button"
+                onClick={onReplay}
+                className="text-eyebrow text-stone hover:text-alabaster uppercase transition-colors"
+              >
+                Replay experience
+              </button>
               <button
                 type="button"
                 onClick={onFloorPlan}
