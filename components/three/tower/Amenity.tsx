@@ -22,13 +22,23 @@ export function Amenity({ layout }: { layout: AmenityLayout }) {
       <MergedBoxes name="amn-tiling" specs={layout.tiling} material={materials.interiorStone} />
       <MergedBoxes name="amn-joinery" specs={layout.joinery} material={materials.teak} />
       <MergedBoxes name="amn-soft" specs={layout.soft} material={materials.rug} />
-      {/* The gym mirror and the sauna door. Neither casts: a mirror that
-          throws a shadow reads as a dark panel, which is the opposite of
-          what it is doing. */}
+      {/* The gym mirror. Not cast: a mirror that throws a shadow reads as a
+          dark panel, which is the opposite of what it is doing. Silvered
+          glass, not the tinted architectural glazing every window on the
+          building uses — a wall of windows reading darkly does not read as
+          a mirror doubling the room. */}
       <MergedBoxes
         name="amn-mirrors"
         specs={layout.mirrors}
-        material={materials.glazing}
+        material={materials.mirror}
+        castShadow={false}
+      />
+      {/* The sauna's own door — glazed, not mirrored, so the cedar box
+          reads as a room with a window in it rather than another mirror. */}
+      <MergedBoxes
+        name="amn-glazing"
+        specs={layout.glazing}
+        material={materials.glazingSurface}
         castShadow={false}
       />
       <MergedBoxes

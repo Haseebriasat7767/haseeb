@@ -117,10 +117,19 @@ function fitOut(
   trade: Trade,
   seed: number,
   unitDepth: number,
-  place: (key: string, name: ModelName, across: number, back: number, turn?: number) => void,
+  rawPlace: (key: string, name: ModelName, across: number, back: number, turn?: number) => void,
   dressed = true,
 ): void {
   const r = (n: number) => rand(seed * 31 + n);
+
+  // Alternate every other unit as a mirror image of the same fit-out.
+  // Sixteen shops built from three trades repeat by necessity — this is
+  // the cheapest real variety available without a second layout per trade:
+  // the till on the left in one fashion unit and on the right in the next
+  // reads as two different shops from the walkway, not the same one twice.
+  const mirrored = Math.abs(Math.floor(seed)) % 2 === 1;
+  const place = (key: string, name: ModelName, across: number, back: number, turn = 0) =>
+    rawPlace(key, name, mirrored ? -across : across, back, turn);
 
   if (trade === 'fashion') {
     // Rails down both flanks, a table of folded goods in the middle, and

@@ -37,8 +37,10 @@ export type AmenityLayout = {
   walls: BoxSpec[];
   /** Wet-room linings — the spa and the changing rooms. */
   tiling: BoxSpec[];
-  /** Mirrors on the gym wall, and the glass to the treatment bays. */
+  /** Mirrors, properly reflective rather than architectural glazing. */
   mirrors: BoxSpec[];
+  /** The sauna's own glazed door. */
+  glazing: BoxSpec[];
   /** The plunge pool shell, and its water. */
   plungeShell: BoxSpec[];
   plungeWater: BoxSpec[];
@@ -60,6 +62,7 @@ export function createAmenity(plan: TowerPlan): AmenityLayout {
   const walls: BoxSpec[] = [];
   const tiling: BoxSpec[] = [];
   const mirrors: BoxSpec[] = [];
+  const glazing: BoxSpec[] = [];
   const plungeShell: BoxSpec[] = [];
   const plungeWater: BoxSpec[] = [];
   const soft: BoxSpec[] = [];
@@ -245,7 +248,7 @@ export function createAmenity(plan: TowerPlan): AmenityLayout {
   );
   // The door faces the corridor, which is the only side anybody approaches
   // it from.
-  mirrors.push(
+  glazing.push(
     box(
       'amn-sauna-door',
       [saunaX[0], saunaX[0] + 0.06],
@@ -257,5 +260,5 @@ export function createAmenity(plan: TowerPlan): AmenityLayout {
   // Reception at the lift lobby, where the floor is arrived at.
   put('amn-desk', 'retail-counter', spaLine + 2.4, splitZ + 0.1, 'east', 'amenity-lounge');
 
-  return { walls, tiling, mirrors, plungeShell, plungeWater, soft, joinery, models };
+  return { walls, tiling, mirrors, glazing, plungeShell, plungeWater, soft, joinery, models };
 }

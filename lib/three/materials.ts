@@ -1519,6 +1519,23 @@ function createMaterials() {
       envMapIntensity: 2.8,
     }),
     /**
+     * Silvered glass — the gym wall, the sauna door's own reflection back
+     * into the room. Not `glazing`: that material is a tinted, 58%-opaque
+     * dielectric deliberately roughened away from mirror values (see the
+     * comment on its own `roughness`), because architectural glass is not
+     * a mirror. A gym mirror is a mirror — opaque, neutral rather than
+     * blue-tinted, and close to the 0.035 glazing moved away from — so it
+     * needed its own material rather than borrowing one built to look like
+     * something else.
+     */
+    mirror: new MeshPhysicalMaterial({
+      color: '#c9cdd1',
+      roughness: 0.045,
+      metalness: 1,
+      reflectivity: 1,
+      envMapIntensity: 3.4,
+    }),
+    /**
      * Pool water — see `withWaterSurface` for the swell, the Fresnel ramp
      * and why the shared variation pass was the wrong tool for it. Still no
      * reflection render target and no simulation, per the Phase 2C
