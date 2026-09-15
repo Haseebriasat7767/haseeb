@@ -9,6 +9,19 @@ const nextConfig: NextConfig = {
   // three.js ships ESM-only sources; transpiling keeps the R3F stack
   // tree-shakeable and avoids duplicated three instances in the bundle.
   transpilePackages: ['three'],
+  // The residence used to be four separate pages; it is now one
+  // (`/residence`) with those sections folded in as tabs, matching the
+  // tower's own single-page pattern. Permanent redirects rather than
+  // deleting the routes outright, so a bookmark or an indexed search
+  // result still resolves — Next passes the incoming query string through
+  // automatically, so `/experience?space=foyer` still opens on that space.
+  async redirects() {
+    return [
+      { source: '/experience', destination: '/residence?tab=explore', permanent: true },
+      { source: '/floor-plan', destination: '/residence?tab=plan', permanent: true },
+      { source: '/gallery', destination: '/residence?tab=gallery', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

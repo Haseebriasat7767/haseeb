@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { Container } from '@/components/ui/Container';
@@ -18,6 +17,12 @@ import { BuildingSwitch } from '@/components/navigation/BuildingSwitch';
 import { HourDial } from '@/components/experience/HourDial';
 import { FloorPlan } from '@/components/plan/FloorPlan';
 import { Gallery } from '@/components/gallery/Gallery';
+import { AccommodationSchedule } from '@/components/residence/AccommodationSchedule';
+import { Reveal } from '@/components/effects/Reveal';
+import { Button } from '@/components/ui/Button';
+import { SectionHeading } from '@/components/ui/SectionHeading';
+import { PROPERTY } from '@/lib/constants/site';
+import { PALETTE } from '@/lib/experience/palette';
 import { cn } from '@/lib/utils/cn';
 import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
@@ -27,22 +32,26 @@ import { WalkPad } from '@/components/tower/WalkPad';
 
 const DEFAULT_SPACE = SPACES[0]!;
 
-export type ExplorerTab = 'explore' | 'plan' | 'gallery';
+export type ExplorerTab = 'overview' | 'explore' | 'plan' | 'gallery';
 
 /**
- * The three sections of the residence flow, kept on their own routes for
- * canonical URLs and SEO — but rendered from this one component tree, with
- * one shared header and one tab bar, the way `TowerWalkthrough` keeps its
- * views, the lift picker and the hour dial in a single spine rather than
- * spreading them across separate pages.
+ * The residence, in one page — the same pattern `/tower` already set: a
+ * guided read of the building, a way to move through it yourself, a
+ * drawing of it, and a set of framings, held as tabs in one component tree
+ * rather than spread across four separate pages. This used to be four
+ * routes (`/residence`, `/experience`, `/floor-plan`, `/gallery`) each with
+ * its own masthead; the other three now redirect here (`next.config.ts`)
+ * so an old link keeps working, but a visitor only ever sees one page.
  */
-const TABS: ReadonlyArray<{ id: ExplorerTab; label: string; href: string }> = [
-  { id: 'explore', label: 'Explore', href: '/experience' },
-  { id: 'plan', label: 'Floor plan', href: '/floor-plan' },
-  { id: 'gallery', label: 'Gallery', href: '/gallery' },
+const TABS: ReadonlyArray<{ id: ExplorerTab; label: string }> = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'explore', label: 'Explore' },
+  { id: 'plan', label: 'Floor plan' },
+  { id: 'gallery', label: 'Gallery' },
 ];
 
 const TAB_COPY: Record<ExplorerTab, { eyebrow: string; title: string }> = {
+  overview: { eyebrow: 'The Residence', title: PROPERTY.name },
   explore: { eyebrow: 'Explore', title: 'Every space in the residence' },
   plan: { eyebrow: 'Architecture', title: 'Plans and levels' },
   gallery: { eyebrow: 'Gallery', title: 'Framings of the residence' },
@@ -54,13 +63,15 @@ const TAB_COPY: Record<ExplorerTab, { eyebrow: string; title: string }> = {
  * eases the camera to that framing and opens its details. Nothing here
  * navigates — the scene is never torn down and rebuilt.
  *
- * `tab` fixes which of the three sections this mount shows — set by the
- * route it was rendered from (`/experience`, `/floor-plan`, `/gallery`).
- * The tab bar below the heading moves between those routes directly, so
- * the address bar, the metadata and the sitemap entry for each section stay
- * real rather than becoming query-string state on one page.
+ * `initialTab` seeds the starting tab; after that it is ordinary component
+ * state, switched by the tab bar without a route change — the same way the
+ * tower's own guided tour, walk mode and inventory are mode switches on one
+ * page rather than separate ones. `?tab=` and `?space=` (read by
+ * `DeepLinkedSpace`) can still request a starting tab or space, which is how
+ * the redirects from the old routes and the journey's "Enter this space"
+ * links keep landing in the right place.
  */
-export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
+export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: ExplorerTab }) {
   const reducedMotion = useReducedMotion();
   // Pointer parallax has no meaning without a pointer: on a touch screen the
   // camera would only shift while a thumb is already dragging it, which
@@ -69,6 +80,7 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
   const coarsePointer = useCoarsePointer();
   const webgl = useWebGLSupport();
 
+  const [tab, setTab] = useState<ExplorerTab>(initialTab);
   const [framedId, setFramedId] = useState<string>(DEFAULT_SPACE.id);
   const [openId, setOpenId] = useState<string | null>(null);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(DEFAULT_TIME_OF_DAY);
@@ -84,20 +96,17 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
   const [seen, setSeen] = useState<ReadonlySet<Space['level']>>(() => new Set());
 
   /**
-   * Opens the space named in `?space=`.
-   *
-   * Passed down to `DeepLinkedSpace` rather than read here. Calling
-   * `useSearchParams` in this component made Next bail out of server
-   * rendering for the whole Suspense boundary, so the page's HTML was an
-   * empty placeholder — no heading, no rail, nothing for a crawler that does
-   * not run JavaScript. Confining the hook to a leaf that renders nothing
-   * leaves the rest of this tree server-rendered.
+   * Opens the space named in `?space=`, and switches to the tab that shows
+   * it — a space only means anything on `explore`, so a link that names one
+   * takes the visitor straight there regardless of which tab it happened to
+   * ask for.
    */
   const openSpace = useCallback((id: string) => {
     const target = findSpace(id);
     if (!target) return;
     setFramedId(target.id);
     setOpenId(target.id);
+    setTab('explore');
   }, []);
 
   const framed = useMemo(() => findSpace(framedId) ?? DEFAULT_SPACE, [framedId]);
@@ -149,133 +158,134 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
         page instead. The rail and the hour control still live below, for
         the visitor who wants the whole set at once.
 
-        The plan and gallery sections have no canvas of their own to open
-        on — `FloorPlan` is a drawing and `Gallery` renders each framing
-        only once it's opened — so they skip straight to the heading below.
+        The other tabs have no canvas of their own to open on — `FloorPlan`
+        is a drawing, `Gallery` renders each framing only once it's opened,
+        and `overview` is read, not looked through — so they skip straight
+        to the heading below.
       */}
       {tab !== 'explore' ? null : (
-        <>
-          <div className="relative h-[86svh] w-full overflow-hidden lg:h-[92svh]">
-            <ExperienceViewport
-              className="absolute inset-0 h-full w-full"
-              view={framed.view}
-              mode={walking ? 'walk' : 'journey'}
-              timeOfDay={timeOfDay}
-              parallax={walking ? 0 : reducedMotion || coarsePointer ? 0 : 4.0}
-              label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
-              hotspots={{ activeId: openId, onSelect: select }}
-            >
-              {/* Ground for the chrome. Bottom-weighted and shallow: the
+        <div className="relative h-[86svh] w-full overflow-hidden lg:h-[92svh]">
+          <ExperienceViewport
+            className="absolute inset-0 h-full w-full"
+            view={framed.view}
+            mode={walking ? 'walk' : 'journey'}
+            timeOfDay={timeOfDay}
+            parallax={walking ? 0 : reducedMotion || coarsePointer ? 0 : 4.0}
+            label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
+            hotspots={{ activeId: openId, onSelect: select }}
+          >
+            {/* Ground for the chrome. Bottom-weighted and shallow: the
               caption, the figures and the prev/next all sit in the lower
               band, and the architecture above it stays untouched. */}
-              <div
-                aria-hidden="true"
-                className="from-obsidian/85 via-obsidian/25 pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t to-transparent"
-              />
-              <div
-                aria-hidden="true"
-                className="from-obsidian/50 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b to-transparent"
-              />
-              {/* Ground for the dial. Without it the scale stands over open sky
+            <div
+              aria-hidden="true"
+              className="from-obsidian/85 via-obsidian/25 pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t to-transparent"
+            />
+            <div
+              aria-hidden="true"
+              className="from-obsidian/50 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b to-transparent"
+            />
+            {/* Ground for the dial. Without it the scale stands over open sky
               at the top of its travel and over sunlit grass at the bottom,
               and the two ends of the same control read at different
               strengths. Wide viewports only — that is the only place the
               vertical dial is shown. */}
-              <div
-                aria-hidden="true"
-                className="from-obsidian/70 pointer-events-none absolute inset-y-0 left-0 hidden w-72 bg-gradient-to-r to-transparent lg:block"
-              />
+            <div
+              aria-hidden="true"
+              className="from-obsidian/70 pointer-events-none absolute inset-y-0 left-0 hidden w-72 bg-gradient-to-r to-transparent lg:block"
+            />
 
-              {/* Walk toggle button */}
-              {webgl === false ? null : (
-                <button
-                  type="button"
-                  onClick={() => setWalking((on) => !on)}
-                  className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
-                >
-                  {walking ? 'Guided tour' : 'Walk the residence'}
-                </button>
-              )}
+            {/* Walk toggle button */}
+            {webgl === false ? null : (
+              <button
+                type="button"
+                onClick={() => setWalking((on) => !on)}
+                className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+              >
+                {walking ? 'Guided tour' : 'Walk the residence'}
+              </button>
+            )}
 
-              {/* Touch only. Without a cursor there is nothing to tell a phone
+            {/* Touch only. Without a cursor there is nothing to tell a phone
               visitor the frame moves, and an interactive view mistaken for
               a photograph is scrolled past. */}
-              {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
+            {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
 
-              {/* Walk mode instructions */}
-              {walking ? (
-                <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
-                  <span className="hidden sm:inline">
-                    Drag to look · arrows or W A S D to walk · Shift to run
-                  </span>
-                  <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
-                </div>
-              ) : null}
+            {/* Walk mode instructions */}
+            {walking ? (
+              <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
+                <span className="hidden sm:inline">
+                  Drag to look · arrows or W A S D to walk · Shift to run
+                </span>
+                <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
+              </div>
+            ) : null}
 
-              {/* The same dial that stands on the landing page, in the same
+            {/* The same dial that stands on the landing page, in the same
               place, doing the same thing — the hour is one idea across the
               site, not a control that moves when the page does. */}
-              {webgl === false ? null : (
-                <HourDial
-                  value={timeOfDay}
-                  onChange={setTimeOfDay}
-                  className="absolute top-1/2 left-7 z-10 hidden -translate-y-1/2 lg:block xl:left-10"
-                />
-              )}
-
-              <CinematicOverlay
-                space={framed}
-                index={position.index}
-                total={SPACES.length}
-                previous={position.previous}
-                next={position.next}
-                onSelect={select}
-                onOpen={openFramed}
-                hidden={open !== null}
+            {webgl === false ? null : (
+              <HourDial
+                value={timeOfDay}
+                onChange={setTimeOfDay}
+                className="absolute top-1/2 left-7 z-10 hidden -translate-y-1/2 lg:block xl:left-10"
               />
-            </ExperienceViewport>
+            )}
 
-            {/* Thumb controls for walk mode */}
-            <TouchSticks active={walking} />
-            {/* Keyboard controls for walk mode */}
-            <WalkPad active={walking} />
+            <CinematicOverlay
+              space={framed}
+              index={position.index}
+              total={SPACES.length}
+              previous={position.previous}
+              next={position.next}
+              onSelect={select}
+              onOpen={openFramed}
+              hidden={open !== null}
+            />
+          </ExperienceViewport>
 
-            <SpacePanel space={open} onClose={close} onFocusSpace={frame} />
-          </div>
+          {/* Thumb controls for walk mode */}
+          <TouchSticks active={walking} />
+          {/* Keyboard controls for walk mode */}
+          <WalkPad active={walking} />
 
-          {/* Reads `?space=` and renders nothing. Its own boundary, so its
-              client-only nature cannot pull the rest of the page out of the
-              server-rendered HTML. */}
-          <Suspense fallback={null}>
-            <DeepLinkedSpace onSpace={openSpace} />
-          </Suspense>
-        </>
+          <SpacePanel space={open} onClose={close} onFocusSpace={frame} />
+        </div>
       )}
+
+      {/* Reads `?space=` and `?tab=` and renders nothing. Its own boundary,
+          so its client-only nature cannot pull the rest of the page out of
+          the server-rendered HTML. Unconditional — not just inside
+          `explore` — since a `?tab=` link has to be read before any tab is
+          showing. */}
+      <Suspense fallback={null}>
+        <DeepLinkedSpace onSpace={openSpace} onTab={setTab} />
+      </Suspense>
 
       <Container className={cn('pb-section', tab === 'explore' ? undefined : 'pt-32 sm:pt-36')}>
         {/* The page's only `h1`. On `explore` it belongs here rather than
             above the frame: the view opens the page full bleed on purpose,
             so the heading introduces the rail once the visitor has looked.
-            `plan` and `gallery` have no frame above them, so the same
-            header carries the extra top padding added above instead. */}
+            Every other tab has no frame above it, so the same header carries
+            the extra top padding added above instead. */}
         <header className="border-alabaster/10 flex flex-col gap-6 border-t pt-10">
           {/* The pair, so the second building is visible from inside the
               first rather than only in the menu. */}
           <BuildingSwitch className="self-start" />
 
-          {/* The spine's own navigation: three sections of one flow, kept
-              on their own routes (real URLs, real metadata) but presented
-              here as tabs rather than as three disconnected pages. */}
+          {/* The spine's own navigation: four sections of one flow, held as
+              tabs rather than as four separate pages. */}
           <nav aria-label="Residence sections" role="tablist" className="flex flex-wrap gap-px">
             {TABS.map((entry) => {
               const active = entry.id === tab;
               return (
-                <Link
+                <button
                   key={entry.id}
-                  href={entry.href}
+                  type="button"
                   role="tab"
                   aria-selected={active}
                   data-cursor="link"
+                  onClick={() => setTab(entry.id)}
                   className={cn(
                     'ease-luxe flex min-h-11 items-center px-5 font-sans text-[0.6875rem] tracking-[0.24em] uppercase transition-colors duration-200',
                     active
@@ -284,7 +294,7 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
                   )}
                 >
                   {entry.label}
-                </Link>
+                </button>
               );
             })}
           </nav>
@@ -293,9 +303,107 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
           <h1 className="font-display text-alabaster text-display-md mt-5 max-w-[24ch] font-light">
             {copy.title}
           </h1>
+          {tab === 'overview' ? (
+            <p className="text-lede text-mist max-w-[62ch]">
+              {PROPERTY.location}. Designed by {PROPERTY.architect} and completed in {PROPERTY.year}{' '}
+              — a single continuous volume set against the ridge, oriented for one uninterrupted
+              view.
+            </p>
+          ) : null}
         </header>
 
-        {tab === 'explore' ? (
+        {tab === 'overview' ? (
+          <div className="flex flex-col gap-24 pt-16">
+            <section
+              aria-labelledby="concept-heading"
+              className="grid gap-12 lg:grid-cols-12 lg:gap-20"
+            >
+              <div className="lg:col-span-5">
+                <Reveal>
+                  <SectionHeading
+                    eyebrow="Concept"
+                    title={<span id="concept-heading">Mass, shadow, and horizon</span>}
+                  />
+                </Reveal>
+              </div>
+              <div className="flex flex-col gap-6 lg:col-span-7">
+                <Reveal delay={80}>
+                  <p className="text-lede text-mist">
+                    A rear service bar holds the private rooms. Two stone wings push forward from
+                    it, and the glazed living volume occupies the gap they leave — so the house is
+                    read as two solids and the light between them.
+                  </p>
+                </Reveal>
+                <Reveal delay={140}>
+                  <p className="text-mist text-sm leading-relaxed">
+                    Above, the upper floor cantilevers four metres past the building line over the
+                    terrace, and a two-storey slot is cut through both levels at the entrance and
+                    roofed in glass. Nothing is decorative. Every element is structural, and the
+                    landscape is invited to do the rest.
+                  </p>
+                </Reveal>
+              </div>
+            </section>
+
+            <section aria-labelledby="palette-heading" className="flex flex-col gap-12">
+              <Reveal>
+                <SectionHeading
+                  eyebrow="Materials"
+                  title={<span id="palette-heading">Six finishes, and no others</span>}
+                  lede="The palette is deliberately short. Each finish below is a material the
+                    model is genuinely rendered with, not a specification written after the fact."
+                />
+              </Reveal>
+
+              <dl className="border-alabaster/10 grid border-t sm:grid-cols-2 lg:grid-cols-3">
+                {PALETTE.map((finish, index) => (
+                  <Reveal
+                    key={finish.name}
+                    delay={index * 50}
+                    className="border-alabaster/10 flex flex-col gap-3 border-b py-8 sm:pr-10"
+                  >
+                    <dt className="font-display text-alabaster text-xl font-light">
+                      {finish.name}
+                    </dt>
+                    <dd className="flex flex-col gap-2">
+                      <span className="text-eyebrow text-stone block uppercase">
+                        {finish.where}
+                      </span>
+                      <span className="text-mist block text-sm leading-relaxed">{finish.note}</span>
+                    </dd>
+                  </Reveal>
+                ))}
+              </dl>
+            </section>
+
+            <section aria-labelledby="accommodation-heading" className="flex flex-col gap-12">
+              <Reveal>
+                <SectionHeading
+                  eyebrow="Accommodation"
+                  title={<span id="accommodation-heading">Room by room</span>}
+                  lede="Areas are computed from the residence's room schedule, level by level."
+                />
+              </Reveal>
+              <AccommodationSchedule />
+            </section>
+
+            <section className="border-alabaster/10 flex flex-col items-start gap-8 border-t pt-16">
+              <SectionHeading
+                eyebrow="Enquire"
+                title="See it in person"
+                lede="Viewings are held by appointment. Share your details and the private client team will respond with a proposed time."
+              />
+              <div className="flex flex-wrap gap-3">
+                <Button href="/contact" magnetic>
+                  Request private viewing
+                </Button>
+                <Button variant="outline" magnetic onClick={() => setTab('plan')}>
+                  Study the plans
+                </Button>
+              </div>
+            </section>
+          </div>
+        ) : tab === 'explore' ? (
           <div className="grid gap-10 pt-10 lg:grid-cols-12 lg:gap-16">
             <div className="min-w-0 lg:col-span-7">
               <SpaceRail activeId={framedId} onSelect={select} />
@@ -329,9 +437,13 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
             <p className="text-mist max-w-[64ch] pb-10 text-sm leading-relaxed">
               Two levels stepped onto the ridge. The plans and the residence are drawn to one
               schedule, so what you walk through in{' '}
-              <Link href="/experience" className="text-alabaster hover:text-gold underline">
+              <button
+                type="button"
+                onClick={() => setTab('explore')}
+                className="text-alabaster hover:text-gold underline"
+              >
                 Explore
-              </Link>{' '}
+              </button>{' '}
               and what you read here are the same description.
             </p>
             <FloorPlan />

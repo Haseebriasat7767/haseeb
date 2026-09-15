@@ -52,10 +52,10 @@ export function WebGLFallback({ reason = 'unsupported' }: WebGLFallbackProps) {
         </p>
         <p className="text-mist text-sm leading-relaxed">{copy.body}</p>
         <div className="mt-2 flex flex-wrap justify-center gap-3">
-          <Button href="/floor-plan" variant="outline">
+          <Button href="/residence?tab=plan" variant="outline">
             View floor plan
           </Button>
-          <Button href="/gallery" variant="outline">
+          <Button href="/residence?tab=gallery" variant="outline">
             View gallery
           </Button>
         </div>

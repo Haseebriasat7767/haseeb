@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils/cn';
  * switches between them has understood the product without being told.
  */
 const BUILDINGS = [
-  { label: 'Residence', href: '/experience', note: 'Single dwelling' },
+  { label: 'Residence', href: '/residence', note: 'Single dwelling' },
   { label: 'Oceanfront Tower', href: '/tower', note: 'Twenty storeys' },
 ] as const;
 

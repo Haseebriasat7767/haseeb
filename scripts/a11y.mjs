@@ -27,10 +27,10 @@ const ORIGIN = `http://127.0.0.1:${PORT}`;
 const PAGES = [
   '/',
   '/tower',
-  '/experience',
+  // /experience, /floor-plan and /gallery now redirect here (see
+  // next.config.ts) — auditing them would just audit this page three more
+  // times under a name it no longer answers to.
   '/residence',
-  '/floor-plan',
-  '/gallery',
   '/contact',
   '/privacy',
   '/terms',

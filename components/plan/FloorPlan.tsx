@@ -170,7 +170,7 @@ export function FloorPlan() {
                   >
                     {space ? (
                       <Link
-                        href={`/experience?space=${space.id}`}
+                        href={`/residence?space=${space.id}`}
                         data-cursor="link"
                         // The row is already 44px tall; the link inside it
                         // was only as tall as its own text. Padding out to

@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils/cn';
  *
  * ## Why the links are indices and not names
  *
- * The residence deep-links by identity — `/experience?space=living` — and
+ * The residence deep-links by identity — `/residence?space=living` — and
  * the obvious thing was to assume the tower does the same. It does not.
  * `TowerWalkthrough` reads `?step=`, parses it as a number, and accepts
  * `1 <= step <= TOWER_VIEWS.length` before subtracting one; there is no

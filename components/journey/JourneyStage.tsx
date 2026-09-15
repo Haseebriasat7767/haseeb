@@ -255,17 +255,21 @@ export function JourneyStage() {
                     )}
                     style={isFirst ? { animationDelay: '440ms' } : undefined}
                   >
-                    <Button href="/experience" magnetic>
+                    <Button href="/residence?tab=explore" magnetic>
                       Explore residence
                     </Button>
-                    <Button href={isFirst ? '/floor-plan' : '/contact'} variant="outline" magnetic>
+                    <Button
+                      href={isFirst ? '/residence?tab=plan' : '/contact'}
+                      variant="outline"
+                      magnetic
+                    >
                       {isFirst ? 'View floor plan' : 'Request private viewing'}
                     </Button>
                   </div>
                 ) : chapter.space ? (
                   <div className="mt-9">
                     <Button
-                      href={`/experience?space=${chapter.space}`}
+                      href={`/residence?space=${chapter.space}`}
                       variant="ghost"
                       size="sm"
                       onClick={() => trackSpaceEntered(chapter.space!, 'residence')}

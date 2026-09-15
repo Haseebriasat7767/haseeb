@@ -4,10 +4,16 @@ export type NavItem = {
 };
 
 /**
- * Named for what a buyer is looking for, in the order they look for it:
- * what the property is, how to move through it, how it is planned, what it
- * looks like. "Architecture" was the label on the floor plan and read as an
- * essay rather than as a drawing.
+ * One entry per building, matching the pattern the tower already set: a
+ * single page holding every way of seeing it (a guided tour, on foot, from
+ * the air, the unit list) as tabs in one component tree rather than as
+ * separate routes. The residence used to be four separate nav entries —
+ * Property, Explore, Floor plan, Gallery — for what is now one page
+ * (`/residence`) with those same sections folded in as tabs, the same way
+ * `/tower` was always one entry. `/experience`, `/floor-plan` and `/gallery`
+ * still resolve (see `next.config.ts`'s `redirects`), so an old link or
+ * bookmark keeps working; they are just no longer a second, third and
+ * fourth page a visitor has to notice in the nav.
  *
  * The tower comes last because it is a different building rather than another
  * view of this one. It was also, for two whole phases, not here at all: the
@@ -18,10 +24,7 @@ export type NavItem = {
  * renders.
  */
 export const NAV_ITEMS: readonly NavItem[] = [
-  { label: 'Property', href: '/residence' },
-  { label: 'Explore', href: '/experience' },
-  { label: 'Floor plan', href: '/floor-plan' },
-  { label: 'Gallery', href: '/gallery' },
+  { label: 'Residence', href: '/residence' },
   { label: 'Tower', href: '/tower' },
 ] as const;
 
