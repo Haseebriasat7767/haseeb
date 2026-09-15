@@ -41,7 +41,7 @@ export function NavLinks({ orientation = 'horizontal', onNavigate, className }: 
                 // is set in the display serif.
                 orientation === 'horizontal'
                   ? 'text-eyebrow font-sans uppercase'
-                  : 'font-display text-[2.75rem] leading-[1.12] font-light tracking-tight sm:text-5xl',
+                  : 'font-display text-[2.75rem] leading-[1.12] font-semibold tracking-tight sm:text-5xl',
                 orientation === 'horizontal'
                   ? active
                     ? 'text-alabaster'

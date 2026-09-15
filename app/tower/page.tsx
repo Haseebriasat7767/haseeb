@@ -58,7 +58,7 @@ export default function TowerPage() {
       <Container>
         <div className="max-w-[62ch] py-16 lg:py-24">
           <p className="text-eyebrow text-gold uppercase">A second building</p>
-          <h1 className="text-display-md font-display text-alabaster mt-5 font-light">
+          <h1 className="text-display-md font-display text-alabaster mt-5 font-semibold">
             Twenty storeys, generated in code
           </h1>
           <p className="text-lede text-mist mt-6">

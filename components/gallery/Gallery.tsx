@@ -69,7 +69,7 @@ export function Gallery() {
               */}
               <span
                 aria-hidden="true"
-                className="text-alabaster/[0.05] font-display pointer-events-none absolute -top-6 -right-2 text-[9rem] leading-none font-light select-none"
+                className="text-alabaster/[0.05] font-display pointer-events-none absolute -top-6 -right-2 text-[9rem] leading-none font-semibold select-none"
                 style={{ transform: `rotate(${((index * 37) % 11) - 5}deg)` }}
               >
                 {space.name.charAt(0)}
@@ -80,7 +80,7 @@ export function Gallery() {
                 <span className="text-gold tabular-nums">{String(index + 1).padStart(2, '0')}</span>
               </span>
 
-              <span className="font-display text-alabaster relative mt-auto text-3xl leading-none font-light">
+              <span className="font-display text-alabaster relative mt-auto text-3xl leading-none font-semibold">
                 {space.name}
               </span>
 
@@ -116,7 +116,7 @@ export function Gallery() {
             )}
           >
             <span className="text-eyebrow text-stone uppercase">By appointment</span>
-            <span className="font-display text-alabaster mt-auto text-3xl leading-none font-light">
+            <span className="font-display text-alabaster mt-auto text-3xl leading-none font-semibold">
               See it in person
             </span>
             <span className="text-mist mt-3 text-sm leading-relaxed">

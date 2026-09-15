@@ -33,7 +33,7 @@ export function AgentCard() {
         <p className="text-eyebrow text-stone uppercase">Enquiries</p>
         {agent.name ? (
           <>
-            <p className="font-display text-alabaster mt-3 text-2xl leading-tight font-light">
+            <p className="font-display text-alabaster mt-3 text-2xl leading-tight font-semibold">
               {agent.name}
             </p>
             {agent.title ? <p className="text-mist text-sm">{agent.title}</p> : null}

@@ -61,7 +61,7 @@ export function SpacePanel({ space, onClose }: SpacePanelProps) {
           <h2
             ref={headingRef}
             tabIndex={-1}
-            className="font-display text-alabaster text-3xl leading-none font-light outline-none sm:text-4xl"
+            className="font-display text-alabaster text-3xl leading-none font-semibold outline-none sm:text-4xl"
           >
             {space.name}
           </h2>

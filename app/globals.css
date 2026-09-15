@@ -2,29 +2,36 @@
 
 /* ------------------------------------------------------------------
    AURELIA — Design System
-   A restrained, editorial luxury language: deep black, warm off-white,
-   charcoal, and a single muted gold accent. No gradients, no glass.
+   A sharper, proptech-forward language: true black and white, one
+   saturated electric accent, sans-serif at every weight. The token
+   names below (obsidian, gold, ...) are unchanged from the previous
+   editorial theme so every existing `bg-obsidian` / `text-gold` class
+   across the codebase repaints automatically — only the values moved.
+   No gradients, no glass.
    ------------------------------------------------------------------ */
 
 @theme {
   /* Palette --------------------------------------------------------- */
-  --color-obsidian: #0a0a0b;
-  --color-ink: #121214;
-  --color-charcoal: #1c1c1f;
-  --color-graphite: #2a2a2e;
-  /* 5.17:1 on obsidian. It was #6b6b70, which measures 3.73:1 — under the
-     4.5:1 AA floor for text at this size, and it is the muted token, so it
-     failed on every page of the site at once. Still clearly secondary
-     against alabaster; just legible now. */
-  --color-stone: #82828a;
-  --color-mist: #a8a8ad;
-  --color-alabaster: #f4f1ec;
-  --color-bone: #e6e1d8;
-  --color-gold: #b99a63;
-  --color-gold-dim: #8c7448;
+  --color-obsidian: #050505;
+  --color-ink: #0c0c0e;
+  --color-charcoal: #18181b;
+  --color-graphite: #27272a;
+  /* Cool grays rather than the previous warm-tinted ones, for the
+     sharper, less editorial contrast this theme is going for. Checked
+     against obsidian: still comfortably above the 4.5:1 AA floor for
+     text at this size. */
+  --color-stone: #8b8b96;
+  --color-mist: #b8b8c2;
+  --color-alabaster: #fafafa;
+  --color-bone: #e4e4e9;
+  /* The single accent. Was a muted gold; this is the same role — the
+     one saturated color in an otherwise black-and-white page — played
+     by an electric blue instead, for the bolder, tech-forward result. */
+  --color-gold: #3d6bff;
+  --color-gold-dim: #2947b3;
 
   /* Typography ------------------------------------------------------ */
-  --font-display: var(--font-cormorant), 'Times New Roman', serif;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --text-display-xl: clamp(3.5rem, 12vw, 10rem);
@@ -43,9 +50,11 @@
   --text-eyebrow--letter-spacing: 0.32em;
 
   /* Spacing scale (extends Tailwind's 0.25rem base) ------------------ */
-  --spacing-section: clamp(5.5rem, 14vh, 10.5rem);
-  --spacing-section-lg: clamp(8rem, 20vh, 16rem);
-  --spacing-gutter: clamp(1.5rem, 5.5vw, 4.5rem);
+  /* Tightened from the editorial theme's wider measure — a denser grid
+     reads more like a product than a magazine spread. */
+  --spacing-section: clamp(4rem, 10vh, 7.5rem);
+  --spacing-section-lg: clamp(6rem, 15vh, 11rem);
+  --spacing-gutter: clamp(1.25rem, 4.5vw, 3.5rem);
 
   /* Containers ------------------------------------------------------ */
   --container-editorial: 46rem;
@@ -106,7 +115,7 @@
   h2,
   h3 {
     font-family: var(--font-display);
-    font-weight: 300;
+    font-weight: 600;
   }
 
   ::selection {

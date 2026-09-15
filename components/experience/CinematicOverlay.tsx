@@ -104,7 +104,7 @@ export function CinematicOverlay({
           places the space in the building; the serif carries the name. */}
       <div className="absolute inset-x-0 bottom-36 flex flex-col items-center gap-2 px-6 text-center sm:bottom-40 lg:bottom-44">
         <p className="text-eyebrow text-alabaster/70 uppercase">{space.eyebrow}</p>
-        <h2 className="font-display text-alabaster text-3xl leading-none font-light tracking-tight sm:text-4xl lg:text-5xl">
+        <h2 className="font-display text-alabaster text-3xl leading-none font-semibold tracking-tight sm:text-4xl lg:text-5xl">
           {space.name}
         </h2>
       </div>

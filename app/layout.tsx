@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Cormorant_Garamond, Inter } from 'next/font/google';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import { Cursor } from '@/components/effects/Cursor';
 import { GrainOverlay } from '@/components/effects/GrainOverlay';
 import { Footer } from '@/components/navigation/Footer';
@@ -11,12 +11,11 @@ import { StructuredData } from '@/components/seo/StructuredData';
 import { SITE } from '@/lib/constants/site';
 import './globals.css';
 
-const display = Cormorant_Garamond({
+const display = Space_Grotesk({
   subsets: ['latin'],
-  weight: ['300', '400', '500'],
-  style: ['normal', 'italic'],
+  weight: ['500', '600', '700'],
   display: 'swap',
-  variable: '--font-cormorant',
+  variable: '--font-space-grotesk',
 });
 
 const sans = Inter({

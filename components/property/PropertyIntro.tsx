@@ -33,7 +33,7 @@ export function PropertyIntro() {
                 className="bg-obsidian flex h-full flex-col gap-3 p-6 sm:p-8"
               >
                 <dt className="text-eyebrow text-stone uppercase">{stat.label}</dt>
-                <dd className="font-display text-alabaster text-3xl font-light sm:text-4xl">
+                <dd className="font-display text-alabaster text-3xl font-semibold sm:text-4xl">
                   {stat.value}
                 </dd>
               </Reveal>

@@ -14,7 +14,7 @@ export function ArchitecturalStatement() {
         <Reveal delay={80}>
           <h2
             id="statement-heading"
-            className="text-display-md text-balance-tight font-display text-alabaster font-light"
+            className="text-display-md text-balance-tight font-display text-alabaster font-semibold"
           >
             Architecture as restraint — mass, shadow, and horizon reduced to their essential terms.
           </h2>

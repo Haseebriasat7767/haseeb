@@ -176,7 +176,7 @@ export function GalleryLightbox({
       <div className="px-gutter flex shrink-0 items-end justify-between gap-8 py-8">
         <div className="max-w-[48ch]">
           <p className="text-eyebrow text-stone uppercase">{space.eyebrow}</p>
-          <h2 className="font-display text-alabaster mt-3 text-2xl font-light sm:text-3xl">
+          <h2 className="font-display text-alabaster mt-3 text-2xl font-semibold sm:text-3xl">
             {space.name}
           </h2>
           <p className="text-mist mt-3 text-sm leading-relaxed">{space.feature}</p>

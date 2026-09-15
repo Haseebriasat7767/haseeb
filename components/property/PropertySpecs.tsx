@@ -44,7 +44,7 @@ export function PropertySpecs() {
                 ) : null}
               </dt>
               <dd className="flex flex-col">
-                <span className="font-display text-alabaster text-3xl leading-none font-light sm:text-4xl">
+                <span className="font-display text-alabaster text-3xl leading-none font-semibold sm:text-4xl">
                   {item.value}
                 </span>
                 <span className="text-stone mt-3 text-xs leading-relaxed">{item.note}</span>

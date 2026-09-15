@@ -226,7 +226,7 @@ export function JourneyStage() {
                 {isFirst ? (
                   <h1
                     id={`chapter-${chapter.id}-title`}
-                    className="text-display-lg font-display text-alabaster rise mt-6 font-light"
+                    className="text-display-lg font-display text-alabaster rise mt-6 font-semibold"
                     style={{ animationDelay: '160ms' }}
                   >
                     {chapter.title}
@@ -234,7 +234,7 @@ export function JourneyStage() {
                 ) : (
                   <h2
                     id={`chapter-${chapter.id}-title`}
-                    className="text-display-md font-display text-alabaster mt-6 font-light"
+                    className="text-display-md font-display text-alabaster mt-6 font-semibold"
                   >
                     {chapter.title}
                   </h2>

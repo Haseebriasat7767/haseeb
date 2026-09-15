@@ -65,7 +65,7 @@ export function TowerViews() {
                 <span className="text-eyebrow text-stone uppercase tabular-nums">
                   {String(step).padStart(2, '0')}
                 </span>
-                <span className="font-display text-alabaster text-2xl leading-none font-light">
+                <span className="font-display text-alabaster text-2xl leading-none font-semibold">
                   {view.label}
                 </span>
                 {note ? (

@@ -30,7 +30,7 @@ export function TowerMaterials() {
             delay={index * 50}
             className="border-alabaster/10 flex flex-col gap-3 border-b py-8 sm:pr-10"
           >
-            <dt className="font-display text-alabaster text-xl font-light">{finish.name}</dt>
+            <dt className="font-display text-alabaster text-xl font-semibold">{finish.name}</dt>
             <dd className="flex flex-col gap-2">
               <span className="text-eyebrow text-stone block uppercase">{finish.where}</span>
               <span className="text-mist block text-sm leading-relaxed">{finish.note}</span>

@@ -94,7 +94,7 @@ export function EnquiryForm() {
         className="border-alabaster/10 flex flex-col gap-4 border p-8"
       >
         <p className="text-eyebrow text-gold uppercase">Enquiry received</p>
-        <p className="font-display text-alabaster text-2xl font-light">Thank you.</p>
+        <p className="font-display text-alabaster text-2xl font-semibold">Thank you.</p>
         <p className="text-mist text-sm leading-relaxed">
           A member of the team will respond with the full architectural dossier and a proposed
           viewing time.
@@ -137,7 +137,9 @@ export function EnquiryForm() {
         className="border-alabaster/10 flex flex-col gap-5 border p-8"
       >
         <p className="text-eyebrow text-gold uppercase">Ready to send</p>
-        <p className="font-display text-alabaster text-2xl font-light">Your enquiry is composed.</p>
+        <p className="font-display text-alabaster text-2xl font-semibold">
+          Your enquiry is composed.
+        </p>
         <p className="text-mist text-sm leading-relaxed">
           Nothing has been sent yet. Open the message to send it from your own mail client, and the
           private client team will reply with a proposed viewing time.
@@ -162,7 +164,7 @@ export function EnquiryForm() {
         className="border-alabaster/10 flex flex-col gap-5 border p-8"
       >
         <p className="text-eyebrow text-gold uppercase">Enquiry ready</p>
-        <p className="font-display text-alabaster text-2xl font-light">
+        <p className="font-display text-alabaster text-2xl font-semibold">
           Your details are ready to send.
         </p>
         <p className="text-mist text-sm leading-relaxed">

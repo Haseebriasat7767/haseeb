@@ -25,7 +25,7 @@ export function AccommodationSchedule() {
             <div className="border-alabaster/10 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-b pb-4">
               <h3
                 id={`acc-${level.id}`}
-                className="font-display text-alabaster text-2xl font-light"
+                className="font-display text-alabaster text-2xl font-semibold"
               >
                 {level.label}
               </h3>

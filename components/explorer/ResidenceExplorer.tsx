@@ -343,7 +343,7 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
           </nav>
 
           <p className="text-eyebrow text-stone uppercase">{copy.eyebrow}</p>
-          <h1 className="font-display text-alabaster text-display-md mt-5 max-w-[24ch] font-light">
+          <h1 className="font-display text-alabaster text-display-md mt-5 max-w-[24ch] font-semibold">
             {copy.title}
           </h1>
           {tab === 'overview' ? (
@@ -405,7 +405,7 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
                     delay={index * 50}
                     className="border-alabaster/10 flex flex-col gap-3 border-b py-8 sm:pr-10"
                   >
-                    <dt className="font-display text-alabaster text-xl font-light">
+                    <dt className="font-display text-alabaster text-xl font-semibold">
                       {finish.name}
                     </dt>
                     <dd className="flex flex-col gap-2">
