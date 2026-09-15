@@ -8,6 +8,10 @@ import { cn } from '@/lib/utils/cn';
 type SpacePanelProps = {
   space: Space | null;
   onClose: () => void;
+  /** Switches to the floor-plan tab with this space still framed, so its
+   *  room arrives highlighted. Omitted rooms (the ones with no `room` id)
+   *  get no button rather than one that goes nowhere useful. */
+  onViewFloorPlan?: () => void;
 };
 
 /**
@@ -16,7 +20,7 @@ type SpacePanelProps = {
  * is the point of selecting a space at all. Escape still closes it, and the
  * heading takes focus on open so the change is announced.
  */
-export function SpacePanel({ space, onClose }: SpacePanelProps) {
+export function SpacePanel({ space, onClose, onViewFloorPlan }: SpacePanelProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const open = space !== null;
 
@@ -72,6 +76,17 @@ export function SpacePanel({ space, onClose }: SpacePanelProps) {
             <p className="text-eyebrow text-stone uppercase">Key feature</p>
             <p className="text-bone text-sm leading-relaxed">{space.feature}</p>
           </div>
+
+          {space.room && onViewFloorPlan ? (
+            <button
+              type="button"
+              onClick={onViewFloorPlan}
+              data-cursor="link"
+              className="text-eyebrow text-mist hover:text-gold self-start uppercase transition-colors"
+            >
+              View on floor plan →
+            </button>
+          ) : null}
         </div>
       ) : null}
     </aside>

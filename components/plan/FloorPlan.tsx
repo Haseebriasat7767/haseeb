@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { createFloorPlanModel, createPlanEnvelope } from '@/lib/experience/floorplan';
+import { trackFloorPlanRoomSelected } from '@/lib/analytics/events';
 import { SPACES } from '@/lib/experience/spaces';
 import { cn } from '@/lib/utils/cn';
 
@@ -28,9 +29,22 @@ function labelFits(label: string, width: number, height: number): boolean {
  * illustration of it.
  *
  * Rooms that also exist as a named space in the explorer link straight
- * through to that space's framing.
+ * through to that space's framing — both the schedule row beside the plan
+ * and the drawn shape itself, so the plan reads as a navigable model of the
+ * property rather than a picture with a list bolted on next to it.
  */
-export function FloorPlan() {
+export function FloorPlan({
+  activeSpaceId,
+  onSelect,
+}: {
+  /** The room currently framed in the 3D view, if the visitor arrived here
+   *  from it — drawn with the same highlight hover gives, so leaving the
+   *  plan and coming back still shows where they are. */
+  activeSpaceId?: string;
+  /** Called instead of navigating when a room with a matching 3D space is
+   *  activated. Omit to fall back to a plain link to `?space=`. */
+  onSelect?: (spaceId: string) => void;
+}) {
   const model = useMemo(() => createFloorPlanModel(), []);
   const envelope = useMemo(() => createPlanEnvelope(), []);
   const spaceByRoom = useMemo(
@@ -102,15 +116,38 @@ export function FloorPlan() {
 
             {level.rooms.map((room) => {
               const space = spaceByRoom.get(room.id);
-              const active = hovered === room.id;
+              const active = hovered === room.id || activeSpaceId === room.id;
               const fits = labelFits(room.label, room.width, room.height);
+              const activate = () => {
+                if (!space) return;
+                trackFloorPlanRoomSelected(space.id);
+                if (onSelect) onSelect(space.id);
+                else window.location.assign(`/residence?space=${space.id}`);
+              };
 
               return (
                 <g
                   key={room.id}
                   onMouseEnter={() => setHovered(room.id)}
                   onMouseLeave={() => setHovered(null)}
-                  className={space ? 'cursor-pointer' : undefined}
+                  onClick={space ? activate : undefined}
+                  onKeyDown={
+                    space
+                      ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            activate();
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={space ? 0 : undefined}
+                  role={space ? 'button' : undefined}
+                  aria-label={space ? `View ${room.label} in 3D` : undefined}
+                  className={cn(
+                    space &&
+                      'focus-visible:outline-gold cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2',
+                  )}
                 >
                   {/* A room too small to set its name inside the cell — the
                       guest bathroom, the stair hall — still names itself on

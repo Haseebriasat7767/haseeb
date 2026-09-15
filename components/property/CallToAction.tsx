@@ -10,19 +10,20 @@ export function CallToAction() {
         <Reveal>
           <SectionHeading
             align="center"
-            eyebrow="Commission a build"
-            title={<span id="cta-heading">Bring your property to life.</span>}
-            lede="Everything here was built from geometry, not photography — which means it can be
-              built for a development that does not exist yet. Tell us about the project."
+            eyebrow="Your property could be next"
+            title={<span id="cta-heading">Your property could be next.</span>}
+            lede="AURELIA demonstrates how an unbuilt property can become an interactive digital
+              sales experience — from architecture and interiors to floor plans, walkthroughs and
+              private enquiries."
           />
         </Reveal>
 
         <Reveal delay={120} className="flex flex-wrap justify-center gap-3">
           <Button href="/contact" magnetic>
-            Discuss your project
+            Create this for my property
           </Button>
-          <Button href="/tower" variant="outline" magnetic>
-            See the tower
+          <Button href="/for-agencies" variant="outline" magnetic>
+            For agencies &amp; developers
           </Button>
         </Reveal>
       </Container>

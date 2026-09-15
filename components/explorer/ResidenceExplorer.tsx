@@ -292,7 +292,7 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
           {/* Keyboard controls for walk mode */}
           <WalkPad active={walking && !flying} />
 
-          <SpacePanel space={open} onClose={close} />
+          <SpacePanel space={open} onClose={close} onViewFloorPlan={() => setTab('plan')} />
         </div>
       )}
 
@@ -489,7 +489,7 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
               </button>{' '}
               and what you read here are the same description.
             </p>
-            <FloorPlan />
+            <FloorPlan activeSpaceId={framed.room} onSelect={openSpace} />
           </div>
         ) : (
           <div className="pt-10">

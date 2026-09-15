@@ -34,3 +34,9 @@ export function trackEnquirySubmitted(
 ): void {
   track('enquiry_submitted', { outcome });
 }
+
+/** A room selected from the floor-plan drawing itself — separate from
+ *  `trackSpaceEntered`, which also fires from the 3D rail and the journey. */
+export function trackFloorPlanRoomSelected(space: string): void {
+  track('floor_plan_room_selected', { space });
+}

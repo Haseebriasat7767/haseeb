@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { Reveal } from '@/components/effects/Reveal';
 import { HourDial } from '@/components/experience/HourDial';
+import { FinalExperienceCTA } from '@/components/property/FinalExperienceCTA';
 import { DEFAULT_TIME_OF_DAY } from '@/lib/three/lighting';
 import { SPACES } from '@/lib/experience/spaces';
 import type { TimeOfDay } from '@/types';
@@ -129,6 +130,8 @@ export function Gallery() {
           </Link>
         </Reveal>
       </ul>
+
+      <FinalExperienceCTA />
 
       <GalleryLightbox
         space={openIndex === null ? null : (SPACES[openIndex] ?? null)}
