@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { CLIENT } from '@/lib/constants/client';
 import type { ResolvedTourStep } from '@/lib/experience/guided-tour';
@@ -46,8 +46,6 @@ export function GuidedTour({
   onExit,
   onFloorPlan,
 }: GuidedTourProps) {
-  const headingRef = useRef<HTMLParagraphElement>(null);
-
   // Escape leaves, from any phase. A visitor who wants out of a guided
   // sequence wants out immediately, and hunting for the exit is the moment
   // a presentation stops feeling like one.
@@ -178,10 +176,7 @@ export function GuidedTour({
               {String(current.position).padStart(2, '0')} / {String(current.total).padStart(2, '0')}
             </p>
           </div>
-          <p
-            ref={headingRef}
-            className="font-display text-alabaster text-xl leading-tight font-semibold sm:text-2xl"
-          >
+          <p className="font-display text-alabaster text-xl leading-tight font-semibold sm:text-2xl">
             {current.name}
           </p>
           <p className="text-mist text-xs leading-relaxed sm:text-sm">{current.description}</p>

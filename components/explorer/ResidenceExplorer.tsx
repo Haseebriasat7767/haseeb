@@ -251,16 +251,21 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
 
   const previousStep = useCallback(() => setTourIndex((at) => Math.max(0, at - 1)), []);
 
+  /**
+   * Advances, or closes on the last step.
+   *
+   * Reads `tourIndex` directly rather than deciding inside a `setTourIndex`
+   * updater: an updater must be pure, and React may call it more than once
+   * for a single click — which would have fired the completion event twice.
+   */
   const nextStep = useCallback(() => {
-    setTourIndex((at) => {
-      if (at + 1 >= GUIDED_TOUR_LENGTH) {
-        setTourPhase('complete');
-        trackGuidedTourCompleted();
-        return at;
-      }
-      return at + 1;
-    });
-  }, []);
+    if (tourIndex + 1 >= GUIDED_TOUR_LENGTH) {
+      setTourPhase('complete');
+      trackGuidedTourCompleted();
+      return;
+    }
+    setTourIndex(tourIndex + 1);
+  }, [tourIndex]);
 
   /** The tour's handoff into the floor plan, which then hands back to 3D. */
   const tourToFloorPlan = useCallback(() => {
