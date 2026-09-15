@@ -288,3 +288,113 @@ describe('rejects what a person would not send', () => {
     expect((await POST(post(valid({ email: 'case@x.com' })))).status).toBe(429);
   });
 });
+
+/**
+ * Phase 2C. The route carries two kinds of enquiry and a context object,
+ * and both are things a wrong answer makes expensive in a quiet way: a
+ * commercial lead filed as a viewing gets answered by the wrong person,
+ * and a context field the app does not define would be a piece of a
+ * visitor's data emailed to a client who never asked for it.
+ */
+describe('enquiry kinds and lead context', () => {
+  function web3Ok() {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ success: true }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  /** The JSON the route actually posted, read the way this file already
+   *  reads it in `Web3Forms delivery` above. */
+  function posted(fetchMock: ReturnType<typeof web3Ok>) {
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    return JSON.parse(init.body as string);
+  }
+
+  it('labels a commercial enquiry distinctly and carries the firm', async () => {
+    const fetchMock = web3Ok();
+    const POST = await loadRoute(WEB3);
+    await POST(post(valid({ kind: 'commercial', organisation: 'Ridgeline Partners' })));
+
+    const sent = posted(fetchMock);
+    expect(sent.subject).toContain('Property experience enquiry');
+    expect(sent.company).toBe('Ridgeline Partners');
+    expect(sent.enquiry_type).toBe('Build for my property');
+  });
+
+  it('keeps a viewing enquiry labelled as a viewing', async () => {
+    const fetchMock = web3Ok();
+    const POST = await loadRoute(WEB3);
+    await POST(post(valid({ kind: 'viewing' })));
+
+    const sent = posted(fetchMock);
+    expect(sent.subject).toContain('Private viewing enquiry');
+    expect(sent.enquiry_type).toBe('Private viewing');
+  });
+
+  it('treats an unrecognised kind as a viewing rather than losing the lead', async () => {
+    const fetchMock = web3Ok();
+    const POST = await loadRoute(WEB3);
+    const response = await POST(post(valid({ kind: 'nonsense' })));
+
+    expect((await response.json()).status).toBe('sent');
+    const sent = posted(fetchMock);
+    expect(sent.subject).toContain('Private viewing enquiry');
+  });
+
+  it('requires a firm on a commercial enquiry', async () => {
+    const POST = await loadRoute(WEB3);
+    const response = await POST(post(valid({ kind: 'commercial', organisation: '' })));
+    expect(response.status).toBe(400);
+    expect((await response.json()).errors).toHaveProperty('organisation');
+  });
+
+  it('writes the lead context into the email', async () => {
+    const POST = await loadRoute();
+    await POST(
+      post(
+        valid({
+          context: { building: 'residence', space: 'Master suite', tourCompleted: true },
+        }),
+      ),
+    );
+
+    const html = String(sendMail.mock.calls[0]?.[0]?.html);
+    expect(html).toContain('Master suite');
+    expect(html).toContain('Completed');
+  });
+
+  it('drops any context field the app does not define', async () => {
+    const POST = await loadRoute();
+    await POST(
+      post(
+        valid({
+          context: {
+            space: 'Master suite',
+            // None of these are fields this app defines. A caller that
+            // posts them must not get them forwarded to the client.
+            ipAddress: '203.0.113.9',
+            userAgent: 'Mozilla/5.0 snooping',
+            referrer: 'https://example.invalid/private',
+          },
+        }),
+      ),
+    );
+
+    const html = String(sendMail.mock.calls[0]?.[0]?.html);
+    expect(html).toContain('Master suite');
+    expect(html).not.toContain('203.0.113.9');
+    expect(html).not.toContain('snooping');
+    expect(html).not.toContain('example.invalid');
+  });
+
+  it('sends no context block at all when the page supplied none', async () => {
+    const POST = await loadRoute();
+    await POST(post(valid()));
+
+    const html = String(sendMail.mock.calls[0]?.[0]?.html);
+    expect(html).not.toContain('Came through');
+    expect(html).not.toContain('Guided tour');
+  });
+});

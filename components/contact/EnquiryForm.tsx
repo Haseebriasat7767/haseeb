@@ -103,10 +103,18 @@ export function EnquiryForm({
     const found = validateEnquiry(values);
     setErrors(found);
     if (Object.keys(found).length > 0) {
-      // Send focus to the first field that failed, so a keyboard visitor is
-      // put at the problem rather than left to hunt for it.
-      const firstError = Object.keys(found)[0];
-      document.querySelector<HTMLElement>(`[name="${firstError}"]`)?.focus();
+      // Focus the first field that failed *as the form is laid out*, not the
+      // first key the validator happened to add. Those differ: the commercial
+      // rule runs first, so keying off the object put focus on the company
+      // field while the empty name above it was the one to fix.
+      const fields = Array.from(
+        event.currentTarget.querySelectorAll<HTMLElement>('input[name], textarea[name]'),
+      );
+      const firstInvalid = fields.find((field) => {
+        const name = field.getAttribute('name');
+        return name !== null && name in found && found[name as keyof EnquiryErrors] !== undefined;
+      });
+      firstInvalid?.focus();
       return;
     }
 
