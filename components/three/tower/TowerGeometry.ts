@@ -837,12 +837,20 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     })),
     ...Array.from({ length: towerLevels }, (_, level) => ({
       id: `tower-${level}`,
+      // Every floor's lift puts you in the same lobby, facing the same
+      // closed front door — the layout behind it never differs from one
+      // level to the next, and this picker cannot show what is on the
+      // other side of that door regardless of which floor it names. The
+      // fitted level is the one exception worth calling out; every other
+      // entry says plainly that it is a landing, not a finished apartment,
+      // rather than implying fourteen distinct interiors this picker
+      // cannot actually show.
       label:
         level === 0
           ? 'Amenity deck'
           : level === furnishedLevel
             ? `Residence ${level} — the fitted home`
-            : `Residence ${level}`,
+            : `Residence ${level} — lift lobby`,
       // In the lift lobby, facing the flat's own front door.
       //
       // Facing the lift doors is what a lift actually does to you and it is

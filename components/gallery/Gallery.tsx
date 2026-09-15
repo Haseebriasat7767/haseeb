@@ -52,24 +52,45 @@ export function Gallery() {
               // rather than driving React state directly.
               data-space={space.id}
               className={cn(
-                'group ease-luxe flex aspect-[4/3] w-full flex-col items-start p-7 text-left sm:p-8',
+                'group ease-luxe relative flex aspect-[4/3] w-full flex-col items-start overflow-hidden p-7 text-left sm:p-8',
                 'hover:bg-ink transition-colors duration-500',
               )}
             >
-              <span className="text-eyebrow text-stone flex w-full items-center justify-between uppercase">
+              {/* The tile has no photograph behind it — the live render is
+                  one click away, in the lightbox, and pre-rendering an image
+                  for every framing is the thing this gallery deliberately
+                  does not do (see the file's own note above). A flat card
+                  with no photograph and no mark of any kind reads as broken
+                  rather than as a choice, though, so each tile gets a real
+                  typographic device instead of a fake preview: the space's
+                  own initial, oversized and faint, angled by its position in
+                  the list so eighteen identical dark cards don't read as one
+                  cell repeated. Nothing here claims to be a photograph.
+              */}
+              <span
+                aria-hidden="true"
+                className="text-alabaster/[0.05] font-display pointer-events-none absolute -top-6 -right-2 text-[9rem] leading-none font-light select-none"
+                style={{ transform: `rotate(${((index * 37) % 11) - 5}deg)` }}
+              >
+                {space.name.charAt(0)}
+              </span>
+
+              <span className="text-eyebrow text-stone relative flex w-full items-center justify-between uppercase">
                 <span>{space.eyebrow}</span>
                 <span className="text-gold tabular-nums">{String(index + 1).padStart(2, '0')}</span>
               </span>
 
-              <span className="font-display text-alabaster mt-auto text-3xl leading-none font-light">
+              <span className="font-display text-alabaster relative mt-auto text-3xl leading-none font-light">
                 {space.name}
               </span>
 
-              <span className="text-mist mt-3 text-sm leading-relaxed">{space.feature}</span>
+              <span className="text-mist relative mt-3 text-sm leading-relaxed">
+                {space.feature}
+              </span>
 
               <span
                 aria-hidden="true"
-                className="bg-gold ease-luxe mt-6 h-px w-8 transition-all duration-500 group-hover:w-full"
+                className="bg-gold ease-luxe relative mt-6 h-px w-8 transition-all duration-500 group-hover:w-full"
               />
             </button>
           </Reveal>
