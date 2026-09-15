@@ -157,16 +157,20 @@ export const CLIENT: ClientConfig = {
      * false claim about a real human being on a live page. So they were
      * emptied.
      *
-     * The name below is not a replacement invention: it is the person who
-     * actually reads the enquiries and owns the address and number
-     * configured underneath. That is the whole distinction the note above
-     * is about — the rule was never "no name", it was "no invented name".
+     * The name itself follows the same rule as the email and phone below:
+     * `null` until `NEXT_PUBLIC_AGENT_NAME` is explicitly set, with no
+     * built-in fallback to a real person's name. A previous version of this
+     * file defaulted to the demo operator's own name — which put it on a
+     * public page with no opt-in and no way to remove it short of editing
+     * source. The card already has an honest fallback for this exact case
+     * ("Every enquiry is read and answered personally"), so there is
+     * nothing lost by leaving it unset.
      *
-     * `agency` stays null because there is no practice to name, and the
-     * card omits any line it has no value for. A client rebranding this
-     * sets all three from the environment.
+     * `title` and `agency` stay null the same way, and the card omits any
+     * line it has no value for. A client rebranding this sets all three
+     * from the environment.
      */
-    name: readEnv('NEXT_PUBLIC_AGENT_NAME') ?? 'Haseeb Riasat',
+    name: readEnv('NEXT_PUBLIC_AGENT_NAME'),
     title: readEnv('NEXT_PUBLIC_AGENT_TITLE') ?? 'Direct enquiries',
     agency: readEnv('NEXT_PUBLIC_AGENT_AGENCY'),
     email: rawEmail,

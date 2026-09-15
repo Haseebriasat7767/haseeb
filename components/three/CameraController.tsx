@@ -98,7 +98,15 @@ const PORTRAIT_OFFSET = 0.22;
 /** Below this aspect a viewport is treated as a phone held upright. */
 const PORTRAIT_ASPECT = 0.8;
 
-function fovForAspect(fov: number, aspect: number): number {
+/**
+ * Exported for `WalkControls`: the first-person camera sets its own field of
+ * view once at mount rather than going through this controller (walk mode
+ * bypasses it entirely, below), so it needs the same aspect correction
+ * applied directly or a decal composed to be visible at 16:9 clips off the
+ * side of a narrower canvas — the identical failure this function exists to
+ * prevent for the composed step views.
+ */
+export function fovForAspect(fov: number, aspect: number): number {
   if (!Number.isFinite(aspect) || aspect <= 0 || aspect >= REFERENCE_ASPECT) return fov;
   const half = Math.tan(MathUtils.degToRad(fov) / 2) * (REFERENCE_ASPECT / aspect);
   return Math.min(MAX_FOV, MathUtils.radToDeg(2 * Math.atan(half)));

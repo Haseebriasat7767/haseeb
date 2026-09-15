@@ -112,6 +112,13 @@ export function FloorPlan() {
                   onMouseLeave={() => setHovered(null)}
                   className={space ? 'cursor-pointer' : undefined}
                 >
+                  {/* A room too small to set its name inside the cell — the
+                      guest bathroom, the stair hall — still names itself on
+                      hover rather than reading as unlabelled. The schedule
+                      beside the plan carries the name too, but a visitor
+                      pointing at the drawing itself shouldn't have to look
+                      away from the shape they're asking about. */}
+                  <title>{room.label}</title>
                   <rect
                     x={room.x}
                     y={room.y}

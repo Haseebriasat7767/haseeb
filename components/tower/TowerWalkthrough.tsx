@@ -193,7 +193,12 @@ export function TowerWalkthrough() {
             onClick={() => setWalking((on) => !on)}
             className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
           >
-            {walking ? 'Guided tour' : 'Walk the building'}
+            {/* While on foot this button's only job is to leave walk mode —
+                it does not start any automated camera movement, so it
+                can't be labelled "Guided tour" without promising a
+                flythrough that doesn't exist. "Overview" names the
+                click-through, scene-card mode it actually returns to. */}
+            {walking ? 'Overview' : 'Walk the building'}
           </button>
         )}
 
@@ -372,7 +377,14 @@ export function TowerWalkthrough() {
                 className="max-w-[56ch]"
               />
             ) : (
-              <div className="max-w-[56ch]">
+              // The ambient bottom-of-frame scrim above is tuned for the
+              // stage as a whole, and a bright, busy frame — the plaza at
+              // Arrival, the palms at the Park — can still leave pale text
+              // sitting directly on photographic detail. The same backdrop
+              // `CinematicOverlay` gives its own chips (`bg-obsidian/40` plus
+              // a blur) makes the caption legible regardless of what is
+              // behind it, rather than depending on any one frame's tones.
+              <div className="border-alabaster/10 bg-obsidian/40 max-w-[56ch] border px-4 py-3 backdrop-blur-sm sm:px-5 sm:py-4">
                 <p className="text-eyebrow text-bone/70 flex items-center gap-4 uppercase">
                   <span className="text-gold tabular-nums">
                     {String(step + 1).padStart(2, '0')}

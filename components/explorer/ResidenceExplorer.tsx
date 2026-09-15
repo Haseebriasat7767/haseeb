@@ -147,7 +147,6 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
     setOpenId(space.id);
   }, []);
 
-  const frame = useCallback((space: Space) => setFramedId(space.id), []);
   const close = useCallback(() => setOpenId(null), []);
 
   // Where the framed space sits in the series, and what sits either side of
@@ -293,7 +292,7 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
           {/* Keyboard controls for walk mode */}
           <WalkPad active={walking && !flying} />
 
-          <SpacePanel space={open} onClose={close} onFocusSpace={frame} />
+          <SpacePanel space={open} onClose={close} />
         </div>
       )}
 

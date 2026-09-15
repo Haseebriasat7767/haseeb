@@ -56,9 +56,18 @@ export function LoadingScreen({ visible, className }: LoadingScreenProps) {
       aria-hidden={!visible}
       hidden={!visible}
       className={cn(
-        'bg-obsidian absolute inset-0 z-20 flex flex-col items-center justify-center gap-10 px-6',
+        'bg-obsidian absolute inset-0 z-20 flex-col items-center justify-center gap-10 px-6',
         'ease-luxe transition-opacity duration-700',
-        visible ? 'opacity-100' : 'pointer-events-none opacity-0',
+        // `hidden` alone does nothing here: an unconditional `flex` class is
+        // an author style, and author styles always win over the UA
+        // stylesheet's `[hidden] { display: none }` regardless of
+        // specificity. With `flex` applied every render, the attribute was
+        // inert and the overlay stayed laid out — and painted — for the
+        // full 700ms opacity fade, double-exposing its text over whatever
+        // the now-ready scene renders underneath. Making `flex` itself
+        // conditional lets the browser's own `display: none` take over the
+        // instant this becomes hidden, so there is nothing left to fade.
+        visible ? 'flex opacity-100' : 'pointer-events-none hidden opacity-0',
         className,
       )}
     >

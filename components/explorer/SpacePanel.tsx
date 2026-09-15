@@ -2,14 +2,12 @@
 
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/Button';
 import type { Space } from '@/lib/experience/spaces';
 import { cn } from '@/lib/utils/cn';
 
 type SpacePanelProps = {
   space: Space | null;
   onClose: () => void;
-  onFocusSpace: (space: Space) => void;
 };
 
 /**
@@ -18,7 +16,7 @@ type SpacePanelProps = {
  * is the point of selecting a space at all. Escape still closes it, and the
  * heading takes focus on open so the change is announced.
  */
-export function SpacePanel({ space, onClose, onFocusSpace }: SpacePanelProps) {
+export function SpacePanel({ space, onClose }: SpacePanelProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const open = space !== null;
 
@@ -74,10 +72,6 @@ export function SpacePanel({ space, onClose, onFocusSpace }: SpacePanelProps) {
             <p className="text-eyebrow text-stone uppercase">Key feature</p>
             <p className="text-bone text-sm leading-relaxed">{space.feature}</p>
           </div>
-
-          <Button variant="outline" size="sm" onClick={() => onFocusSpace(space)}>
-            Frame this space
-          </Button>
         </div>
       ) : null}
     </aside>

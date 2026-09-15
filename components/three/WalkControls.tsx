@@ -2,9 +2,10 @@
 
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { Box3, Line3, Vector3 } from 'three';
+import { Box3, Line3, type PerspectiveCamera, Vector3 } from 'three';
 import { onTravel } from '@/lib/three/walk-floors';
 import { walkRun } from '@/lib/three/walk-input';
+import { fovForAspect } from './CameraController';
 import type { WalkCollider } from './tower/WalkCollider';
 
 /**
@@ -32,6 +33,18 @@ import type { WalkCollider } from './tower/WalkCollider';
  * that has both a height and a width, which is the minimum needed to stand on
  * a floor AND be stopped by a pane of glass.
  */
+
+/**
+ * Duck-typed rather than `instanceof`: the camera comes through from
+ * `useThree()` typed as the generic three.js `Camera`, and a perspective
+ * camera always carries this flag — checking the flag instead of the class
+ * identity means the aspect correction below still works if the render
+ * surface's own three.js module happens to be a different copy than the one
+ * imported here.
+ */
+function isPerspectiveCamera(camera: object): camera is PerspectiveCamera {
+  return (camera as { isPerspectiveCamera?: boolean }).isPerspectiveCamera === true;
+}
 
 /** Eye height, and so the height of a person, in metres. */
 const EYE = 1.68;
@@ -95,7 +108,24 @@ export function WalkControls({
   lookRef,
   onMove,
 }: WalkControlsProps) {
-  const { camera, gl } = useThree();
+  const { camera, gl, size } = useThree();
+
+  // The canvas gets its starting field of view from the composed step the
+  // visitor was on when they stepped onto their own feet — never touched
+  // again after that, because nothing else in walk mode moves it. On a
+  // narrower canvas that leaves it exactly as tight as the 16:9 frame it was
+  // composed against, and anything set near the edge of that composition —
+  // a wall of signage in the lobby, say — clips off the side. `fovForAspect`
+  // is the same widening the composed step views get from `CameraController`;
+  // walk mode never runs that controller (see `Scene.tsx`), so it has to be
+  // applied here instead, against the field of view the scene actually
+  // opened on rather than a value re-derived from scratch.
+  const baseFov = useRef(isPerspectiveCamera(camera) ? camera.fov : null);
+  useEffect(() => {
+    if (!isPerspectiveCamera(camera) || baseFov.current === null) return;
+    camera.fov = fovForAspect(baseFov.current, size.width / size.height);
+    camera.updateProjectionMatrix();
+  }, [camera, size]);
 
   const state = useRef({
     // The capsule's lower and upper sphere centres, in world space.
