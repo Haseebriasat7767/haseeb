@@ -58,6 +58,19 @@ export function FloorPlan({
   const level = model.levels.find((entry) => entry.id === levelId) ?? model.levels[0]!;
   const { bounds } = model;
 
+  /**
+   * The one way a room is chosen, wherever it is chosen from.
+   *
+   * Both the drawn shape and the schedule row call this, so the analytics
+   * event fires once per selection however it was made and neither can
+   * quietly acquire behaviour the other lacks.
+   */
+  const activateSpace = (spaceId: string) => {
+    trackFloorPlanRoomSelected(spaceId);
+    if (onSelect) onSelect(spaceId);
+    else window.location.assign(`/residence?space=${spaceId}`);
+  };
+
   return (
     <div className="flex flex-col gap-10">
       <div
@@ -119,10 +132,7 @@ export function FloorPlan({
               const active = hovered === room.id || activeSpaceId === room.id;
               const fits = labelFits(room.label, room.width, room.height);
               const activate = () => {
-                if (!space) return;
-                trackFloorPlanRoomSelected(space.id);
-                if (onSelect) onSelect(space.id);
-                else window.location.assign(`/residence?space=${space.id}`);
+                if (space) activateSpace(space.id);
               };
 
               return (
@@ -143,6 +153,11 @@ export function FloorPlan({
                   }
                   tabIndex={space ? 0 : undefined}
                   role={space ? 'button' : undefined}
+                  // An SVG group cannot be a real <button>, so it carries
+                  // the role and the key handling itself. `aria-pressed`
+                  // gives the selected room a state a screen reader can
+                  // read, which the gold outline only conveys visually.
+                  aria-pressed={space ? activeSpaceId === room.id : undefined}
                   aria-label={space ? `View ${room.label} in 3D` : undefined}
                   className={cn(
                     space &&
@@ -213,17 +228,42 @@ export function FloorPlan({
                     )}
                   >
                     {space ? (
-                      <Link
-                        href={`/residence?space=${space.id}`}
-                        data-cursor="link"
-                        // The row is already 44px tall; the link inside it
-                        // was only as tall as its own text. Padding out to
-                        // the row's edges and pulling the margin back makes
-                        // the whole row tappable without moving anything.
-                        className="hover:text-gold -my-3 inline-flex min-h-11 items-center py-3 text-sm transition-colors"
-                      >
-                        {room.label}
-                      </Link>
+                      /*
+                       * A button, not a link, whenever the explorer is
+                       * listening. The row used to navigate to
+                       * `?space=` while the drawn shape beside it called
+                       * `onSelect` — the same action taking two different
+                       * paths, one of which reloaded the route and threw
+                       * away the hour, the tab and the camera's position.
+                       * `activate` is the shape's own handler, so the two
+                       * cannot diverge again. Without `onSelect` it still
+                       * falls back to the link, for the plan rendered
+                       * outside the explorer.
+                       *
+                       * The row is already 44px tall; the control inside it
+                       * was only as tall as its own text. Padding out to
+                       * the row's edges and pulling the margin back makes
+                       * the whole row tappable without moving anything.
+                       */
+                      onSelect ? (
+                        <button
+                          type="button"
+                          onClick={() => activateSpace(space.id)}
+                          data-cursor="link"
+                          aria-current={activeSpaceId === room.id ? 'true' : undefined}
+                          className="hover:text-gold focus-visible:outline-gold -my-3 inline-flex min-h-11 items-center py-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
+                          {room.label}
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/residence?space=${space.id}`}
+                          data-cursor="link"
+                          className="hover:text-gold -my-3 inline-flex min-h-11 items-center py-3 text-sm transition-colors"
+                        >
+                          {room.label}
+                        </Link>
+                      )
                     ) : (
                       <span className="text-sm">{room.label}</span>
                     )}

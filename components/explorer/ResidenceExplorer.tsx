@@ -30,12 +30,14 @@ import { GUIDED_TOUR_LENGTH, resolveTourStep } from '@/lib/experience/guided-tou
 import { rememberLeadContext } from '@/lib/contact/lead-context';
 import {
   trackBrochureDownload,
+  trackSpaceEntered,
   trackGuidedTourCompleted,
   trackGuidedTourExited,
   trackGuidedTourSkipped,
   trackGuidedTourStarted,
   trackGuidedTourStepViewed,
 } from '@/lib/analytics/events';
+import { SpaceSummary } from './SpaceSummary';
 import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
 import { SpaceRail } from './SpaceRail';
@@ -157,6 +159,24 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
   }, []);
 
   const framed = useMemo(() => findSpace(framedId) ?? DEFAULT_SPACE, [framedId]);
+
+  /**
+   * A room chosen on the floor plan.
+   *
+   * Frames the space and stays where the visitor is. `openSpace` switches
+   * to Explore, which is right for a `?space=` deep link arriving from
+   * outside and wrong here: it closed the drawing the moment it was used,
+   * so the plan could never show which room was being looked at. The
+   * preview above the plan reads `framed` like every other view of the
+   * building, so the two are the same selection rather than two copies of
+   * it.
+   */
+  const selectFromPlan = useCallback((id: string) => {
+    const target = findSpace(id);
+    if (!target) return;
+    setFramedId(target.id);
+    trackSpaceEntered(target.id, 'residence');
+  }, []);
 
   useEffect(() => {
     setSeen((previous) => {
@@ -682,7 +702,34 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
               </button>{' '}
               and what you read here are the same description.
             </p>
-            <FloorPlan activeSpaceId={framed.room} onSelect={openSpace} />
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-12">
+              {/*
+                The same building, framed on the same space the plan has
+                selected. `ExperienceViewport` in `journey` mode with
+                `framed.view` — the identical call the Explore tab makes, so
+                there is one camera system and the drawing is simply another
+                way of driving it.
+
+                Only one canvas is ever mounted: the tabs are conditionally
+                rendered, so this replaces the Explore viewport rather than
+                joining it.
+              */}
+              <div className="lg:sticky lg:top-24">
+                <div className="border-alabaster/10 relative aspect-[4/3] w-full overflow-hidden border">
+                  <ExperienceViewport
+                    className="absolute inset-0 h-full w-full"
+                    view={framed.view}
+                    mode="journey"
+                    timeOfDay={timeOfDay}
+                    parallax={0}
+                    label={`Three-dimensional view, framing the ${framed.name.toLowerCase()}`}
+                  />
+                </div>
+                <SpaceSummary space={framed} />
+              </div>
+
+              <FloorPlan activeSpaceId={framed.room} onSelect={selectFromPlan} />
+            </div>
           </div>
         ) : (
           <div className="pt-10">
