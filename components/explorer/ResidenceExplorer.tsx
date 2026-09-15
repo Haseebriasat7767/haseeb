@@ -31,6 +31,7 @@ import { rememberLeadContext } from '@/lib/contact/lead-context';
 import {
   trackBrochureDownload,
   trackSpaceEntered,
+  trackFloorPlanOpened,
   trackGuidedTourCompleted,
   trackGuidedTourReplayed,
   trackGuidedTourExited,
@@ -161,6 +162,12 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
   }, []);
 
   const framed = useMemo(() => findSpace(framedId) ?? DEFAULT_SPACE, [framedId]);
+
+  // Fires once per arrival on the plan, however the visitor got there — the
+  // tab strip, the tour's handoff, or a `?tab=plan` link.
+  useEffect(() => {
+    if (tab === 'plan') trackFloorPlanOpened();
+  }, [tab]);
 
   /**
    * A room chosen on the floor plan.

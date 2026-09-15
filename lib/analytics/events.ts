@@ -72,6 +72,18 @@ export function trackEnquirySubmitted(
   track('enquiry_submitted', { outcome });
 }
 
+/**
+ * The floor plan opened.
+ *
+ * Distinct from selecting a room in it: reaching the drawing at all is the
+ * step that says a visitor is reading the property rather than looking at
+ * it, and the drop-off between opening the plan and choosing a room is the
+ * thing worth seeing. No payload — which tab was opened is the whole event.
+ */
+export function trackFloorPlanOpened(): void {
+  track('floor_plan_opened');
+}
+
 /** A room selected from the floor-plan drawing itself — separate from
  *  `trackSpaceEntered`, which also fires from the 3D rail and the journey. */
 export function trackFloorPlanRoomSelected(space: string): void {
