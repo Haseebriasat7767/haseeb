@@ -215,7 +215,7 @@ export function TowerScene({
         {collider ? (
           <WalkControls
             collider={collider}
-            start={[40, 0.3, 6]}
+            start={[40, 0.3, 0]}
             heading={Math.PI / 2}
             moveRef={walkMove}
             lookRef={walkLook}

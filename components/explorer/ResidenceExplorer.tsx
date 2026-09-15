@@ -283,7 +283,7 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
               next={position.next}
               onSelect={select}
               onOpen={openFramed}
-              hidden={open !== null}
+              hidden={open !== null || walking}
             />
           </ExperienceViewport>
 

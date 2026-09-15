@@ -40,8 +40,24 @@ function boxesToGeometry(specs: readonly BoxSpec[]): BufferGeometry[] {
 }
 
 export function createVillaWalkCollider(layout: VillaLayout): WalkCollider {
-  const { openings } = layout;
+  const { openings, plan } = layout;
+  // The lawn and paving the visitor arrives across on foot. The plinth
+  // above only covers the raised platform the house itself stands on — walk
+  // mode starts a couple of metres out from the foot of the entrance stairs,
+  // on open grade, and every step around the exterior after that is on this
+  // ground too. Without it there is nothing underfoot outside the building's
+  // own footprint and a visitor who spawns there falls straight through.
+  const zMin = -plan.halfDepth - 40;
+  const zMax = plan.plinthFrontZ + 40;
+  const ground: BoxSpec[] = [
+    {
+      key: 'walk-ground',
+      position: [0, plan.groundY - 0.25, (zMin + zMax) / 2],
+      scale: [plan.plinthHalfWidth * 2 + 80, 0.5, zMax - zMin],
+    },
+  ];
   const groups: readonly (readonly BoxSpec[])[] = [
+    ground,
     // The ground the building sits on, and its own mass and entrance reveal.
     layout.foundation.plinth,
     layout.groundFloor.mass,
