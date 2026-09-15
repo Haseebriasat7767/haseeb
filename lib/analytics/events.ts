@@ -40,3 +40,31 @@ export function trackEnquirySubmitted(
 export function trackFloorPlanRoomSelected(space: string): void {
   track('floor_plan_room_selected', { space });
 }
+
+/**
+ * The guided tour.
+ *
+ * Step id and number only. Nothing a visitor typed, and nothing that could
+ * identify them — the same rule the enquiry events follow, which is why
+ * `enquiry_submitted` carries an outcome and not a message.
+ */
+export function trackGuidedTourStarted(): void {
+  track('guided_tour_started');
+}
+
+export function trackGuidedTourStepViewed(step: string, position: number): void {
+  track('guided_tour_step_viewed', { step, position });
+}
+
+export function trackGuidedTourCompleted(): void {
+  track('guided_tour_completed');
+}
+
+export function trackGuidedTourSkipped(): void {
+  track('guided_tour_skipped');
+}
+
+/** Left partway through — `position` is the step they left from. */
+export function trackGuidedTourExited(position: number): void {
+  track('guided_tour_exited', { position });
+}

@@ -12,7 +12,7 @@ import { findSpace, SPACES } from '@/lib/experience/spaces';
 import type { Space } from '@/lib/experience/spaces';
 import type { CameraView, TimeOfDay } from '@/types';
 import { CinematicOverlay } from '@/components/experience/CinematicOverlay';
-import { TouchHint } from '@/components/experience/TouchHint';
+import { ControlHint, type ControlPair } from '@/components/experience/ControlHint';
 import { VisitedCTA } from '@/components/experience/VisitedCTA';
 import { BuildingSwitch } from '@/components/navigation/BuildingSwitch';
 import { HourDial } from '@/components/experience/HourDial';
@@ -25,6 +25,15 @@ import { SectionHeading } from '@/components/ui/SectionHeading';
 import { PROPERTY } from '@/lib/constants/site';
 import { PALETTE } from '@/lib/experience/palette';
 import { cn } from '@/lib/utils/cn';
+import { GuidedTour, type TourPhase } from './GuidedTour';
+import { GUIDED_TOUR_LENGTH, resolveTourStep } from '@/lib/experience/guided-tour';
+import {
+  trackGuidedTourCompleted,
+  trackGuidedTourExited,
+  trackGuidedTourSkipped,
+  trackGuidedTourStarted,
+  trackGuidedTourStepViewed,
+} from '@/lib/analytics/events';
 import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
 import { SpaceRail } from './SpaceRail';
@@ -106,6 +115,23 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
   }, [walking]);
 
   /**
+   * The guided tour.
+   *
+   * `null` is the ordinary experience — the tour is an additional layer over
+   * it, never a mode the visitor has to leave to use the site. The step
+   * index is the only thing stored: everything the tour *does* (the camera,
+   * the hour) it does by calling the same setters the rail and the hour dial
+   * already call, so there is no second camera path to keep in sync and
+   * nothing to unwind on exit beyond forgetting the number.
+   */
+  const [tourPhase, setTourPhase] = useState<TourPhase | null>(null);
+  const [tourIndex, setTourIndex] = useState(0);
+  const tourStep = useMemo(
+    () => (tourPhase === 'running' ? resolveTourStep(tourIndex) : null),
+    [tourPhase, tourIndex],
+  );
+
+  /**
    * Which of the three levels the visitor has framed.
    *
    * A Set rather than a counter: revisiting the terrace three times is not
@@ -163,6 +189,117 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
   }, [framed.id]);
 
   const openFramed = useCallback(() => setOpenId(framed.id), [framed.id]);
+
+  /**
+   * Applies the current step to the experience.
+   *
+   * This is the whole of the tour's effect on the 3D: frame the step's
+   * space, and set the hour if the step is about the hour. `CameraController`
+   * eases to the new framing exactly as it does when the rail is clicked —
+   * same transition, same duration, same reduced-motion handling — because
+   * it is the same code path.
+   *
+   * The info panel is deliberately left closed: it is a 26rem card down the
+   * right of the frame, and the tour already names the space in its own
+   * chrome. Two captions for one room is one too many.
+   */
+  useEffect(() => {
+    if (tourPhase !== 'running') return;
+
+    const resolved = resolveTourStep(tourIndex);
+    // A step naming a space that no longer exists is a content error, not a
+    // reason to strand the visitor in a tour with nothing in it.
+    if (!resolved) {
+      setTourPhase(null);
+      return;
+    }
+
+    setFramedId(resolved.space.id);
+    setOpenId(null);
+    if (resolved.step.timeOfDay) setTimeOfDay(resolved.step.timeOfDay);
+    trackGuidedTourStepViewed(resolved.step.id, resolved.position);
+  }, [tourPhase, tourIndex]);
+
+  /** Opens the tour on its introduction, from wherever the visitor was. */
+  const startTour = useCallback(() => {
+    setTab('explore');
+    setWalking(false);
+    setOpenId(null);
+    setTourIndex(0);
+    setTourPhase('intro');
+    trackGuidedTourStarted();
+  }, []);
+
+  const beginTour = useCallback(() => setTourPhase('running'), []);
+
+  const skipTour = useCallback(() => {
+    setTourPhase(null);
+    trackGuidedTourSkipped();
+  }, []);
+
+  /**
+   * Leaves the tour and hands the visitor the building where they stand —
+   * the camera keeps the framing the last step set rather than snapping
+   * back, so exiting reads as being let go rather than being moved again.
+   */
+  const exitTour = useCallback(() => {
+    setTourPhase((phase) => {
+      if (phase === 'running') trackGuidedTourExited(tourIndex + 1);
+      return null;
+    });
+  }, [tourIndex]);
+
+  const previousStep = useCallback(() => setTourIndex((at) => Math.max(0, at - 1)), []);
+
+  const nextStep = useCallback(() => {
+    setTourIndex((at) => {
+      if (at + 1 >= GUIDED_TOUR_LENGTH) {
+        setTourPhase('complete');
+        trackGuidedTourCompleted();
+        return at;
+      }
+      return at + 1;
+    });
+  }, []);
+
+  /** The tour's handoff into the floor plan, which then hands back to 3D. */
+  const tourToFloorPlan = useCallback(() => {
+    setTourPhase(null);
+    setTab('plan');
+  }, []);
+
+  /**
+   * What the visitor can actually do in the frame as it currently stands.
+   *
+   * Composed views mount no `OrbitControls` and, on a coarse pointer, no
+   * parallax either — so the only real interactions are the markers and the
+   * step controls, and those are what this says. Walk mode is the mode that
+   * genuinely takes drag and W A S D.
+   */
+  const controls = useMemo<readonly ControlPair[]>(() => {
+    if (walking && !flying) {
+      return coarsePointer
+        ? [
+            { input: 'Left thumb', action: 'Walk' },
+            { input: 'Right thumb', action: 'Look' },
+          ]
+        : [
+            { input: 'Drag', action: 'Look' },
+            { input: 'W A S D', action: 'Walk' },
+            { input: 'Shift', action: 'Run' },
+          ];
+    }
+    if (flying) return [{ input: 'Watch', action: 'Circling the residence' }];
+    return coarsePointer
+      ? [
+          { input: 'Tap', action: 'Enter a space' },
+          { input: 'Prev / Next', action: 'Move through' },
+        ]
+      : [
+          { input: 'Click', action: 'Enter a space' },
+          { input: 'Prev / Next', action: 'Move through' },
+        ];
+  }, [walking, flying, coarsePointer]);
 
   const copy = TAB_COPY[tab];
 
@@ -224,7 +361,7 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
                 onClick={() => setWalking((on) => !on)}
                 className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
               >
-                {walking ? 'Guided tour' : 'Walk the residence'}
+                {walking ? 'Composed views' : 'Walk the residence'}
               </button>
             )}
 
@@ -242,26 +379,14 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
               </button>
             )}
 
-            {/* Touch only. Without a cursor there is nothing to tell a phone
-              visitor the frame moves, and an interactive view mistaken for
-              a photograph is scrolled past. */}
-            {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
-
-            {/* Walk mode instructions */}
-            {walking && !flying ? (
-              <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
-                <span className="hidden sm:inline">
-                  Drag to look · arrows or W A S D to walk · Shift to run
-                </span>
-                <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
-              </div>
-            ) : null}
-
-            {flying ? (
-              <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
-                Circling the residence
-              </div>
-            ) : null}
+            {/* What this frame actually responds to, in this mode. One hint
+              for every mode rather than a touch string plus two fixed
+              captions: the three used to disagree, and the touch one named
+              two gestures that composed views do not answer at all. */}
+            <ControlHint
+              controls={controls}
+              hidden={tourPhase === 'intro' || tourPhase === 'complete'}
+            />
 
             {/* The same dial that stands on the landing page, in the same
               place, doing the same thing — the hour is one idea across the
@@ -282,8 +407,35 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
               next={position.next}
               onSelect={select}
               onOpen={openFramed}
-              hidden={open !== null || walking}
+              hidden={open !== null || walking || tourPhase !== null}
             />
+
+            {/* The one thing a first-time visitor is asked to do. Only
+                offered where it can be taken — outside the tour, and out of
+                walk mode, which it would otherwise interrupt. */}
+            {webgl === false || walking || tourPhase !== null ? null : (
+              <button
+                type="button"
+                onClick={startTour}
+                data-cursor="link"
+                className="text-eyebrow ease-luxe border-gold text-gold hover:bg-gold hover:text-obsidian bg-obsidian/40 absolute top-24 left-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+              >
+                Start the experience
+              </button>
+            )}
+
+            {tourPhase === null ? null : (
+              <GuidedTour
+                phase={tourPhase}
+                current={tourStep}
+                onBegin={beginTour}
+                onSkip={skipTour}
+                onPrevious={previousStep}
+                onNext={nextStep}
+                onExit={exitTour}
+                onFloorPlan={tourToFloorPlan}
+              />
+            )}
           </ExperienceViewport>
 
           {/* Thumb controls for walk mode. Neither applies in flight — the

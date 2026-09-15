@@ -7,7 +7,8 @@ import { HourDial } from '@/components/experience/HourDial';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import { hourTheme } from '@/lib/experience/hour-theme';
 import { BuildingSwitch } from '@/components/navigation/BuildingSwitch';
-import { TouchHint } from '@/components/experience/TouchHint';
+import { ControlHint, type ControlPair } from '@/components/experience/ControlHint';
+import { useCoarsePointer } from '@/hooks/useCoarsePointer';
 import { TouchSticks } from './TouchSticks';
 import { WalkPad } from './WalkPad';
 import { getWalkFloors, subscribeWalkFloors, travelTo } from '@/lib/three/walk-floors';
@@ -93,6 +94,30 @@ export function TowerWalkthrough() {
   useEffect(() => {
     if (!walking) setFlying(false);
   }, [walking]);
+
+  const coarsePointer = useCoarsePointer();
+
+  /**
+   * The controls that are actually live in the current mode. Composed views
+   * are `fixed` — no orbit, no zoom — so all they offer is the scene
+   * sequence and the lift.
+   */
+  const controls = useMemo<readonly ControlPair[]>(() => {
+    if (walking && !flying) {
+      return coarsePointer
+        ? [
+            { input: 'Left thumb', action: 'Walk' },
+            { input: 'Right thumb', action: 'Look' },
+          ]
+        : [
+            { input: 'Drag', action: 'Look' },
+            { input: 'W A S D', action: 'Walk' },
+            { input: 'Shift', action: 'Run' },
+          ];
+    }
+    if (flying) return [{ input: 'Watch', action: 'Circling the tower' }];
+    return [{ input: 'Continue', action: 'Move through the tower' }];
+  }, [walking, flying, coarsePointer]);
   // The inventory, the guided tour's own counterpart to flying: a second
   // way to choose a framing, open only while the tour is composing the
   // camera rather than the visitor. Closed by entering walk mode, same as
@@ -230,21 +255,6 @@ export function TowerWalkthrough() {
           </button>
         )}
 
-        {walking && !flying ? (
-          <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
-            <span className="hidden sm:inline">
-              Drag to look · arrows or W A S D to walk · Shift to run
-            </span>
-            <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
-          </div>
-        ) : null}
-
-        {flying ? (
-          <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
-            Circling the tower
-          </div>
-        ) : null}
-
         {/* Thumb controls. Outside the canvas because a touch target inside a
             WebGL scene has to be raycast, and they write to the same shared
             input the controller already reads. Neither applies in flight —
@@ -254,9 +264,11 @@ export function TowerWalkthrough() {
             a cursor. Each renders only for its own kind of pointer. */}
         <WalkPad active={walking && !flying} />
 
-        {/* Guided tour only: in walk mode the thumb sticks carry their own
-            instructions and a second hint would contradict them. */}
-        {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
+        {/* What this frame responds to, in whichever mode it is in. The
+            composed views mount no orbit controls, so the old "drag to look
+            around · pinch to zoom" named two gestures the tower never
+            answered. */}
+        <ControlHint controls={controls} hidden={showInventory} />
 
         {/* The lift. Twenty storeys is four minutes of stairwell at walking
             pace, and nobody wants to see the stair twenty times to reach the
