@@ -27,7 +27,9 @@ import { PALETTE } from '@/lib/experience/palette';
 import { cn } from '@/lib/utils/cn';
 import { GuidedTour, type TourPhase } from './GuidedTour';
 import { GUIDED_TOUR_LENGTH, resolveTourStep } from '@/lib/experience/guided-tour';
+import { rememberLeadContext } from '@/lib/contact/lead-context';
 import {
+  trackBrochureDownload,
   trackGuidedTourCompleted,
   trackGuidedTourExited,
   trackGuidedTourSkipped,
@@ -267,6 +269,34 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
     setTourIndex(tourIndex + 1);
   }, [tourIndex]);
 
+  /**
+   * What the visitor was looking at when they left for a form.
+   *
+   * Stashed rather than passed as a query string: it is for whoever reads
+   * the lead, not for the visitor's address bar. Nothing identifying — the
+   * building, the room, whether the tour finished. See
+   * `lib/contact/lead-context.ts` for why that boundary is drawn there.
+   */
+  const rememberContext = useCallback(
+    (source: string) => {
+      rememberLeadContext({
+        source,
+        building: 'residence',
+        space: framed.name,
+        tourCompleted: tourPhase === 'complete',
+        path: window.location.pathname,
+      });
+    },
+    [framed.name, tourPhase],
+  );
+
+  const toCommercial = useCallback(
+    () => rememberContext('guided-tour-complete'),
+    [rememberContext],
+  );
+  const toViewing = useCallback(() => rememberContext('guided-tour-viewing'), [rememberContext]);
+  const onBrochure = useCallback(() => trackBrochureDownload(), []);
+
   /** The tour's handoff into the floor plan, which then hands back to 3D. */
   const tourToFloorPlan = useCallback(() => {
     setTourPhase(null);
@@ -442,6 +472,9 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
                 onNext={nextStep}
                 onExit={exitTour}
                 onFloorPlan={tourToFloorPlan}
+                onCommercial={toCommercial}
+                onViewing={toViewing}
+                onBrochure={onBrochure}
               />
             )}
           </ExperienceViewport>

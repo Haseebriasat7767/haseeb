@@ -24,12 +24,16 @@ import { TrackedLink } from './TrackedLink';
  */
 export function DirectChannels() {
   const mailto = mailtoLink('Enquiry from the AURELIA site');
+  // Written so the thread opens with the context already in it. An agent
+  // reading "Hello" has to ask what it is about; this one has already been
+  // told, which is most of a qualification before anyone has typed twice.
   const whatsapp = whatsappLink(
-    'Hello — I saw the AURELIA site and would like to talk about a project.',
+    "Hello, I'm interested in the AURELIA property experience and would like to request a private viewing.",
   );
   const { agent } = CLIENT;
+  const booking = CLIENT.links.booking;
 
-  const hasAny = Boolean(mailto || whatsapp || agent.phone);
+  const hasAny = Boolean(mailto || whatsapp || agent.phone || booking);
 
   if (!hasAny) {
     // Only warn in development — production logs should not contain setup hints
@@ -84,6 +88,21 @@ export function DirectChannels() {
             className="text-alabaster hover:text-gold text-sm transition-colors"
           >
             Call {agent.phoneDisplay}
+          </TrackedLink>
+        ) : null}
+        {/* The scheduling page, when the client runs one. It is the only
+            channel here that books without anybody replying, so it goes
+            last but reads as the most direct. */}
+        {booking ? (
+          <TrackedLink
+            onTrack={() => trackContactChannelClick('booking')}
+            href={booking}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-cursor="link"
+            className="text-alabaster hover:text-gold text-sm transition-colors"
+          >
+            Book a time directly
           </TrackedLink>
         ) : null}
       </div>

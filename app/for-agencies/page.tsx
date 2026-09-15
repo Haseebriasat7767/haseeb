@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Reveal } from '@/components/effects/Reveal';
 import { Button } from '@/components/ui/Button';
+import { DirectChannels } from '@/components/contact/DirectChannels';
+import { EnquiryForm } from '@/components/contact/EnquiryForm';
 import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeading } from '@/components/ui/SectionHeading';
@@ -199,11 +201,21 @@ export default function ForAgenciesPage() {
         </Container>
       </section>
 
-      <section className="py-section-lg" aria-labelledby="agencies-cta-heading">
-        <Container className="flex flex-col items-center gap-12 text-center">
+      {/*
+        The commercial enquiry itself, on this page rather than behind a
+        link to `/contact`.
+
+        A developer who has read this far has already decided to ask; sending
+        them to the buyer's viewing form to start over would lose most of
+        them, and would reach the client's inbox labelled as a viewing
+        request for a residence that does not exist. Same form component,
+        same route, same validation — `kind="commercial"` is the whole
+        difference, and it is what makes the lead legible at the other end.
+      */}
+      <section className="py-section-lg" aria-labelledby="agencies-cta-heading" id="create">
+        <Container className="flex flex-col gap-12">
           <Reveal>
             <SectionHeading
-              align="center"
               eyebrow="Discuss a project"
               title={<span id="agencies-cta-heading">Create this for your property.</span>}
               lede="The residence and tower shown here are conceptual. The architecture, the
@@ -212,16 +224,27 @@ export default function ForAgenciesPage() {
             />
           </Reveal>
 
-          <Reveal delay={120} className="flex flex-wrap justify-center gap-3">
-            <Button href="/contact" magnetic>
-              Create this for my property
-            </Button>
-            {CLIENT.brochurePath ? (
-              <Button href={CLIENT.brochurePath} variant="outline" magnetic download>
-                Download brochure
-              </Button>
-            ) : null}
-          </Reveal>
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16">
+            <Reveal delay={120}>
+              <EnquiryForm kind="commercial" />
+            </Reveal>
+
+            <Reveal delay={200} className="flex flex-col gap-8">
+              <DirectChannels />
+              {CLIENT.brochurePath ? (
+                <div className="border-alabaster/10 flex flex-col gap-4 border p-6">
+                  <p className="text-eyebrow text-stone uppercase">Before you write</p>
+                  <p className="text-mist text-sm leading-relaxed">
+                    The brochure is generated from the same model the walkthrough is built from — a
+                    working example of what the system produces.
+                  </p>
+                  <Button href={CLIENT.brochurePath} variant="outline" download>
+                    Download brochure
+                  </Button>
+                </div>
+              ) : null}
+            </Reveal>
+          </div>
         </Container>
       </section>
     </>

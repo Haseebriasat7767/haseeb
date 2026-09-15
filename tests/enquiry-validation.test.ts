@@ -8,6 +8,8 @@ import {
 } from '@/lib/contact/enquiry';
 
 const base: Enquiry = {
+  kind: 'viewing',
+  organisation: '',
   name: 'Ada Lovelace',
   email: 'ada@example.com',
   phone: '',
@@ -68,10 +70,30 @@ describe('validateEnquiry', () => {
 
   it('reports every problem at once rather than one at a time', () => {
     expect(
-      Object.keys(
-        validateEnquiry({ name: '', email: 'x', phone: '', preferredDate: '', message: '' }),
-      ),
+      Object.keys(validateEnquiry({ ...base, name: '', email: 'x', phone: '', message: '' })),
     ).toEqual(expect.arrayContaining(['name', 'email', 'message']));
+  });
+});
+
+describe('commercial enquiries', () => {
+  const commercial: Enquiry = { ...base, kind: 'commercial', organisation: 'Ridgeline Partners' };
+
+  it('accepts a commercial enquiry that names a firm', () => {
+    expect(validateEnquiry(commercial)).toEqual({});
+  });
+
+  it('requires a firm on a commercial enquiry', () => {
+    expect(validateEnquiry({ ...commercial, organisation: '' })).toHaveProperty('organisation');
+  });
+
+  it('does not require a firm on a viewing enquiry', () => {
+    expect(validateEnquiry({ ...base, organisation: '' })).not.toHaveProperty('organisation');
+  });
+
+  it('rejects an over-long company name on either kind', () => {
+    const long = 'a'.repeat(MAX_NAME_LENGTH + 1);
+    expect(validateEnquiry({ ...base, organisation: long })).toHaveProperty('organisation');
+    expect(validateEnquiry({ ...commercial, organisation: long })).toHaveProperty('organisation');
   });
 });
 

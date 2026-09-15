@@ -1,6 +1,7 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { NextResponse } from 'next/server';
-import { validateEnquiry, type Enquiry } from '@/lib/contact/enquiry';
+import { validateEnquiry, type Enquiry, type EnquiryKind } from '@/lib/contact/enquiry';
+import { describeLeadContext, type LeadContext } from '@/lib/contact/lead-context';
 import { getClientIP, rateLimited } from '@/lib/server/rate-limit';
 
 /**
@@ -62,6 +63,37 @@ const LIMIT = { limit: 4, windowMs: 10 * 60 * 1000 };
 
 /** Maximum JSON body size — prevents large payload abuse */
 const MAX_BODY_SIZE = 10 * 1024;
+
+/**
+ * Accepts only the context fields this app defines, each clamped.
+ *
+ * The body is attacker-controlled: anything posted here ends up in an
+ * email somebody at the client opens. So the shape is rebuilt field by
+ * field rather than spread, which drops every key not named below —
+ * including anything a caller tried to smuggle in alongside them.
+ */
+function readContext(raw: unknown): LeadContext | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const source = raw as Record<string, unknown>;
+  const text = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.trim() ? value.trim().slice(0, 80) : undefined;
+
+  const context: LeadContext = {
+    building: text(source.building),
+    space: text(source.space),
+    source: text(source.source),
+    path: text(source.path),
+    tourCompleted: typeof source.tourCompleted === 'boolean' ? source.tourCompleted : undefined,
+  };
+  return Object.values(context).some((value) => value !== undefined) ? context : undefined;
+}
+
+/** What the client sees in their inbox, so the two kinds never blur. */
+function subjectFor(enquiry: Enquiry): string {
+  return enquiry.kind === 'commercial'
+    ? `Property experience enquiry — ${enquiry.organisation || enquiry.name}`
+    : `Private viewing enquiry — ${enquiry.name}`;
+}
 
 /** Escapes text bound for an HTML mail body. */
 function escape(value: string): string {
@@ -151,14 +183,19 @@ async function sendViaWeb3Forms(accessKey: string, enquiry: Enquiry): Promise<vo
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
         access_key: accessKey,
-        subject: `Private viewing enquiry — ${enquiry.name}`,
+        subject: subjectFor(enquiry),
         from_name: 'AURELIA',
         // Named so the forwarded email is readable rather than a field dump.
+        enquiry_type: enquiry.kind === 'commercial' ? 'Build for my property' : 'Private viewing',
         name: enquiry.name,
         email: enquiry.email,
+        company: enquiry.organisation || '—',
         telephone: enquiry.phone || '—',
         preferred_viewing: enquiry.preferredDate || '—',
         message: enquiry.message,
+        context: describeLeadContext(enquiry.context ?? {})
+          .map(([label, value]) => `${label}: ${value}`)
+          .join(' · '),
       }),
       signal: controller.signal,
     });
@@ -217,6 +254,10 @@ export async function POST(request: Request) {
 
   const payload = body as Partial<Enquiry> & { company?: string; elapsed?: number };
 
+  // Two kinds, and anything unrecognised is treated as a viewing rather
+  // than rejected: an enquiry is never worth losing over a bad enum.
+  const kind: EnquiryKind = payload.kind === 'commercial' ? 'commercial' : 'viewing';
+
   // The honeypot. A field no visitor can see and no visitor can tab to, so
   // anything in it came from something reading the markup. Answered with 200
   // on purpose: a bot told it failed simply tries again differently.
@@ -228,11 +269,14 @@ export async function POST(request: Request) {
   }
 
   const enquiry: Enquiry = {
+    kind,
     name: String(payload.name ?? '').slice(0, 200),
     email: String(payload.email ?? '').slice(0, 320),
     phone: String(payload.phone ?? '').slice(0, 60),
+    organisation: String(payload.organisation ?? '').slice(0, 200),
     preferredDate: String(payload.preferredDate ?? '').slice(0, 60),
     message: String(payload.message ?? '').slice(0, 4000),
+    context: readContext(payload.context),
   };
 
   // Validated again here. The browser already did it, and the browser is not
@@ -263,8 +307,12 @@ export async function POST(request: Request) {
   const table = [
     row('Name', enquiry.name),
     row('Email', enquiry.email),
+    enquiry.organisation ? row('Company', enquiry.organisation) : '',
     enquiry.phone ? row('Telephone', enquiry.phone) : '',
     enquiry.preferredDate ? row('Preferred viewing', enquiry.preferredDate) : '',
+    // Where the enquiry came from, when the page knew. Nothing here
+    // identifies the visitor — see `lib/contact/lead-context.ts`.
+    ...describeLeadContext(enquiry.context ?? {}).map(([label, value]) => row(label, value)),
   ].join('');
 
   // Web3Forms first: it is the one somebody deliberately switched on.
@@ -291,12 +339,12 @@ export async function POST(request: Request) {
     await mailer.sendMail({
       from: smtp.from,
       to: smtp.to,
-      subject: `Private viewing enquiry — ${enquiry.name}`,
+      subject: subjectFor(enquiry),
       // `reply_to` is the enquirer, so answering is one keystroke rather than
       // copying an address out of the body.
       replyTo: enquiry.email,
       html: `<div style="font:400 15px/1.6 system-ui;color:#1b1f25">
-<p style="font:500 12px system-ui;letter-spacing:.14em;text-transform:uppercase;color:#96733d;margin:0 0 18px">Private viewing enquiry</p>
+<p style="font:500 12px system-ui;letter-spacing:.14em;text-transform:uppercase;color:#96733d;margin:0 0 18px">${enquiry.kind === 'commercial' ? 'Property experience enquiry' : 'Private viewing enquiry'}</p>
 <table style="border-collapse:collapse;margin-bottom:22px">${table}</table>
 <div style="border-left:3px solid #96733d;padding-left:16px;white-space:pre-wrap">${escape(enquiry.message)}</div>
 </div>`,

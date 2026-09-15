@@ -17,7 +17,44 @@ export function trackBrochureDownload(): void {
   track('brochure_download');
 }
 
-export function trackContactChannelClick(channel: 'whatsapp' | 'call' | 'email'): void {
+/**
+ * The brochure, opened rather than saved.
+ *
+ * Separate from `brochure_download` because they mean different things: a
+ * visitor who opens it is still reading on the site, and one who downloads
+ * it has taken it away to show somebody. The second is the stronger signal.
+ */
+export function trackBrochureOpened(): void {
+  track('brochure_opened');
+}
+
+/**
+ * The two conversions, each split into reached-the-form and actually-sent.
+ *
+ * These sit alongside `enquiry_started` / `enquiry_submitted` rather than
+ * replacing them: the generic pair still measures the form itself, and
+ * these measure the two funnels through it. Same provider, same `track`,
+ * no second analytics system — the project has one and it stays one.
+ *
+ * As everywhere else here: no name, no email, no phone, no message.
+ */
+export function trackPrivateViewingStarted(): void {
+  track('private_viewing_started');
+}
+
+export function trackPrivateViewingSubmitted(): void {
+  track('private_viewing_submitted');
+}
+
+export function trackCommercialDemoStarted(): void {
+  track('commercial_demo_started');
+}
+
+export function trackCommercialDemoSubmitted(): void {
+  track('commercial_demo_submitted');
+}
+
+export function trackContactChannelClick(channel: 'whatsapp' | 'call' | 'email' | 'booking'): void {
   track('contact_channel_click', { channel });
 }
 

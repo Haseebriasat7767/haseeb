@@ -30,6 +30,11 @@ type GuidedTourProps = {
   onNext: () => void;
   onExit: () => void;
   onFloorPlan: () => void;
+  /** Records the lead's context before leaving for the commercial form. */
+  onCommercial: () => void;
+  /** The same, for the buyer's viewing form. */
+  onViewing: () => void;
+  onBrochure: () => void;
 };
 
 /** The shared panel treatment — the same border, ground and blur the rest
@@ -45,6 +50,9 @@ export function GuidedTour({
   onNext,
   onExit,
   onFloorPlan,
+  onCommercial,
+  onViewing,
+  onBrochure,
 }: GuidedTourProps) {
   // Escape leaves, from any phase. A visitor who wants out of a guided
   // sequence wants out immediately, and hunting for the exit is the moment
@@ -106,9 +114,9 @@ export function GuidedTour({
           )}
         >
           <div className="flex flex-col gap-3">
-            <p className="text-eyebrow text-stone uppercase">You&rsquo;ve seen the property</p>
+            <p className="text-eyebrow text-stone uppercase">You&rsquo;ve seen the experience</p>
             <p className="font-display text-alabaster text-2xl leading-tight font-semibold sm:text-3xl">
-              Now imagine your property this way.
+              Now imagine your property presented this way.
             </p>
             <p className="text-mist text-sm leading-relaxed">
               The residence is conceptual. The experience is real — and can be built for a
@@ -116,16 +124,39 @@ export function GuidedTour({
             </p>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
+            {/* Ranked, not stacked. The commercial ask is primary because a
+                visitor who has just finished the tour is the one person on
+                the site qualified to answer it; the viewing sits beside it
+                for the buyer, and the brochure is the quiet third way out
+                for anyone not ready to type. */}
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button onClick={onFloorPlan} variant="outline" magnetic>
-                Explore the floor plan
+              <Button href="/for-agencies#create" onClick={onCommercial} magnetic>
+                Create my property experience
               </Button>
-              <Button href="/contact" magnetic>
-                Request a viewing
+              <Button href="/contact" variant="outline" onClick={onViewing} magnetic>
+                Request a private viewing
               </Button>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              <button
+                type="button"
+                onClick={onFloorPlan}
+                className="text-eyebrow text-stone hover:text-alabaster uppercase transition-colors"
+              >
+                Explore the floor plan
+              </button>
+              {CLIENT.brochurePath ? (
+                <a
+                  href={CLIENT.brochurePath}
+                  download
+                  onClick={onBrochure}
+                  data-cursor="link"
+                  className="text-eyebrow text-stone hover:text-alabaster uppercase transition-colors"
+                >
+                  Download brochure
+                </a>
+              ) : null}
               <button
                 type="button"
                 onClick={onExit}
@@ -133,23 +164,6 @@ export function GuidedTour({
               >
                 Explore freely
               </button>
-              {CLIENT.brochurePath ? (
-                <a
-                  href={CLIENT.brochurePath}
-                  download
-                  data-cursor="link"
-                  className="text-eyebrow text-stone hover:text-alabaster uppercase transition-colors"
-                >
-                  Download brochure
-                </a>
-              ) : null}
-              <a
-                href="/for-agencies"
-                data-cursor="link"
-                className="text-eyebrow text-stone hover:text-alabaster uppercase transition-colors"
-              >
-                Create this for my property
-              </a>
             </div>
           </div>
         </div>

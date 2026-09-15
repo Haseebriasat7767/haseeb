@@ -119,6 +119,24 @@ export type ClientConfig = {
   };
 
   /**
+   * Marks and links a client owns. Every one is `null` until configured and
+   * every consumer hides its UI rather than drawing a placeholder — the
+   * same rule the contact channels follow, for the same reason.
+   */
+  links: {
+    /** Client logo, served from `public/`. `null` keeps the wordmark. */
+    logo: string | null;
+    /** Headshot beside the advisor's name. `null` omits the portrait. */
+    agentPhoto: string | null;
+    /** Scheduling page — Calendly, HubSpot, whatever they already run. */
+    booking: string | null;
+    /** The client's own site. */
+    website: string | null;
+    /** Overrides the primary call to action's wording. */
+    ctaLabel: string | null;
+  };
+
+  /**
    * Where the brochure is served from, or `null` to hide every download
    * affordance. Nothing here is invented marketing material: the document
    * at this path is generated at build time by `app/brochure/route.ts`
@@ -135,6 +153,31 @@ const rawWhatsappEnv = readEnv('NEXT_PUBLIC_ENQUIRY_WHATSAPP');
 const rawPhoneNormalized = normalizeTel(rawPhone);
 const rawWhatsappNormalized = normalizePhoneDigits(rawWhatsappEnv ?? rawPhone);
 const rawAddress = readEnv('NEXT_PUBLIC_CONTACT_ADDRESS');
+
+/**
+ * An absolute `https` URL, or `null`.
+ *
+ * Anything else is refused outright rather than patched up. A booking or
+ * website value arrives from an environment variable somebody typed, and
+ * the failure modes worth guarding are a scheme that downgrades the visitor
+ * to plaintext and a `javascript:` string that would run in their page.
+ */
+function normalizeUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A path under `public/`, or `null`. Root-relative only — an off-site
+ *  image would hand a third party a request log of every visitor. */
+function normalizeAsset(raw: string | null): string | null {
+  if (!raw) return null;
+  return raw.startsWith('/') && !raw.startsWith('//') ? raw : null;
+}
 
 export const CLIENT: ClientConfig = {
   property: {
@@ -184,8 +227,21 @@ export const CLIENT: ClientConfig = {
     addressDisplay: rawAddress ?? 'By private appointment',
   },
 
+  links: {
+    logo: normalizeAsset(readEnv('NEXT_PUBLIC_CLIENT_LOGO')),
+    agentPhoto: normalizeAsset(readEnv('NEXT_PUBLIC_AGENT_PHOTO')),
+    booking: normalizeUrl(readEnv('NEXT_PUBLIC_BOOKING_URL')),
+    website: normalizeUrl(readEnv('NEXT_PUBLIC_CLIENT_WEBSITE')),
+    ctaLabel: readEnv('NEXT_PUBLIC_CTA_LABEL'),
+  },
+
   brochurePath: '/brochure',
 };
+
+/** The primary call to action's wording — the client's, or the default. */
+export function primaryCtaLabel(fallback = 'Request a private viewing'): string {
+  return CLIENT.links.ctaLabel ?? fallback;
+}
 
 /**
  * A `wa.me` link with the enquiry already written, or `null` when no number
@@ -219,6 +275,18 @@ export function mailtoLink(subject?: string): string | null {
 
   const line = subject ?? `Enquiry — ${CLIENT.property.name}`;
   return `mailto:${email}?subject=${encodeURIComponent(line)}`;
+}
+
+/**
+ * The booking link, or `null`.
+ *
+ * Validated as an absolute `https` URL rather than trusted: a scheduling
+ * link is the one channel a buyer uses *instead* of writing, so a
+ * mistyped value here costs an enquiry outright. `http` and `javascript:`
+ * are refused rather than normalised.
+ */
+export function bookingLink(): string | null {
+  return CLIENT.links.booking;
 }
 
 /** Returns true if at least one contact channel is valid and configured */

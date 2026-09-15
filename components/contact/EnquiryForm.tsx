@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { CLIENT } from '@/lib/constants/client';
 import { SITE } from '@/lib/constants/site';
@@ -10,11 +10,22 @@ import {
   validateEnquiry,
   type Enquiry,
   type EnquiryErrors,
+  type EnquiryKind,
 } from '@/lib/contact/enquiry';
-import { trackEnquirySubmitted, trackEnquiryStarted } from '@/lib/analytics/events';
+import { takeLeadContext, type LeadContext } from '@/lib/contact/lead-context';
+import {
+  trackEnquirySubmitted,
+  trackEnquiryStarted,
+  trackCommercialDemoStarted,
+  trackCommercialDemoSubmitted,
+  trackPrivateViewingStarted,
+  trackPrivateViewingSubmitted,
+} from '@/lib/analytics/events';
 import { Field } from './Field';
 
-const EMPTY: Enquiry = { name: '', email: '', phone: '', preferredDate: '', message: '' };
+function empty(kind: EnquiryKind): Enquiry {
+  return { kind, name: '', email: '', phone: '', organisation: '', preferredDate: '', message: '' };
+}
 
 type Status =
   | { kind: 'idle' }
@@ -39,18 +50,46 @@ type Status =
  * against the submit time. Between them they cost a real person nothing and
  * stop the traffic that finds a public form within a day of it going up.
  */
-export function EnquiryForm() {
-  const [values, setValues] = useState<Enquiry>(EMPTY);
+export function EnquiryForm({
+  /**
+   * Which conversation this is. A viewing by default, so every existing
+   * mount of this component keeps the behaviour it had.
+   */
+  kind = 'viewing',
+}: {
+  kind?: EnquiryKind;
+} = {}) {
+  const commercial = kind === 'commercial';
+  const [values, setValues] = useState<Enquiry>(() => empty(kind));
   const [errors, setErrors] = useState<EnquiryErrors>({});
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [company, setCompany] = useState('');
   const openedAt = useRef(Date.now());
   const started = useRef(false);
+  /**
+   * Guards a second delivery.
+   *
+   * `disabled` on the button stops the obvious double-click, but not a
+   * return keypress landing while React is mid-render, and not a
+   * resubmission from a form control that never blurred. A ref is checked
+   * and set synchronously inside the handler, before any await, which is
+   * the only place a duplicate can actually be caught.
+   */
+  const inFlight = useRef(false);
+  const [context, setContext] = useState<LeadContext>({});
+
+  // Read once on mount, on the client only: the CTA that sent the visitor
+  // here stashed it, and it describes the page they came from, not this one.
+  useEffect(() => {
+    setContext(takeLeadContext());
+  }, []);
 
   const set = (key: keyof Enquiry) => (event: { target: { value: string } }) => {
     if (!started.current) {
       started.current = true;
       trackEnquiryStarted();
+      if (commercial) trackCommercialDemoStarted();
+      else trackPrivateViewingStarted();
     }
     setValues((current) => ({ ...current, [key]: event.target.value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
@@ -59,14 +98,23 @@ export function EnquiryForm() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (inFlight.current) return;
+
     const found = validateEnquiry(values);
     setErrors(found);
-    if (Object.keys(found).length > 0) return;
+    if (Object.keys(found).length > 0) {
+      // Send focus to the first field that failed, so a keyboard visitor is
+      // put at the problem rather than left to hunt for it.
+      const firstError = Object.keys(found)[0];
+      document.querySelector<HTMLElement>(`[name="${firstError}"]`)?.focus();
+      return;
+    }
 
+    inFlight.current = true;
     setStatus({ kind: 'sending' });
 
     try {
-      const result = await submitEnquiry(values, SITE.contact.email, {
+      const result = await submitEnquiry({ ...values, context }, SITE.contact.email, {
         company,
         elapsed: Date.now() - openedAt.current,
       });
@@ -80,10 +128,18 @@ export function EnquiryForm() {
               : { kind: 'undeliverable', body: result.body },
       );
       trackEnquirySubmitted(result.status);
+      if (result.status === 'sent') {
+        if (commercial) trackCommercialDemoSubmitted();
+        else trackPrivateViewingSubmitted();
+      }
+      // Only a delivered enquiry closes the form. Every other outcome puts
+      // the visitor back in front of their own typing with a way onward.
+      if (result.status !== 'sent') inFlight.current = false;
     } catch (error) {
       const message = error instanceof Error ? error.message : undefined;
       setStatus({ kind: 'failed', message });
       trackEnquirySubmitted('failed');
+      inFlight.current = false;
     }
   }
 
@@ -94,9 +150,11 @@ export function EnquiryForm() {
         aria-live="polite"
         className="border-alabaster/10 flex flex-col gap-5 border p-8"
       >
-        <p className="text-eyebrow text-gold uppercase">Request received</p>
+        <p className="text-eyebrow text-gold uppercase">
+          {commercial ? 'Enquiry received' : 'Private viewing request received'}
+        </p>
         <p className="font-display text-alabaster text-2xl font-semibold">
-          Your private viewing request has been received.
+          Thank you. Your request has been received.
         </p>
         <p className="text-mist text-sm leading-relaxed">
           A member of the project team will contact you shortly.
@@ -200,7 +258,7 @@ export function EnquiryForm() {
       onSubmit={onSubmit}
       noValidate
       className="flex flex-col gap-8"
-      aria-label="Private viewing enquiry"
+      aria-label={commercial ? 'Property experience enquiry' : 'Private viewing enquiry'}
     >
       <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
         <label htmlFor="company-ref">Company</label>
@@ -245,13 +303,27 @@ export function EnquiryForm() {
           optional
         />
         <Field
-          label="Preferred viewing"
-          name="preferredDate"
-          type="date"
-          value={values.preferredDate}
-          onChange={set('preferredDate')}
-          optional
+          label={commercial ? 'Company or agency' : 'Company or agency'}
+          name="organisation"
+          autoComplete="organization"
+          value={values.organisation}
+          onChange={set('organisation')}
+          error={errors.organisation}
+          required={commercial}
+          optional={!commercial}
         />
+        {/* A viewing date means nothing on a commercial enquiry — that
+            conversation starts with a call, not a slot. */}
+        {commercial ? null : (
+          <Field
+            label="Preferred viewing"
+            name="preferredDate"
+            type="date"
+            value={values.preferredDate}
+            onChange={set('preferredDate')}
+            optional
+          />
+        )}
       </div>
 
       <Field
@@ -267,7 +339,7 @@ export function EnquiryForm() {
 
       {status.kind === 'failed' ? (
         <p role="alert" className="text-sm text-red-400">
-          {status.message ?? 'The enquiry could not be sent. Please try again'}
+          {status.message ?? "We couldn't send your request. Please try again"}
           {SITE.contact.email ? (
             <>
               , or email{' '}
@@ -282,9 +354,13 @@ export function EnquiryForm() {
 
       <div className="flex items-center gap-5">
         <Button type="submit" disabled={status.kind === 'sending'} magnetic>
-          {status.kind === 'sending' ? 'Sending…' : 'Request private viewing'}
+          {status.kind === 'sending'
+            ? 'Sending…'
+            : commercial
+              ? 'Request a private demo'
+              : 'Request private viewing'}
         </Button>
-        <p aria-live="polite" className="text-stone text-xs">
+        <p role="status" aria-live="polite" className="text-stone text-xs">
           {status.kind === 'sending' ? 'Submitting your enquiry…' : 'Secure enquiry — no spam'}
         </p>
       </div>

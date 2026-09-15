@@ -1,10 +1,36 @@
-/** A private-viewing enquiry, as captured by the contact form. */
+import type { LeadContext } from './lead-context';
+
+/**
+ * Which of the two conversations this is.
+ *
+ * A buyer asking to see the residence and a developer asking for the same
+ * experience built for their own scheme want opposite things, reach
+ * different people, and are worth different amounts. They share this
+ * pipeline because the validation, the rate limiting, the anti-spam and
+ * the delivery are genuinely the same problem — but the lead has to say
+ * which it is, or whoever opens the mailbox cannot tell them apart.
+ */
+export type EnquiryKind = 'viewing' | 'commercial';
+
+/** A private-viewing or commercial enquiry, as captured by the form. */
 export type Enquiry = {
+  kind: EnquiryKind;
   name: string;
   email: string;
   phone: string;
+  /**
+   * The firm. Required on a commercial enquiry and optional on a viewing.
+   *
+   * Named `organisation`, not `company`: `company` is the honeypot field,
+   * and giving a real input the honeypot's name would reject every
+   * commercial lead that filled it in — a silent 200 that sends nothing,
+   * which is the exact failure this pipeline is built to refuse.
+   */
+  organisation: string;
   preferredDate: string;
   message: string;
+  /** Non-identifying circumstances. Never required, never validated. */
+  context?: LeadContext;
 };
 
 export type EnquiryErrors = Partial<Record<keyof Enquiry, string>>;
@@ -38,6 +64,14 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export function validateEnquiry(enquiry: Enquiry): EnquiryErrors {
   const errors: EnquiryErrors = {};
+
+  // A commercial enquiry without a firm is unanswerable — there is nobody
+  // to look up and nothing to price against.
+  if (enquiry.kind === 'commercial' && enquiry.organisation.trim().length < 2) {
+    errors.organisation = 'Please enter your company or agency.';
+  } else if (enquiry.organisation.trim().length > MAX_NAME_LENGTH) {
+    errors.organisation = `Company name is too long (max ${MAX_NAME_LENGTH} characters).`;
+  }
 
   const name = enquiry.name.trim();
   if (name.length < 2) errors.name = 'Please enter your name.';
@@ -84,6 +118,7 @@ function composeBody(enquiry: Enquiry): string {
   return [
     `Name: ${enquiry.name}`,
     `Email: ${enquiry.email}`,
+    enquiry.organisation ? `Company: ${enquiry.organisation}` : null,
     enquiry.phone ? `Telephone: ${enquiry.phone}` : null,
     enquiry.preferredDate ? `Preferred viewing: ${enquiry.preferredDate}` : null,
     '',
@@ -94,7 +129,11 @@ function composeBody(enquiry: Enquiry): string {
 }
 
 function composeMailto(enquiry: Enquiry, to: string): string {
-  return `mailto:${to}?subject=${encodeURIComponent('Private viewing enquiry')}&body=${encodeURIComponent(composeBody(enquiry))}`;
+  const subject =
+    enquiry.kind === 'commercial'
+      ? 'AURELIA — property experience enquiry'
+      : 'Private viewing enquiry';
+  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(composeBody(enquiry))}`;
 }
 
 /**
