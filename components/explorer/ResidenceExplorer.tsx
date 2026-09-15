@@ -359,8 +359,11 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
               className="from-obsidian/70 pointer-events-none absolute inset-y-0 left-0 hidden w-72 bg-gradient-to-r to-transparent lg:block"
             />
 
-            {/* Walk toggle button */}
-            {webgl === false ? null : (
+            {/* Walk toggle. Hidden during the tour: walk mode swaps the
+                camera to `walk`, which would leave the tour's own chrome
+                stepping a camera the visitor is now driving themselves —
+                two navigation systems arguing over one frame. */}
+            {webgl === false || tourPhase !== null ? null : (
               <button
                 type="button"
                 onClick={() => setWalking((on) => !on)}
