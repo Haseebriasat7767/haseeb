@@ -67,26 +67,40 @@ export type MallLayout = {
 /**
  * How the sixteen tenancies are distributed.
  *
- * Three units a side on the fashion and design levels, two a side in the
- * food hall because a restaurant needs a bigger box than a boutique. That
- * comes to exactly sixteen, which is how many names the signage atlas holds
- * — a constraint worth designing to rather than working around, because the
- * alternative is a mall where two units carry the same sign.
+ * Two sides of the void had the depth for a full unit — west and south —
+ * and for a long time those were the only sides dressed. The east run has
+ * only 6.2 m of plate outside the void before the podium's own outer wall,
+ * against the 6 m a full unit already needs before a walkway is added, so a
+ * full-depth unit there is a shop with its own back wall in the corridor.
+ * East gets the same shopfront language at a shallower, kiosk depth
+ * instead — glazed, signed, fitted — rather than being left as bare
+ * balustrade the way it was. Food stays off it: a servery and covers do not
+ * fit in four metres, and a food hall missing its kitchen reads worse than
+ * an unbroken wall would.
+ *
+ * Counts still land on exactly sixteen, which is how many names the
+ * signage atlas holds — a constraint worth designing to rather than working
+ * around, because the alternative is a mall where two units carry the same
+ * sign: (2 west + 2 south + 2 east) on each of the two boutique levels, plus
+ * (2 west + 2 south) in the food hall.
  *
  * Grade is left alone: the ground floor is arrival, and lining the entrance
  * hall with shopfronts is what turns a lobby into a corridor between two
  * shops. The top level is the cinema, which is one tenant and already built.
  */
-const LEVELS: readonly { level: number; perSide: number; trade: Trade }[] = [
-  { level: 1, perSide: 3, trade: 'fashion' },
-  { level: 2, perSide: 3, trade: 'home' },
-  { level: 3, perSide: 2, trade: 'food' },
+type Trade = 'fashion' | 'home' | 'food';
+type Side = 'west' | 'south' | 'east';
+
+const LEVELS: readonly { level: number; trade: Trade; counts: Partial<Record<Side, number>> }[] = [
+  { level: 1, trade: 'fashion', counts: { west: 2, south: 2, east: 2 } },
+  { level: 2, trade: 'home', counts: { west: 2, south: 2, east: 2 } },
+  { level: 3, trade: 'food', counts: { west: 2, south: 2 } },
 ];
 
-type Trade = 'fashion' | 'home' | 'food';
-
-/** Depth of a unit back from the mall, and the glazed head height. */
+/** Depth of a full unit back from the mall, and the glazed head height. */
 const UNIT_DEPTH = 6.0;
+/** East's own depth: the same shopfront, built to what the plate allows. */
+const UNIT_DEPTH_EAST = 4.0;
 const SHOPFRONT_HEAD = 4.0;
 const FASCIA: Range = [4.05, 4.72];
 const ENTRANCE_WIDTH = 2.4;
@@ -102,6 +116,7 @@ const PARTY_WALL = 0.18;
 function fitOut(
   trade: Trade,
   seed: number,
+  unitDepth: number,
   place: (key: string, name: ModelName, across: number, back: number, turn?: number) => void,
   dressed = true,
 ): void {
@@ -113,13 +128,13 @@ function fitOut(
     // last thing you reach and the first thing staff can see the door from.
     // The three that make it a clothes shop from inside it: something to
     // buy from, something to buy off, and a figure in the window.
-    place('till', 'retail-counter', 1.3, UNIT_DEPTH - 1.4, Math.PI);
+    place('till', 'retail-counter', 1.3, unitDepth - 1.4, Math.PI);
     place('rail-a', 'retail-rack', -1.5, 1.8, Math.PI / 2);
     place('form-a', 'mannequin', -1.9 + r(1) * 0.3, 0.9);
     if (!dressed) return;
     place('rail-b', 'retail-rack', 1.5, 1.8, -Math.PI / 2);
-    place('rail-c', 'retail-rack', -1.5, 3.6, Math.PI / 2);
-    place('shelf', 'retail-shelf', 0, UNIT_DEPTH - 0.5);
+    place('rail-c', 'retail-rack', -1.5, Math.min(3.6, unitDepth - 0.4), Math.PI / 2);
+    place('shelf', 'retail-shelf', 0, unitDepth - 0.5);
     place('table', 'low-table', 0.2, 2.4);
     place('form-b', 'mannequin', -1.1 + r(2) * 0.3, 1.3);
     place('form-c', 'mannequin', 1.7 + r(3) * 0.3, 1.0);
@@ -129,13 +144,13 @@ function fitOut(
   if (trade === 'home') {
     // A design shop is a room dressed as a room. The stock is the setting.
     place('sofa', 'sofa-3seat', -0.6, 2.6, Math.PI);
-    place('table', 'organic-table-lg', 0.1, 3.4);
-    place('till', 'retail-counter', 1.4, UNIT_DEPTH - 1.5, Math.PI);
+    place('table', 'organic-table-lg', 0.1, Math.min(3.4, unitDepth - 0.6));
+    place('till', 'retail-counter', 1.4, unitDepth - 1.5, Math.PI);
     if (!dressed) return;
     place('chair', 'lounge-chair', 1.4, 2.2, -Math.PI / 2);
-    place('drum', 'side-drum', 1.6, 3.6);
+    place('drum', 'side-drum', 1.6, Math.min(3.6, unitDepth - 0.4));
     place('lamp', 'floor-lamp', -1.9, 3.2);
-    place('shelf', 'retail-shelf', 0, UNIT_DEPTH - 0.5);
+    place('shelf', 'retail-shelf', 0, unitDepth - 0.5);
     place('case', 'vitrine', -1.8, 1.2);
     place('vessel', 'vessel-tall', 1.9, 1.1);
     return;
@@ -143,7 +158,7 @@ function fitOut(
 
   // Food: a counter across the front, tables behind it, pendants over.
   place('counter', 'retail-counter', 0, 1.6, Math.PI);
-  place('back', 'kitchen-run', 0, UNIT_DEPTH - 0.6);
+  place('back', 'kitchen-run', 0, unitDepth - 0.6);
   // One laid table is a restaurant. Three is a restaurant with covers.
   const covers = dressed ? 3 : 1;
   for (let i = 0; i < covers; i += 1) {
@@ -165,13 +180,17 @@ function fitOut(
  * unit around the camera that stands on the upper gallery — you looked out
  * at the inside of a shop wall.
  *
- * The runs are west and south because those are the sides with the depth.
- * The atrium sits toward the ocean end of the podium: there is 40m of plate
- * west of it and 6m east, so an east run would be a two-metre-deep shop.
+ * West and south have the depth for a full unit and a full walkway. East has
+ * only 6.2m of plate before the podium's own outer wall — the atrium sits
+ * toward the ocean end of the podium — so it runs a shallower walkway and a
+ * shallower unit (`UNIT_DEPTH_EAST`) rather than a full one it cannot fit.
  */
 const WALKWAY = 4.0;
+/** East's own walkway — still wide enough to pass someone browsing a window. */
+const WALKWAY_EAST = 2.0;
 
 type Run = {
+  side: Side;
   /** The axis units are laid out along. */
   axis: 'x' | 'z';
   /** Extent along that axis — the void's own span, so shops face the void. */
@@ -183,6 +202,8 @@ type Run = {
   /** Yaw for a piece facing the mall, and for the fascia's lettering. */
   faceYaw: number;
   signYaw: number;
+  /** How far back a unit on this run goes — full depth, or east's shallower one. */
+  unitDepth: number;
 };
 
 /**
@@ -220,38 +241,57 @@ export function createMallShops(plan: TowerPlan, { dressed = true }: MallOptions
   const runs: readonly Run[] = [
     // West of the void, fronts facing +X across the walkway into it.
     {
+      side: 'west',
       axis: 'z',
       along: atriumZ,
       frontAt: atriumX[0] - WALKWAY,
       dir: -1,
       faceYaw: -Math.PI / 2,
       signYaw: Math.PI / 2,
+      unitDepth: UNIT_DEPTH,
     },
     // South of the void, fronts facing -Z.
     {
+      side: 'south',
       axis: 'x',
       along: atriumX,
       frontAt: atriumZ[1] + WALKWAY,
       dir: 1,
       faceYaw: 0,
       signYaw: Math.PI,
+      unitDepth: UNIT_DEPTH,
+    },
+    // East of the void, fronts facing -X — the mirror of the west run, built
+    // to the shallower depth the plate actually has on this side.
+    {
+      side: 'east',
+      axis: 'z',
+      along: atriumZ,
+      frontAt: atriumX[1] + WALKWAY_EAST,
+      dir: 1,
+      faceYaw: Math.PI / 2,
+      signYaw: -Math.PI / 2,
+      unitDepth: UNIT_DEPTH_EAST,
     },
   ];
 
   let tenant = 0;
 
-  for (const { level, perSide, trade } of LEVELS) {
+  for (const { level, trade, counts } of LEVELS) {
     const floorY = level * podiumLevelHeight;
 
     for (const run of runs) {
+      const perSide = counts[run.side] ?? 0;
+      if (perSide === 0) continue;
       const unitWidth = span(run.along) / perSide;
+      const { unitDepth } = run;
 
       for (let i = 0; i < perSide; i += 1) {
         const name = TENANTS[tenant % TENANTS.length] as string;
         const cell = tenantCell(tenant);
         tenant += 1;
 
-        const key = `shop-${level}-${run.axis}-${i}`;
+        const key = `shop-${level}-${run.side}-${i}`;
         const a0 = run.along[0] + unitWidth * i;
         const a1 = a0 + unitWidth;
         const centreA = (a0 + a1) / 2;
@@ -277,17 +317,17 @@ export function createMallShops(plan: TowerPlan, { dressed = true }: MallOptions
           walls.push(
             at(`${key}-party-${edge}`, [a - PARTY_WALL / 2, a + PARTY_WALL / 2], fullY, [
               0,
-              UNIT_DEPTH,
+              unitDepth,
             ]),
           );
         }
-        walls.push(at(`${key}-back`, [a0, a1], fullY, [UNIT_DEPTH - 0.2, UNIT_DEPTH]));
+        walls.push(at(`${key}-back`, [a0, a1], fullY, [unitDepth - 0.2, unitDepth]));
         floors.push(
           at(
             `${key}-floor`,
             [a0 + PARTY_WALL, a1 - PARTY_WALL],
             [floorY, floorY + 0.02],
-            [0, UNIT_DEPTH],
+            [0, unitDepth],
           ),
         );
 
@@ -351,6 +391,7 @@ export function createMallShops(plan: TowerPlan, { dressed = true }: MallOptions
         fitOut(
           trade,
           tenant,
+          unitDepth,
           (partKey, model, across, back, turn = 0) => {
             const depthAt = run.frontAt + run.dir * back;
             models.push({
