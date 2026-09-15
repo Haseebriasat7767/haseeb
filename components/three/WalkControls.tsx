@@ -4,6 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { Box3, Line3, Vector3 } from 'three';
 import { onTravel } from '@/lib/three/walk-floors';
+import { walkRun } from '@/lib/three/walk-input';
 import type { WalkCollider } from './tower/WalkCollider';
 
 /**
@@ -37,8 +38,22 @@ const EYE = 1.68;
 /** How wide the visitor is. Wide enough not to slip through a mullion. */
 const RADIUS = 0.32;
 const GRAVITY = -22;
-const WALK_SPEED = 12.0; // Increased from 3.4 for responsive mobile navigation
-const RUN_SPEED = 20.0; // Increased from 7.0 for responsive mobile sprinting
+/**
+ * Walking and running pace, in metres a second.
+ *
+ * These were raised to 12 and 20 in an attempt to make the touch sticks
+ * feel more responsive — they do not, because responsiveness was never the
+ * problem. `wish` used to be forced to unit length before being scaled by
+ * speed (see the note below), so *any* deflection past the stick's dead
+ * zone snapped straight to top speed with no gradient in between. At 12 m/s
+ * — faster than an Olympic sprinter — a visitor crossing that dead zone
+ * flew across a room in under a second and slammed into the far wall,
+ * which reads as the control being broken rather than as the building
+ * being fast. Restored to a genuine walking and jogging pace; the actual
+ * fix for feel is the proportional scaling below.
+ */
+const WALK_SPEED = 4.2;
+const RUN_SPEED = 8.5;
 /**
  * Furthest the capsule may move before collision is resolved again.
  *
@@ -251,8 +266,20 @@ export function WalkControls({
       wish.addScaledVector(forward, -moveRef.current.y);
     }
 
-    const speed = k.has('ShiftLeft') || k.has('ShiftRight') ? RUN_SPEED : WALK_SPEED;
-    if (wish.lengthSq() > 0) wish.normalize().multiplyScalar(speed);
+    const speed =
+      k.has('ShiftLeft') || k.has('ShiftRight') || walkRun.current ? RUN_SPEED : WALK_SPEED;
+    // Clamp to unit length rather than forcing it to one. A key press adds a
+    // unit vector so two at once (a diagonal) would otherwise move faster
+    // than one — clamping still catches that. But the analog stick writes a
+    // magnitude of its own, anywhere from 0 to 1 depending how far off
+    // centre a thumb sits, and normalizing threw that away: every deflection
+    // past the dead zone became the same full-length vector, so there was no
+    // way to creep forward slowly, only "stopped" and "top speed". Clamping
+    // instead of normalizing preserves a deflection under 1 exactly, which
+    // is what makes the stick feel analog rather than like a digital switch.
+    const wishLength = wish.length();
+    if (wishLength > 1) wish.divideScalar(wishLength);
+    wish.multiplyScalar(speed);
 
     // ── Integrate ─────────────────────────────────────────────────────────
     s.velocity.y += GRAVITY * delta;

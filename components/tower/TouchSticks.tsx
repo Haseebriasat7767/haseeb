@@ -7,6 +7,7 @@ import {
   STICK_RANGE,
   walkLook,
   walkMove,
+  walkRun,
 } from '@/lib/three/walk-input';
 
 /**
@@ -42,7 +43,10 @@ export function TouchSticks({ active }: { active: boolean }) {
   const [touch, setTouch] = useState(false);
   const [move, setMove] = useState<Stick | null>(null);
   const [look, setLook] = useState<Stick | null>(null);
-  const running = useRef(false);
+  // The pointer id of a second finger held in the walk zone while the first
+  // is already driving the stick — tracked separately from `move` because
+  // the stick itself only ever follows the first finger.
+  const sprintId = useRef<number | null>(null);
 
   // Coarse pointer, not screen width: a small laptop window is still a mouse,
   // and a large tablet is still a thumb.
@@ -60,7 +64,7 @@ export function TouchSticks({ active }: { active: boolean }) {
     if (active) return;
     setMove(null);
     setLook(null);
-    running.current = false;
+    sprintId.current = null;
     resetWalkInput();
   }, [active]);
 
@@ -84,6 +88,16 @@ export function TouchSticks({ active }: { active: boolean }) {
 
     return {
       onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
+        // Sprint: a second finger landing in the walk zone while the first
+        // is already driving the stick. There is no shift key on a phone,
+        // and a separate run button is a third thing to hold. Captured so
+        // its own release is still reported even if the finger drifts.
+        if (which === 'move' && stick) {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          sprintId.current = event.pointerId;
+          walkRun.current = true;
+          return;
+        }
         if (stick) return;
         event.currentTarget.setPointerCapture(event.pointerId);
         const next = {
@@ -95,9 +109,6 @@ export function TouchSticks({ active }: { active: boolean }) {
         };
         setStick(next);
         write(next);
-        // Sprint: a second finger in the walk zone. There is no shift key on
-        // a phone, and a separate run button is a third thing to hold.
-        if (which === 'move') running.current = true;
       },
       onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => {
         if (!stick || stick.id !== event.pointerId) return;
@@ -106,15 +117,24 @@ export function TouchSticks({ active }: { active: boolean }) {
         write(next);
       },
       onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => {
+        if (which === 'move' && sprintId.current === event.pointerId) {
+          sprintId.current = null;
+          walkRun.current = false;
+          return;
+        }
         if (!stick || stick.id !== event.pointerId) return;
         setStick(null);
         write(null);
-        if (which === 'move') running.current = false;
       },
-      onPointerCancel: () => {
+      onPointerCancel: (event: React.PointerEvent<HTMLDivElement>) => {
+        if (which === 'move' && sprintId.current === event.pointerId) {
+          sprintId.current = null;
+          walkRun.current = false;
+          return;
+        }
+        if (!stick || stick.id !== event.pointerId) return;
         setStick(null);
         write(null);
-        if (which === 'move') running.current = false;
       },
     };
   }

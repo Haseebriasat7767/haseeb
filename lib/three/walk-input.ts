@@ -20,12 +20,21 @@ export const walkMove = { current: { x: 0, y: 0 } };
 /** Yaw and pitch rate, each −1…1. */
 export const walkLook = { current: { x: 0, y: 0 } };
 
+/**
+ * Sprint, held rather than toggled. There is no Shift key on a phone, so
+ * `TouchSticks` sets this while a second finger sits in the walk zone —
+ * the touch equivalent of holding Shift down at the keyboard, and read by
+ * `WalkControls` the same way.
+ */
+export const walkRun = { current: false };
+
 /** Centres both sticks. Called when a touch ends or walk mode is left. */
 export function resetWalkInput(): void {
   walkMove.current.x = 0;
   walkMove.current.y = 0;
   walkLook.current.x = 0;
   walkLook.current.y = 0;
+  walkRun.current = false;
 }
 
 /** Travel, in pixels, at which a stick reads as fully deflected. */
