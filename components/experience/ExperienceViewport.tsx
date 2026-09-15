@@ -36,6 +36,8 @@ type ExperienceViewportProps = {
   onReady?: () => void;
   /** Path-traces this framing instead of rasterizing it. Stills only. */
   cinematic?: boolean;
+  /** Overrides `PathTracer`'s own sample budget. Stills capture only. */
+  cinematicMaxSamples?: number;
   onCinematicProgress?: (samples: number, maxSamples: number) => void;
   /** Chrome rendered over the canvas, inside the same positioned box. */
   children?: ReactNode;
@@ -72,6 +74,7 @@ export function ExperienceViewport({
   hotspots,
   onReady,
   cinematic,
+  cinematicMaxSamples,
   onCinematicProgress,
   children,
   className,
@@ -126,6 +129,7 @@ export function ExperienceViewport({
             drift={drift}
             hotspots={hotspots}
             cinematic={cinematic}
+            cinematicMaxSamples={cinematicMaxSamples}
             onCinematicProgress={onCinematicProgress}
             onReady={onReady}
           />

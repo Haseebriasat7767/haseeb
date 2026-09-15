@@ -30,6 +30,9 @@ import { EstateExterior } from './site/EstateExterior';
 import { ARRIVAL_CONFIG, createEstateLayout, OUTDOOR_CONFIG } from './site/EstateGeometry';
 import { SiteExterior } from './site/SiteExterior';
 import { createSiteLayout, SITE_CONFIG } from './site/SiteGeometry';
+import { WalkControls } from '../WalkControls';
+import { walkLook, walkMove } from '@/lib/three/walk-input';
+import { createVillaWalkCollider } from './WalkCollider';
 
 type ProceduralVillaProps = {
   /** Partial override of the default proportions. */
@@ -38,7 +41,18 @@ type ProceduralVillaProps = {
   detail?: DetailTier;
   /** The resolved time-of-day rig. Defaults to the presentation hero hour. */
   lighting?: ResolvedLighting;
+  /** Hands the camera to the visitor and builds the collider they walk on. */
+  walk?: boolean;
 };
+
+/**
+ * Where the walk starts: a couple of metres out from the foot of the
+ * approach stairs, at grade, facing the entrance. Every number is a real
+ * plan line rather than a guess — `entranceStairsOuterZ` is the villa's own
+ * "where the stairs meet the ground" — so the start point stays correct
+ * through any configuration that reshapes the approach.
+ */
+const WALK_START_CLEARANCE = 2;
 
 /**
  * The procedurally generated residence — a contemporary two-storey villa
@@ -50,11 +64,23 @@ type ProceduralVillaProps = {
  * terrace depth and the architecture — inside and out — recomposes
  * coherently.
  */
-export function ProceduralVilla({ config, detail = 'high', lighting }: ProceduralVillaProps) {
+export function ProceduralVilla({
+  config,
+  detail = 'high',
+  lighting,
+  walk = false,
+}: ProceduralVillaProps) {
   const layout = useMemo(
     () => createVillaLayout(config ? { ...VILLA_CONFIG, ...config } : VILLA_CONFIG, detail),
     [config, detail],
   );
+
+  // The surfaces a visitor can stand on and bump into. Built only while
+  // actually walking, same reasoning as the tower's own collider: it is a
+  // second merged geometry over the whole building and there is no reason
+  // to pay for it while the camera is composed.
+  const collider = useMemo(() => (walk ? createVillaWalkCollider(layout) : null), [walk, layout]);
+  useEffect(() => () => collider?.geometry.dispose(), [collider]);
 
   const rig = useMemo(() => lighting ?? resolveLighting(undefined, detail), [lighting, detail]);
 
@@ -115,6 +141,22 @@ export function ProceduralVilla({ config, detail = 'high', lighting }: Procedura
   return (
     <ChamferProvider value={ARCHITECTURAL_CHAMFER[detail]}>
       <group name="ProceduralVilla">
+        {collider ? (
+          <WalkControls
+            collider={collider}
+            start={[
+              layout.plan.entranceOffsetX,
+              layout.levels.groundY,
+              layout.plan.entranceStairsOuterZ + WALK_START_CLEARANCE,
+            ]}
+            // Facing −Z, which is toward the entrance from the approach —
+            // the same direction the composed `arrival` camera looks from
+            // further back.
+            heading={0}
+            moveRef={walkMove}
+            lookRef={walkLook}
+          />
+        ) : null}
         <VillaFoundation layout={layout} />
         <VillaLowerFloor layout={layout} />
         <VillaUpperFloor layout={layout} />

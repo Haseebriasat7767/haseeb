@@ -11,6 +11,20 @@ import { Wordmark } from './Wordmark';
 /**
  * Transparent overlay header — it already sits on top of the page and will
  * sit on top of a full-bleed 3D canvas without further change.
+ *
+ * ## The baseline scrim
+ *
+ * The scroll-triggered `bg-obsidian/80` only exists once the page has moved
+ * — at the top of every page it renders fully transparent, which is correct
+ * for the site's own dark heroes and wrong the moment a hero is not dark.
+ * `/tower`'s arrival framing and `/experience`'s brighter hours both put
+ * open sky directly behind the alabaster wordmark and nav labels, and gold
+ * on pale blue does not clear 4.5:1 no matter how the hero itself is
+ * graded. Rather than tuning every hero component that could ever sit under
+ * this header, the header keeps a soft gradient of its own — present at
+ * every scroll position, underneath the scroll-triggered background rather
+ * than instead of it — so the nav has a floor of contrast regardless of
+ * what is rendered beneath it.
  */
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -31,7 +45,14 @@ export function Header() {
           scrolled ? 'bg-obsidian/80 backdrop-blur-sm' : 'bg-transparent',
         )}
       >
-        <div className="max-w-wide px-gutter mx-auto flex h-20 items-center justify-between">
+        {/* The floor of contrast described above. Sized a little past the
+            nav row so it feathers into whatever the hero renders next,
+            rather than ending on a visible edge. */}
+        <div
+          aria-hidden="true"
+          className="from-obsidian/60 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b to-transparent"
+        />
+        <div className="max-w-wide px-gutter relative mx-auto flex h-20 items-center justify-between">
           <Wordmark />
 
           <div className="hidden items-center gap-8 lg:flex xl:gap-10">
@@ -53,9 +74,9 @@ export function Header() {
             <Link
               href="/contact"
               data-cursor="link"
-              className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold border px-4 py-2.5 whitespace-nowrap uppercase transition-colors duration-300 xl:px-5"
+              className="text-eyebrow ease-luxe border-alabaster/40 text-alabaster hover:border-gold hover:text-gold border px-5 py-3 font-medium tracking-wide whitespace-nowrap uppercase transition-colors duration-200 xl:px-6"
             >
-              Request private viewing
+              Request viewing
             </Link>
           </div>
 

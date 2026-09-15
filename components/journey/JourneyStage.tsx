@@ -196,7 +196,7 @@ export function JourneyStage() {
             // was unreachable with a mouse, and the hour dial would have
             // been too. Scrolling, selection inside the copy and the
             // section's own intersection tracking are all unaffected.
-            className="pointer-events-none relative flex h-[100svh] flex-col justify-end pb-32 sm:pb-36 lg:pb-24"
+            className="pointer-events-none relative flex h-[100svh] flex-col justify-end pb-16 sm:pb-20 lg:pb-12"
           >
             <Container>
               <div

@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import { Gallery } from '@/components/gallery/Gallery';
-import { Container } from '@/components/ui/Container';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { ResidenceExplorer } from '@/components/explorer/ResidenceExplorer';
 import { SPACES } from '@/lib/experience/spaces';
 
 const CANONICAL_PATH = '/gallery';
@@ -31,19 +29,5 @@ export const metadata: Metadata = {
 };
 
 export default function GalleryPage() {
-  return (
-    <>
-      <PageHeader
-        dense
-        eyebrow="Gallery"
-        title="Framings of the residence"
-        lede="These are not photographs. Each framing opens as a live view of the
-          residence — choose an hour, and the whole set answers to it."
-      />
-
-      <Container className="pb-section">
-        <Gallery />
-      </Container>
-    </>
-  );
+  return <ResidenceExplorer tab="gallery" />;
 }

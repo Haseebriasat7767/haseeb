@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import { FloorPlan } from '@/components/plan/FloorPlan';
-import { Container } from '@/components/ui/Container';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { ResidenceExplorer } from '@/components/explorer/ResidenceExplorer';
 
 const CANONICAL_PATH = '/floor-plan';
 
@@ -27,20 +25,5 @@ export const metadata: Metadata = {
 };
 
 export default function FloorPlanPage() {
-  return (
-    <>
-      <PageHeader
-        dense
-        eyebrow="Architecture"
-        title="Plans and levels"
-        lede="Two levels stepped onto the ridge. The plans and the residence are drawn
-          to one schedule, so what you walk through and what you read here are the
-          same description."
-      />
-
-      <Container className="pb-section">
-        <FloorPlan />
-      </Container>
-    </>
-  );
+  return <ResidenceExplorer tab="plan" />;
 }

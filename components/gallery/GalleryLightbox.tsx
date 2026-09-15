@@ -7,6 +7,18 @@ import { useScrollLock } from '@/hooks/useScrollLock';
 import type { Space } from '@/lib/experience/spaces';
 import type { TimeOfDay } from '@/types';
 
+declare global {
+  interface Window {
+    /**
+     * Set only by `scripts/brochure-stills.mjs`, before it opens a plate.
+     * Lets batch capture on unaccelerated hardware ask for fewer samples
+     * than a real visitor's GPU would ever need to wait for, without
+     * touching the sample budget anyone else gets.
+     */
+    __AURELIA_STILL_SAMPLES__?: number;
+  }
+}
+
 type GalleryLightboxProps = {
   space: Space | null;
   index: number;
@@ -130,6 +142,9 @@ export function GalleryLightbox({
           view={space.view}
           mode="fixed"
           cinematic
+          cinematicMaxSamples={
+            typeof window === 'undefined' ? undefined : window.__AURELIA_STILL_SAMPLES__
+          }
           onCinematicProgress={handleProgress}
           timeOfDay={timeOfDay}
           label={`${space.name} — path-traced frame`}
@@ -138,7 +153,15 @@ export function GalleryLightbox({
             lingers on a finished image is chrome competing with the
             architecture, which is the one thing this page must not do. */}
         {converged < 1 ? (
-          <div className="pointer-events-none absolute right-6 bottom-6 flex items-center gap-3">
+          <div
+            // Read by `scripts/brochure-stills.mjs` to wait for the traced
+            // image to converge before it takes the screenshot, rather than
+            // capturing on a fixed timer. This element is only ever mounted
+            // while `converged < 1`, so its absence *is* the convergence
+            // signal — no separate "done" state to keep in sync.
+            data-cinematic-progress
+            className="pointer-events-none absolute right-6 bottom-6 flex items-center gap-3"
+          >
             <div className="bg-alabaster/20 h-px w-24 overflow-hidden">
               <div
                 className="bg-gold h-px transition-[width] duration-300"
