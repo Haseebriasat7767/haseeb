@@ -12,7 +12,8 @@ export function Footer() {
             <p className="font-display text-alabaster text-2xl tracking-[0.42em]">{SITE.name}</p>
             <p className="text-eyebrow text-stone mt-4 uppercase">Private luxury residence</p>
             <p className="text-stone mt-4 text-[0.6875rem] leading-relaxed tracking-[0.15em] uppercase">
-              Conceptual — no existing property. Built to be adapted to a real listing.
+              A demonstration of the Aurelia property experience. The residence is conceptual; the
+              technology is real.
             </p>
           </div>
 

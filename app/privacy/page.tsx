@@ -89,20 +89,17 @@ export default function PrivacyPage() {
           Your message is forwarded through their service to our mailbox. See their privacy policy
           for how they handle forwarded messages.
         </p>
-      ) : null}
-      {smtpHost ? (
+      ) : smtpHost ? (
         <p>
-          Enquiries are delivered via SMTP host <code>{smtpHost}</code> to our mailbox provider.
-          That provider is a processor of your enquiry. The operator should name the provider and
-          its country here before publishing.
+          Enquiries are delivered to our mailbox through a third-party email service, which acts as
+          a processor of your enquiry on our behalf.
         </p>
-      ) : !hasWeb3Forms ? (
-        <p className="border-alabaster/10 border-l-2 pl-4 text-sm">
-          <strong>Operator note:</strong> No mail provider has been configured for this deployment
-          (set SMTP_HOST or WEB3FORMS_ACCESS_KEY). This paragraph must name the mailbox host and its
-          country before the site is published for a real property.
+      ) : (
+        <p>
+          Enquiries submitted through this site are sent directly to the project team and are not
+          shared with a third-party forms or marketing service.
         </p>
-      ) : null}
+      )}
 
       <h2>How long it is kept</h2>
       <p>
@@ -129,12 +126,9 @@ export default function PrivacyPage() {
         </p>
       ) : (
         <p>
-          <strong>
-            The operator&rsquo;s contact details have not been published on this deployment.
-          </strong>{' '}
-          This site is a demonstration build. Before it is used for a real property, the
-          controller&rsquo;s legal name, registered address and a contact address must be set here,
-          and this notice reviewed by a lawyer in that controller&rsquo;s jurisdiction.
+          A dedicated privacy contact has not yet been published for this presentation. To exercise
+          any of the rights above, please use the <a href="/contact">enquiry form</a> and we will
+          route your request to the right person.
         </p>
       )}
 

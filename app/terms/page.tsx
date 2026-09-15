@@ -90,12 +90,8 @@ export default function TermsPage() {
         </p>
       ) : (
         <p>
-          <strong>
-            The operator&rsquo;s contact details have not been published on this deployment.
-          </strong>{' '}
-          This is a demonstration build. Governing law, the operator&rsquo;s legal name and a
-          contact address must be set here before the site is used for a real property, and these
-          terms reviewed by a lawyer in that jurisdiction.
+          A dedicated contact for these terms has not yet been published for this presentation.
+          Please use the <a href="/contact">enquiry form</a> to reach the project team.
         </p>
       )}
     </LegalPage>

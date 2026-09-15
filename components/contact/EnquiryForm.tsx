@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
+import { CLIENT } from '@/lib/constants/client';
 import { SITE } from '@/lib/constants/site';
 import {
   MAX_MESSAGE_LENGTH,
@@ -91,14 +92,25 @@ export function EnquiryForm() {
       <div
         role="status"
         aria-live="polite"
-        className="border-alabaster/10 flex flex-col gap-4 border p-8"
+        className="border-alabaster/10 flex flex-col gap-5 border p-8"
       >
-        <p className="text-eyebrow text-gold uppercase">Enquiry received</p>
-        <p className="font-display text-alabaster text-2xl font-semibold">Thank you.</p>
-        <p className="text-mist text-sm leading-relaxed">
-          A member of the team will respond with the full architectural dossier and a proposed
-          viewing time.
+        <p className="text-eyebrow text-gold uppercase">Request received</p>
+        <p className="font-display text-alabaster text-2xl font-semibold">
+          Your private viewing request has been received.
         </p>
+        <p className="text-mist text-sm leading-relaxed">
+          A member of the project team will contact you shortly.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Button href="/" variant="outline" magnetic>
+            Return to experience
+          </Button>
+          {CLIENT.brochurePath ? (
+            <Button href={CLIENT.brochurePath} download magnetic>
+              Download brochure
+            </Button>
+          ) : null}
+        </div>
       </div>
     );
   }

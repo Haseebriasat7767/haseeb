@@ -124,11 +124,9 @@ export default function AccessibilityPage() {
         </p>
       ) : (
         <p>
-          <strong>This section is not yet complete.</strong> An accessibility statement must give a
-          monitored contact route for reporting barriers, and no contact address has been configured
-          for this deployment. Before this site is published, the operator must set
-          NEXT_PUBLIC_ENQUIRY_EMAIL and name it here, together with the response time they undertake
-          to meet. Until then the <a href="/contact">enquiry form</a> is the only route available.
+          A dedicated accessibility contact has not yet been published for this presentation. Please
+          use the <a href="/contact">enquiry form</a> to report a barrier, and we will respond as
+          quickly as possible.
         </p>
       )}
 
