@@ -7,9 +7,10 @@ import { useCoarsePointer } from '@/hooks/useCoarsePointer';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import { DEFAULT_TIME_OF_DAY } from '@/lib/three/lighting';
+import { CAMERA_VIEWS } from '@/lib/three/scene-config';
 import { findSpace, SPACES } from '@/lib/experience/spaces';
 import type { Space } from '@/lib/experience/spaces';
-import type { TimeOfDay } from '@/types';
+import type { CameraView, TimeOfDay } from '@/types';
 import { CinematicOverlay } from '@/components/experience/CinematicOverlay';
 import { TouchHint } from '@/components/experience/TouchHint';
 import { VisitedCTA } from '@/components/experience/VisitedCTA';
@@ -50,6 +51,15 @@ const TABS: ReadonlyArray<{ id: ExplorerTab; label: string }> = [
   { id: 'gallery', label: 'Gallery' },
 ];
 
+/**
+ * The flyover. Reuses the site's own aerial framing for its position and
+ * target rather than inventing a new vantage — `CameraController`'s
+ * `cinematic` mode then does all the work, orbiting at the radius and
+ * height that position already implies around the target already composed
+ * for it. The same technique `TowerWalkthrough`'s "Fly over" uses.
+ */
+const FLYOVER_VIEW: CameraView = CAMERA_VIEWS.find((entry) => entry.id === 'aerial')!;
+
 const TAB_COPY: Record<ExplorerTab, { eyebrow: string; title: string }> = {
   overview: { eyebrow: 'The Residence', title: PROPERTY.name },
   explore: { eyebrow: 'Explore', title: 'Every space in the residence' },
@@ -85,6 +95,15 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
   const [openId, setOpenId] = useState<string | null>(null);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(DEFAULT_TIME_OF_DAY);
   const [walking, setWalking] = useState(false);
+  // The flyover, nested under "on foot" rather than a third top-level mode —
+  // it is the other way of moving through the grounds yourself, where the
+  // guided tour is composed for the visitor. Reset whenever the visitor
+  // leaves "on foot" entirely, so re-entering walk mode always opens on the
+  // ground rather than remembering the sky.
+  const [flying, setFlying] = useState(false);
+  useEffect(() => {
+    if (!walking) setFlying(false);
+  }, [walking]);
 
   /**
    * Which of the three levels the visitor has framed.
@@ -167,12 +186,16 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
         <div className="relative h-[86svh] w-full overflow-hidden lg:h-[92svh]">
           <ExperienceViewport
             className="absolute inset-0 h-full w-full"
-            view={framed.view}
-            mode={walking ? 'walk' : 'journey'}
+            view={flying ? FLYOVER_VIEW : framed.view}
+            mode={walking ? (flying ? 'cinematic' : 'walk') : 'journey'}
             timeOfDay={timeOfDay}
             parallax={walking ? 0 : reducedMotion || coarsePointer ? 0 : 4.0}
-            label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
-            hotspots={{ activeId: openId, onSelect: select }}
+            label={
+              flying
+                ? 'Three-dimensional aerial view, circling the residence'
+                : `Interactive residence, currently framing the ${framed.name.toLowerCase()}`
+            }
+            hotspots={flying ? undefined : { activeId: openId, onSelect: select }}
           >
             {/* Ground for the chrome. Bottom-weighted and shallow: the
               caption, the figures and the prev/next all sit in the lower
@@ -206,18 +229,38 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
               </button>
             )}
 
+            {/* The second choice, once on foot: cross the grounds yourself,
+                or pull back to a drone's height and glide the exterior
+                instead. Nested under the first toggle rather than a third
+                top-level option, matching the tower's own "Fly over". */}
+            {webgl === false || !walking ? null : (
+              <button
+                type="button"
+                onClick={() => setFlying((on) => !on)}
+                className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-40 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+              >
+                {flying ? 'Ground view' : 'Fly over'}
+              </button>
+            )}
+
             {/* Touch only. Without a cursor there is nothing to tell a phone
               visitor the frame moves, and an interactive view mistaken for
               a photograph is scrolled past. */}
             {walking ? null : <TouchHint label="Drag to look around · Pinch to zoom" />}
 
             {/* Walk mode instructions */}
-            {walking ? (
+            {walking && !flying ? (
               <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
                 <span className="hidden sm:inline">
                   Drag to look · arrows or W A S D to walk · Shift to run
                 </span>
                 <span className="sm:hidden">Left thumb to walk · Right thumb to look</span>
+              </div>
+            ) : null}
+
+            {flying ? (
+              <div className="text-eyebrow text-mist/80 bg-obsidian/50 pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-sm px-4 py-2.5 text-center uppercase backdrop-blur-sm">
+                Circling the residence
               </div>
             ) : null}
 
@@ -244,10 +287,11 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
             />
           </ExperienceViewport>
 
-          {/* Thumb controls for walk mode */}
-          <TouchSticks active={walking} />
+          {/* Thumb controls for walk mode. Neither applies in flight — the
+              orbit flies itself. */}
+          <TouchSticks active={walking && !flying} />
           {/* Keyboard controls for walk mode */}
-          <WalkPad active={walking} />
+          <WalkPad active={walking && !flying} />
 
           <SpacePanel space={open} onClose={close} onFocusSpace={frame} />
         </div>
