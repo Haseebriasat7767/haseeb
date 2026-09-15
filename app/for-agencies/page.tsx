@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Reveal } from '@/components/effects/Reveal';
-import { Button } from '@/components/ui/Button';
+import { BrochureButton } from '@/components/property/BrochureButton';
 import { DirectChannels } from '@/components/contact/DirectChannels';
 import { EnquiryForm } from '@/components/contact/EnquiryForm';
 import { Container } from '@/components/ui/Container';
@@ -238,9 +238,7 @@ export default function ForAgenciesPage() {
                     The brochure is generated from the same model the walkthrough is built from — a
                     working example of what the system produces.
                   </p>
-                  <Button href={CLIENT.brochurePath} variant="outline" download>
-                    Download brochure
-                  </Button>
+                  <BrochureButton />
                 </div>
               ) : null}
             </Reveal>

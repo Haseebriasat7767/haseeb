@@ -298,6 +298,16 @@ export async function POST(request: Request) {
   }
 
   const clientIP = getClientIP(request);
+  /**
+   * One bucket for both kinds, deliberately.
+   *
+   * Giving the viewing and commercial forms separate logical keys was
+   * considered and rejected: it would let a single actor send the limit
+   * down each of them, raising the per-actor ceiling from four enquiries
+   * to eight. Separation would be a weakening dressed as a hardening.
+   * The key is already the narrow one — address plus email, so two people
+   * behind one NAT do not exhaust each other.
+   */
   const rateKey = `${clientIP}:${enquiry.email.trim().toLowerCase()}`;
 
   if (rateLimited('enquiry', rateKey, LIMIT)) {
@@ -314,6 +324,23 @@ export async function POST(request: Request) {
     // identifies the visitor — see `lib/contact/lead-context.ts`.
     ...describeLeadContext(enquiry.context ?? {}).map(([label, value]) => row(label, value)),
   ].join('');
+
+  /*
+   * The extension point for a CRM, when one is wanted.
+   *
+   * Everything a webhook would need is assembled by this line: `enquiry`
+   * carries the kind, the firm, the message and the sanitised context, and
+   * the delivery decision below it is already a place that either succeeds
+   * or answers `failed` honestly. A CRM POST belongs beside the provider
+   * call, not in place of it, and it must not be allowed to fail the
+   * request — the lead is delivered by mail whether or not a CRM accepted
+   * it, and telling a visitor their enquiry failed because a webhook
+   * timed out would be false in the same way the original bug was.
+   *
+   * Deliberately not added here. Nothing in the product needs it yet, and
+   * a second outbound dependency on the one path that must not break is
+   * not worth adding speculatively.
+   */
 
   // Web3Forms first: it is the one somebody deliberately switched on.
   if (web3FormsKey) {

@@ -18,17 +18,6 @@ export function trackBrochureDownload(): void {
 }
 
 /**
- * The brochure, opened rather than saved.
- *
- * Separate from `brochure_download` because they mean different things: a
- * visitor who opens it is still reading on the site, and one who downloads
- * it has taken it away to show somebody. The second is the stronger signal.
- */
-export function trackBrochureOpened(): void {
-  track('brochure_opened');
-}
-
-/**
  * The two conversions, each split into reached-the-form and actually-sent.
  *
  * These sit alongside `enquiry_started` / `enquiry_submitted` rather than

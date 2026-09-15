@@ -1,7 +1,6 @@
 import { Reveal } from '@/components/effects/Reveal';
-import { Button } from '@/components/ui/Button';
 import { BuildForYourProperty } from './BuildForYourProperty';
-import { CLIENT } from '@/lib/constants/client';
+import { BrochureButton } from './BrochureButton';
 
 /**
  * The closing conversion moment, meant for the point a visitor has actually
@@ -19,11 +18,7 @@ export function FinalExperienceCTA() {
   return (
     <Reveal className="border-alabaster/10 mt-4 flex flex-col items-center gap-6 border-t pt-16 pb-4">
       <BuildForYourProperty source="gallery-final" compact />
-      {CLIENT.brochurePath ? (
-        <Button href={CLIENT.brochurePath} variant="outline" download>
-          Download brochure
-        </Button>
-      ) : null}
+      <BrochureButton />
     </Reveal>
   );
 }

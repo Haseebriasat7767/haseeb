@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
-import { CLIENT } from '@/lib/constants/client';
+import { BrochureButton } from '@/components/property/BrochureButton';
 import { SITE } from '@/lib/constants/site';
 import {
   MAX_MESSAGE_LENGTH,
@@ -171,11 +171,7 @@ export function EnquiryForm({
           <Button href="/" variant="outline" magnetic>
             Return to experience
           </Button>
-          {CLIENT.brochurePath ? (
-            <Button href={CLIENT.brochurePath} download magnetic>
-              Download brochure
-            </Button>
-          ) : null}
+          <BrochureButton variant="primary" magnetic />
         </div>
       </div>
     );
