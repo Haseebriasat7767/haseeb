@@ -1,5 +1,6 @@
 'use client';
 
+import { capturePointer, releasePointer } from '@/lib/utils/pointer-capture';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { Box3, Line3, type PerspectiveCamera, Vector3 } from 'three';
@@ -212,7 +213,7 @@ export function WalkControls({
       lastY = e.clientY;
       // Keeps the deltas coming if the pointer leaves the canvas mid-turn,
       // which is what happens every time someone spins past 90°.
-      canvas.setPointerCapture?.(e.pointerId);
+      capturePointer(canvas, e.pointerId);
       canvas.style.cursor = 'grabbing';
     };
 
@@ -227,7 +228,7 @@ export function WalkControls({
     const endDrag = (e: PointerEvent) => {
       if (!dragging) return;
       dragging = false;
-      canvas.releasePointerCapture?.(e.pointerId);
+      releasePointer(canvas, e.pointerId);
       canvas.style.cursor = 'grab';
     };
 

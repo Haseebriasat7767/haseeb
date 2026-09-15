@@ -1,5 +1,6 @@
 'use client';
 
+import { capturePointer } from '@/lib/utils/pointer-capture';
 import { useEffect, useRef, useState } from 'react';
 import {
   resetWalkInput,
@@ -93,13 +94,13 @@ export function TouchSticks({ active }: { active: boolean }) {
         // and a separate run button is a third thing to hold. Captured so
         // its own release is still reported even if the finger drifts.
         if (which === 'move' && stick) {
-          event.currentTarget.setPointerCapture(event.pointerId);
+          capturePointer(event.currentTarget, event.pointerId);
           sprintId.current = event.pointerId;
           walkRun.current = true;
           return;
         }
         if (stick) return;
-        event.currentTarget.setPointerCapture(event.pointerId);
+        capturePointer(event.currentTarget, event.pointerId);
         const next = {
           id: event.pointerId,
           originX: event.clientX,
