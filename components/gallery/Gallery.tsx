@@ -10,6 +10,7 @@ import { SPACES } from '@/lib/experience/spaces';
 import type { TimeOfDay } from '@/types';
 import { cn } from '@/lib/utils/cn';
 import { GalleryLightbox } from './GalleryLightbox';
+import { PlateImage } from './PlateImage';
 
 /**
  * The gallery index. Each entry is a framing of the residence rather than a
@@ -57,16 +58,20 @@ export function Gallery() {
                 'hover:bg-ink transition-colors duration-500',
               )}
             >
-              {/* The tile has no photograph behind it — the live render is
-                  one click away, in the lightbox, and pre-rendering an image
-                  for every framing is the thing this gallery deliberately
-                  does not do (see the file's own note above). A flat card
-                  with no photograph and no mark of any kind reads as broken
-                  rather than as a choice, though, so each tile gets a real
-                  typographic device instead of a fake preview: the space's
-                  own initial, oversized and faint, angled by its position in
-                  the list so eighteen identical dark cards don't read as one
-                  cell repeated. Nothing here claims to be a photograph.
+              {/* The plate, where one has been rendered. `PlateImage`
+                  returns nothing for a space that has none, so the tile
+                  falls back to the device below — plates arrive a few at a
+                  time and a half-covered grid has to read as deliberate.
+                  The first two are eager: they are above the fold on every
+                  width and a gallery that greys in under the cursor is the
+                  opposite of the impression this page exists to make. */}
+              <PlateImage space={space.id} priority={index < 2} />
+
+              {/* The device under the plate, and the whole tile without one:
+                  the space's own initial, oversized and faint, angled by its
+                  position so eighteen dark cards don't read as one cell
+                  repeated. Nothing here claims to be a photograph — the
+                  standfirst above says what these are.
               */}
               <span
                 aria-hidden="true"

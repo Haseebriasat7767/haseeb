@@ -763,8 +763,9 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
         ) : (
           <div className="pt-10">
             <p className="text-mist max-w-[64ch] pb-10 text-sm leading-relaxed">
-              These are not photographs. Each framing opens as a live view of the residence — choose
-              an hour, and the whole set answers to it.
+              Rendered from the model, not photographed — there is nothing to photograph yet. Open
+              any framing and it becomes a live view you can move through: choose an hour, and the
+              whole set answers to it.
             </p>
             <Gallery />
           </div>
