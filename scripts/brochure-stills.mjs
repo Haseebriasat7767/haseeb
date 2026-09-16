@@ -62,21 +62,52 @@ const OUT = OUT_DIR;
  *   drift away from what the site renders.
  */
 
-/** See `STILL_SAMPLES` below for why this is lower than `PathTracer`'s own
- *  default — even so, generous: a plate that never converges should time
- *  out loudly rather than hang the run indefinitely. */
-const CONVERGE_TIMEOUT_MS = 25 * 60_000;
+/**
+ * The sample budget.
+ *
+ * 320 is `PathTracer`'s own default and what the scene is tuned for: on a
+ * real GPU it converges in a couple of seconds, and it is the figure the
+ * plates should be rendered at, because the finishing pass reads the
+ * traced frame's materials and lighting — a noisier base gives it less to
+ * work from.
+ *
+ * ## It will not converge without a GPU
+ *
+ * This was 90 for exactly that reason. Every sample goes through
+ * SwiftShader's software rasteriser on a machine with no GPU, and 320 at
+ * 3840×2160 was measured at more than forty minutes for a single plate —
+ * past `CONVERGE_TIMEOUT_MS`, and across twenty-nine plates a run that
+ * cannot finish. 90 fitted inside the timeout and was still real path
+ * tracing rather than a rasterized fallback.
+ *
+ * So the default is now the GPU figure, and the software case is an
+ * override rather than a silent compromise for everyone:
+ *
+ *   STILL_SAMPLES=90 node scripts/brochure-stills.mjs
+ *
+ * Getting this wrong fails loudly — the plate times out and the run stops
+ * — rather than quietly writing twenty-nine noisy frames.
+ */
+const STILL_SAMPLES = Number(process.env.STILL_SAMPLES ?? 320);
+
+if (!Number.isFinite(STILL_SAMPLES) || STILL_SAMPLES < 1) {
+  throw new Error(`STILL_SAMPLES must be a positive number, got "${process.env.STILL_SAMPLES}"`);
+}
 
 /**
- * The sample budget for this run only — see the comment at the capture
- * site. Chosen by measurement, not guessed: 320 samples at 3840×2160 did
- * not converge inside 40 minutes under SwiftShader, so this is scaled down
- * enough to fit inside `CONVERGE_TIMEOUT_MS` with headroom, while still
- * being real path tracing — true global illumination, soft shadows and
- * reflections a rasterizer cannot produce — rather than a rasterized
- * fallback.
+ * How long one plate may take to converge before the run gives up.
+ *
+ * Generous on a GPU, where 320 samples land in seconds — this exists so a
+ * plate that never converges stops the run loudly instead of hanging it.
+ * Raise it with `CONVERGE_TIMEOUT_MIN` when rendering somewhere slow.
  */
-const STILL_SAMPLES = 90;
+const CONVERGE_TIMEOUT_MS = Number(process.env.CONVERGE_TIMEOUT_MIN ?? 25) * 60_000;
+
+console.log(
+  `${ALL_PLATES.length} plates at ${STILL_SAMPLES} samples ` +
+    `(timeout ${Math.round(CONVERGE_TIMEOUT_MS / 60_000)} min/plate)\n` +
+    `  no GPU? re-run with STILL_SAMPLES=90 — 320 will not converge under SwiftShader`,
+);
 
 mkdirSync(OUT, { recursive: true });
 
