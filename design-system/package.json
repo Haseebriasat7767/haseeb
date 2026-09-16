@@ -1,0 +1,24 @@
+{
+  "name": "@aurelia/primitives",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The presentational primitives the AURELIA property experience is built from.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/design-system/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/design-system/src/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/index.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  }
+}

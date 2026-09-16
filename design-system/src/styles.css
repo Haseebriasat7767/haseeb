@@ -1,0 +1,19 @@
+/*
+ * The library's stylesheet.
+ *
+ * Tailwind is pointed at the five primitives and nothing else, so the
+ * emitted CSS carries the token layer plus exactly the utilities those
+ * components use — not the whole application's surface.
+ *
+ * `@theme` lives in the application's `globals.css` and is imported rather
+ * than copied: one definition of the palette, the type scale and the
+ * spacing, shared by the site and by anything built from this package. A
+ * second copy would drift the moment either moved.
+ */
+@import '../../app/globals.css';
+
+@source '../../components/ui/Button.tsx';
+@source '../../components/ui/Container.tsx';
+@source '../../components/ui/Eyebrow.tsx';
+@source '../../components/ui/PageHeader.tsx';
+@source '../../components/ui/SectionHeading.tsx';

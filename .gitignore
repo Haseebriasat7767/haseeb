@@ -13,3 +13,6 @@ npm-debug.log*
 # Contact sheets from `tools/blender/models.py --preview`. Build output for
 # looking at, not artefacts the site serves.
 /preview
+
+# Build output of the primitives package — rebuilt by `npm run build:ds`.
+design-system/dist

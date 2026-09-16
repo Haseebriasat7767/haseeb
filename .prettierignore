@@ -5,3 +5,6 @@ package-lock.json
 # Vendored, and not ours to format — ESLint already ignores it for the
 # same reason.
 public/assets/draco
+
+# Build output of the primitives package — generated, never hand-edited.
+design-system/dist

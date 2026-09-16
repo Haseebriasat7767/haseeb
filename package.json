@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:a11y": "node scripts/a11y.mjs",
-    "brochure:stills": "node scripts/brochure-stills.mjs"
+    "brochure:stills": "node scripts/brochure-stills.mjs",
+    "build:ds": "node design-system/build.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
@@ -44,6 +45,7 @@
     "@types/three": "^0.180.0",
     "@vitest/coverage-v8": "^5.0.0",
     "axe-core": "^4.13.0",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.25",
     "eslint-config-prettier": "^10.1.8",

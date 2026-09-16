@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "dist/types",
+    "rootDir": "..",
+    "paths": { "@/*": ["../*"], "next/link": ["./src/link.tsx"] }
+  },
+  "include": [
+    "src/index.ts",
+    "src/link.tsx",
+    "../components/ui/**/*",
+    "../lib/utils/cn.ts",
+    "../hooks/**/*"
+  ],
+  "exclude": ["dist"]
+}
