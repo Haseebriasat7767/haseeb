@@ -62,10 +62,26 @@ on a real device. If the measured peak exceeds the budget, drop the limit,
 not the resolution — a smaller limit costs a reload when a visitor
 backtracks, a smaller face costs every visitor every frame.
 
-**Byte budget.** Measured at 1024², 4 samples: PNG 564 KiB/room → 16.0 MiB
-for 29 rooms. JPEG q90: see the commit that made the switch for the measured
-delta. A single room is six requests, fetched on entry, cached by content
-hash thereafter.
+**Byte budget, measured — and the saving is far smaller than expected.**
+The same room rendered twice at 1024², 4 samples:
+
+|          | Total     | px        | nz           |
+| -------- | --------- | --------- | ------------ |
+| PNG      | 564.2 KiB | 230.2 KiB | 13.5 KiB     |
+| JPEG q90 | 461.2 KiB | 135.7 KiB | **13.8 KiB** |
+
+**18%, not the ~83% the format change predicts.** The reason is the source:
+a 4-sample path trace is mostly high-frequency noise, which is precisely
+what JPEG cannot compress. Note `nz` — a near-black, nearly flat face —
+where JPEG came out _larger_ than PNG.
+
+So this number is a **lower bound distorted by unconverged input**, not the
+production figure. A converged render is smooth gradients and soft
+shadowing, which compresses the way the format change assumes. Re-measure
+once TBD-2 fixes the sample count; do not quote 18% as the expected saving.
+
+A single room is six requests, fetched on entry, cached by content hash
+thereafter.
 
 ## Determinism
 
@@ -124,15 +140,39 @@ The manifest emitter **merges** rather than replaces. `render:panoramas
 living` renders one room; emitting only that room's entry would delete the
 other twelve from the site.
 
-## Encoding caveat
+## Encoding: 4:4:4 is specified and not currently achieved
 
-The brief calls for 4:4:4 chroma so cube-face seams do not show. Faces are
-captured through CDP `Page.captureScreenshot`, which exposes `quality` but
-**not** chroma subsampling — Chrome's encoder chooses. Whether the output is
-4:4:4 or 4:2:0 is recorded in the commit that made the switch, read from the
-JPEG's own SOF0 sampling factors rather than assumed. Forcing 4:4:4 would
-mean encoding outside the browser, which means a new dependency; that is a
-decision to take on evidence, not pre-emptively.
+Faces are wanted at 4:4:4 chroma because a cube-face edge is exactly where
+subsampling shows: 4:2:0 averages chroma over 2×2 blocks, and at a face
+boundary the neighbouring face's pixels do not exist, so the edge chroma is
+computed from padding. Two faces that should agree along a shared edge then
+disagree, and the seam is visible as a colour shift.
+
+**What the pipeline actually emits is 4:2:0.** Read from the JPEG's own
+SOF0 marker, not assumed:
+
+```
+nx.jpg: components=3  luma sampling=2x2  -> 4:2:0
+```
+
+CDP `Page.captureScreenshot` exposes `quality` and nothing else; Chrome's
+encoder picks the subsampling. There is no flag for it.
+
+The options, none taken yet:
+
+1. **Encode outside the browser** (`sharp`, which has an explicit
+   `chromaSubsampling: '4:4:4'`). Correct, and a new native dependency for
+   a pipeline that currently has none.
+2. **Keep PNG for the faces.** Lossless, no subsampling at all — and on the
+   measurement above it costs only 18% more, though that figure is
+   noise-distorted and will widen once renders converge.
+3. **Measure whether the seam is actually visible** at the final sample
+   count and face size, and accept 4:2:0 if it is not.
+
+Option 3 first. The seam mechanism is real, but its visibility at 1024² and
+11 px/degree is an empirical question, and it cannot be answered against a
+noise field — the noise swamps exactly the edge detail being judged. Settle
+it on the first converged render; take option 1 only if the seam shows.
 
 ## A cautionary note: the manifest that 404s
 
