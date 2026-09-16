@@ -95,6 +95,31 @@ if (!Number.isFinite(STILL_SAMPLES) || STILL_SAMPLES < 1) {
 }
 
 /**
+ * What renders the plates.
+ *
+ * `gpu` is the default because that is the only thing 320 samples
+ * converges on. `swiftshader` is Chromium's software rasteriser — correct
+ * output, orders of magnitude slower, and the right choice only on a
+ * machine with no GPU, where it belongs with `STILL_SAMPLES=90`.
+ *
+ * The flags used to force SwiftShader with no way to opt out, which meant
+ * a GPU machine rendered in software anyway. The launch below verifies
+ * what it actually got rather than trusting the flag.
+ */
+const RENDER_BACKEND = process.env.RENDER_BACKEND ?? 'gpu';
+
+if (!['gpu', 'swiftshader'].includes(RENDER_BACKEND)) {
+  throw new Error(`RENDER_BACKEND must be "gpu" or "swiftshader", got "${RENDER_BACKEND}"`);
+}
+
+const BACKEND_ARGS =
+  RENDER_BACKEND === 'swiftshader'
+    ? ['--use-gl=swiftshader', '--enable-unsafe-swiftshader']
+    : // Let Chromium pick the platform's native GL, and do not let its
+      // blocklist quietly drop a headless server GPU back to software.
+      ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=default'];
+
+/**
  * How long one plate may take to converge before the run gives up.
  *
  * Generous on a GPU, where 320 samples land in seconds — this exists so a
@@ -104,9 +129,9 @@ if (!Number.isFinite(STILL_SAMPLES) || STILL_SAMPLES < 1) {
 const CONVERGE_TIMEOUT_MS = Number(process.env.CONVERGE_TIMEOUT_MIN ?? 25) * 60_000;
 
 console.log(
-  `${ALL_PLATES.length} plates at ${STILL_SAMPLES} samples ` +
+  `${ALL_PLATES.length} plates at ${STILL_SAMPLES} samples, ${RENDER_BACKEND} backend ` +
     `(timeout ${Math.round(CONVERGE_TIMEOUT_MS / 60_000)} min/plate)\n` +
-    `  no GPU? re-run with STILL_SAMPLES=90 — 320 will not converge under SwiftShader`,
+    `  no GPU? RENDER_BACKEND=swiftshader STILL_SAMPLES=90`,
 );
 
 mkdirSync(OUT, { recursive: true });
@@ -139,11 +164,42 @@ let browser;
 try {
   await waitForServer();
   browser = await chromium.launch({
-    // Software rendering, and `--no-sandbox` because this runs as root in
-    // CI containers where Chromium's own sandbox cannot start.
-    args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
+    // `--no-sandbox` because this often runs as root in containers where
+    // Chromium's own sandbox cannot start. The rest depends on what is
+    // actually rendering — see `RENDER_BACKEND`.
+    args: ['--no-sandbox', ...BACKEND_ARGS],
     ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
   });
+
+  // What is actually rendering, asked of the renderer rather than assumed.
+  //
+  // This check exists because the flags used to force SwiftShader
+  // unconditionally: on a GPU machine the run would still software-render,
+  // every plate would hit the convergence timeout, and the only symptom
+  // would be a rented GPU doing nothing for hours. Now the backend is
+  // reported before the first plate, and asking for a GPU and silently not
+  // getting one stops the run instead of burning the budget.
+  {
+    const probe = await browser.newPage();
+    const renderer = await probe.evaluate(() => {
+      const gl = document.createElement('canvas').getContext('webgl2');
+      if (!gl) return 'none';
+      const info = gl.getExtension('WEBGL_debug_renderer_info');
+      return info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : 'unknown';
+    });
+    await probe.close();
+    console.log(`  renderer: ${renderer}`);
+
+    const software = /swiftshader|llvmpipe|software/i.test(renderer);
+    if (RENDER_BACKEND === 'gpu' && software) {
+      throw new Error(
+        `asked for the GPU backend but the renderer is "${renderer}".\n` +
+          `  ${STILL_SAMPLES} samples will not converge in software — the run would time out on every plate.\n` +
+          `  Either fix GPU access for Chromium, or re-run in software:\n` +
+          `    RENDER_BACKEND=swiftshader STILL_SAMPLES=90 node scripts/brochure-stills.mjs`,
+      );
+    }
+  }
 
   for (const plate of ALL_PLATES) {
     // At least 4K, per the site's own cinematic gallery target: a brochure
