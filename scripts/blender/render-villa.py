@@ -117,16 +117,6 @@ GLASS_KEY = re.compile(r'(glass|leaf)', re.I)
 COVE_KEY = re.compile(r'(cove|strip)', re.I)
 
 
-def material_for(group, key):
-    if COVE_KEY.search(key):
-        return COVE_MAT
-    if group == 'shell.openings':
-        return MATS[group] if GLASS_KEY.search(key) else FRAME_MAT
-    return MATS.get(group, DEFAULT)
-
-# The generator's own material vocabulary for soft geometry. Each form names
-# one of these, so this is a lookup rather than a guess about what a sofa is
-# made of.
 FORM_MATS = {
     'joinery': material('joinery', (0.38, 0.26, 0.17, 1), 0.45),
     'wood': material('wood', (0.34, 0.22, 0.13, 1), 0.50),
@@ -156,14 +146,107 @@ if 'Emission Color' in _glow.inputs:
     _glow.inputs['Emission Color'].default_value = (1.0, 0.88, 0.68, 1)
     _glow.inputs['Emission Strength'].default_value = 3.0
 
+# The tower's groups are named for their material by the generator itself —
+# `t.tower.glazing`, `apt.parts.joinery`, `t.podium.mullions`. So the leaf
+# segment resolves against the same vocabulary the forms use, rather than
+# needing a second hand-written table that could disagree with it.
+LEAF_MATS = {
+    'glazing': MATS['shell.openings'],
+    'glass': MATS['shell.openings'],
+    'mullions': FRAME_MAT,
+    'fins': FRAME_MAT,
+    'rails': FRAME_MAT,
+    'screens': FRAME_MAT,
+    'doors': FRAME_MAT,
+    'balustrades': MATS['shell.openings'],
+    'coves': COVE_MAT,
+    'strip': COVE_MAT,
+    'glow': FORM_MATS['glow'],
+    'joinery': FORM_MATS['joinery'],
+    'plaster': FORM_MATS['plaster'],
+    'paper': FORM_MATS['paper'],
+    'drapery': FORM_MATS['drapery'],
+    'rugs': FORM_MATS['rug'],
+    'mirrors': material('mirror', (0.92, 0.93, 0.94, 1), 0.02, 1.0),
+    'foliageClusters': FORM_MATS['indoorFoliage'],
+    'planters': FORM_MATS['ceramic'],
+    'plungeWater': material('water', (0.22, 0.42, 0.46, 1), 0.02, 0.0, 0.92),
+    'poolShell': material('pool', (0.55, 0.72, 0.74, 1), 0.25),
+    'plungeShell': material('plunge', (0.55, 0.72, 0.74, 1), 0.25),
+    'tiling': material('tiling', (0.78, 0.77, 0.74, 1), 0.28),
+    'paving': MATS['shell.terrace'],
+    'boardwalk': FORM_MATS['wood'],
+    'ceilings': MATS['int.ceilings'],
+    'plates': MATS['int.floorsStone'],
+    'floors': MATS['int.floorsStone'],
+    'slabs': MATS['shell.groundFloor'],
+    'bands': MATS['shell.facade'],
+    'core': MATS['shell.groundFloor'],
+    'mass': MATS['shell.groundFloor'],
+    'columns': MATS['shell.columns'],
+    'parapet': MATS['shell.roof'],
+    'parapets': MATS['shell.roof'],
+    'furniture': FORM_MATS['upholstery'],
+    'commonFurniture': FORM_MATS['upholstery'],
+    'loungers': FORM_MATS['upholstery'],
+    'parasols': FORM_MATS['drapery'],
+    'artBodies': FORM_MATS['plaster'],
+    'signage': FORM_MATS['bronze'],
+    'dark': FORM_MATS['darkMetal'],
+    'channel': FORM_MATS['darkMetal'],
+    'steps': MATS['shell.stairs'],
+    'walls': FORM_MATS['plaster'],
+    'soft': FORM_MATS['upholstery'],
+}
+
+
+def material_for(group, key):
+    if COVE_KEY.search(key):
+        return COVE_MAT
+    if group == 'shell.openings':
+        return MATS[group] if GLASS_KEY.search(key) else FRAME_MAT
+    if group in MATS:
+        return MATS[group]
+    leaf = group.split('.')[-1]
+    return LEAF_MATS.get(leaf, DEFAULT)
+
+# The generator's own material vocabulary for soft geometry. Each form names
+# one of these, so this is a lookup rather than a guess about what a sofa is
+# made of.
+
 # ── Geometry ──────────────────────────────────────────────────────────────
 # Three's Y-up becomes Blender's Z-up: (x, y, z) -> (x, -z, y).
+FOLIAGE_MAT = material('foliage-crown', (0.17, 0.30, 0.14, 1), 0.72)
+
 total = 0
+foliage = 0
 for group, items in data['groups'].items():
     buckets = {}
     for box in items:
         px, py, pz = box['position']
         sx, sy, sz = box['scale']
+
+        # Foliage cards are not boxes.
+        #
+        # They carry a `radius`, and the web scene draws each as a billboard
+        # whose outline comes from a texture with leaves and gaps in it. The
+        # generic collector picks them up because they have a position and a
+        # scale like everything else — and rendered as solid cubes they
+        # plant one-metre green blocks through the interiors. One of them sat
+        # a metre from the tower apartment's camera and filled the frame.
+        if 'radius' in box:
+            radius = float(box['radius'])
+            bpy.ops.mesh.primitive_ico_sphere_add(
+                radius=radius, subdivisions=2, location=(px, -pz, py)
+            )
+            obj = bpy.context.object
+            obj.scale = (sx, sz, sy)
+            obj.data.materials.append(FOLIAGE_MAT)
+            buckets.setdefault('foliage-crown', []).append(obj)
+            total += 1
+            foliage += 1
+            continue
+
         bpy.ops.mesh.primitive_cube_add(size=1, location=(px, -pz, py))
         obj = bpy.context.object
         obj.scale = (sx, sz, sy)
@@ -183,7 +266,10 @@ for group, items in data['groups'].items():
             bpy.context.view_layer.objects.active = objs[0]
             bpy.ops.object.join()
 
-print(f'built {total} boxes in {len(data["groups"])} material groups')
+print(
+    f'built {total} solids in {len(data["groups"])} material groups '
+    f'({foliage} foliage crowns)'
+)
 
 
 def place(obj, form):
