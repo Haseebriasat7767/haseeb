@@ -95,6 +95,26 @@ if (!Number.isFinite(STILL_SAMPLES) || STILL_SAMPLES < 1) {
 }
 
 /**
+ * Render a subset, by plate id.
+ *
+ * A run is long and a single plate often needs redoing — a framing
+ * changed, one trace came out noisy, a material was fixed. Re-rendering
+ * twenty-nine to replace one is the kind of waste that stops people
+ * fixing the one.
+ *
+ *   ONLY=living node scripts/brochure-stills.mjs
+ *   ONLY=living,master,tower-atrium node scripts/brochure-stills.mjs
+ *
+ * Matches a residence `space` or a tower `view`. An id that matches
+ * nothing stops the run rather than rendering all of them, because a
+ * typo here otherwise means an unattended hour spent on the wrong work.
+ */
+const ONLY = (process.env.ONLY ?? '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean);
+
+/**
  * The capture resolution.
  *
  * 3840×2160 is what a brochure plate wants: a still someone can zoom,
@@ -157,8 +177,24 @@ const BACKEND_ARGS =
  */
 const CONVERGE_TIMEOUT_MS = Number(process.env.CONVERGE_TIMEOUT_MIN ?? 25) * 60_000;
 
+const PLATES_TO_RENDER =
+  ONLY.length === 0
+    ? ALL_PLATES
+    : ALL_PLATES.filter((plate) => ONLY.includes(plate.space ?? plate.view));
+
+if (ONLY.length > 0) {
+  const matched = new Set(PLATES_TO_RENDER.map((plate) => plate.space ?? plate.view));
+  const missing = ONLY.filter((id) => !matched.has(id));
+  if (missing.length > 0) {
+    throw new Error(
+      `ONLY names nothing renderable: ${missing.join(', ')}\n` +
+        `  ids come from lib/experience/spaces.ts and lib/three/tower-views.ts`,
+    );
+  }
+}
+
 console.log(
-  `${ALL_PLATES.length} plates at ${RENDER_WIDTH}x${RENDER_HEIGHT}, ${STILL_SAMPLES} samples, ${RENDER_BACKEND} backend ` +
+  `${PLATES_TO_RENDER.length} plates at ${RENDER_WIDTH}x${RENDER_HEIGHT}, ${STILL_SAMPLES} samples, ${RENDER_BACKEND} backend ` +
     `(timeout ${Math.round(CONVERGE_TIMEOUT_MS / 60_000)} min/plate)\n` +
     `  no GPU? RENDER_BACKEND=swiftshader STILL_SAMPLES=90`,
 );
@@ -230,7 +266,7 @@ try {
     }
   }
 
-  for (const plate of ALL_PLATES) {
+  for (const plate of PLATES_TO_RENDER) {
     // At least 4K, per the site's own cinematic gallery target: a brochure
     // plate is a still someone can zoom, where the live page is seen in
     // motion, so it earns more pixels than the on-screen frame does.
@@ -343,4 +379,4 @@ try {
   stop();
 }
 
-console.log(`\n${ALL_PLATES.length} plates written to ${OUT}`);
+console.log(`\n${PLATES_TO_RENDER.length} plates written to ${OUT}`);
