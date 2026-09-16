@@ -32,7 +32,8 @@ import { spaceIds } from './lib/pano-spaces.mjs';
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = join(REPO, 'public/assets/pano');
 const PUBLIC_PREFIX = '/assets/pano';
-const EXTENSION = 'png';
+const EXTENSION = process.env.PANO_FORMAT ?? 'jpg';
+const JPEG_QUALITY = Number(process.env.PANO_QUALITY ?? 90);
 
 const ORIGIN = process.env.RENDER_ORIGIN ?? 'http://localhost:3100';
 const RENDER_BACKEND = process.env.RENDER_BACKEND ?? 'gpu';
@@ -57,7 +58,8 @@ async function main() {
   const peak = peakMiB(SIZE, CACHE_LIMIT);
   console.log(
     `${targets.length} rooms x ${CUBE_FACES.length} faces = ${targets.length * CUBE_FACES.length} renders\n` +
-      `  ${SIZE}px faces, ${SAMPLES} samples, ${RENDER_BACKEND} backend, ` +
+      `  ${SIZE}px ${EXTENSION}${EXTENSION === 'png' ? '' : ` q${JPEG_QUALITY}`} faces, ` +
+      `${SAMPLES} samples, ${RENDER_BACKEND} backend, ` +
       `timeout ${Math.round(CONVERGE_TIMEOUT_MS / 60_000)} min/face\n` +
       `  peak VRAM at cache limit ${CACHE_LIMIT}: ${peak.toFixed(0)} MiB`,
   );
@@ -111,7 +113,11 @@ async function main() {
       for (const face of CUBE_FACES) {
         const faceStart = Date.now();
         await renderFace(page, face, CONVERGE_TIMEOUT_MS);
-        await writeFile(join(staging, `${face}.${EXTENSION}`), await captureCanvas(page));
+        const image = await captureCanvas(page, {
+          format: EXTENSION === 'png' ? 'png' : 'jpeg',
+          quality: JPEG_QUALITY,
+        });
+        await writeFile(join(staging, `${face}.${EXTENSION}`), image);
         console.log(`  ${spaceId}/${face}  ${Date.now() - faceStart}ms`);
       }
 

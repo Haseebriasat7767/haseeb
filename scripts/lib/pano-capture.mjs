@@ -27,8 +27,14 @@ export async function waitForConvergence(page, timeoutMs) {
   await page.waitForTimeout(200);
 }
 
-/** The canvas alone, with every sibling hidden so nothing composites in. */
-export async function captureCanvas(page) {
+/**
+ * The canvas alone, with every sibling hidden so nothing composites in.
+ *
+ * `format` is JPEG for the delivered faces: PNG is lossless encoding on
+ * photographic content, and at 1024² it costs about six times the bytes for
+ * no visible difference on a face read at ~11 px/degree.
+ */
+export async function captureCanvas(page, { format = 'jpeg', quality = 90 } = {}) {
   const client = await page.context().newCDPSession(page);
   const box = await page.evaluate(() => {
     const canvas = document.querySelector('canvas');
@@ -39,7 +45,8 @@ export async function captureCanvas(page) {
   if (!box) throw new Error('no canvas to capture');
 
   const shot = await client.send('Page.captureScreenshot', {
-    format: 'png',
+    format,
+    ...(format === 'jpeg' ? { quality } : {}),
     clip: { ...box, scale: 1 },
     captureBeyondViewport: false,
   });
