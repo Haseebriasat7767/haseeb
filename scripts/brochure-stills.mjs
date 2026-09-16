@@ -33,31 +33,34 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { ALL_PLATES, OUT_DIR, TOWER_PLATES } from './plates.manifest.mjs';
 
 const PORT = Number(process.env.BROCHURE_PORT ?? 3910);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
-const OUT = 'public/assets/brochure';
+const OUT = OUT_DIR;
 
 /**
- * The framings, and why each one.
+ * The framings, and how each is captured.
  *
- * A brochure needs the building, a principal room, the water, and a
- * bedroom — the four things a buyer looks for and in that order. Every id
- * below is a real entry in `lib/experience/spaces.ts` and therefore also a
- * tile on `/gallery`, which is how each plate is opened: this script drives
- * the same cinematic lightbox (`GalleryLightbox`) a visitor would, rather
- * than a capture path of its own.
+ * The list itself lives in `scripts/plates.manifest.mjs` — the capture
+ * script, the test that checks the ids are real, and anyone deciding what
+ * still needs rendering all read the same rows. It used to be four plates
+ * written here; it is now every residence space and every tower framing,
+ * because the gallery shows all of them and a tile with no plate is a
+ * visibly empty cell.
  *
- * The tower has no equivalent gallery yet — `TowerWalkthrough` never wires
- * `cinematic` — so it has no plates here either. Nothing below invents a
- * capture path the live site doesn't have.
+ * Two capture paths, because the two buildings genuinely differ:
+ *
+ * - The residence goes through the gallery's own lightbox, by clicking the
+ *   tile a visitor would click. That is the one surface on the site which
+ *   already path-traces, so the capture exercises the real path end to end.
+ *
+ * - The tower has no lightbox. It is captured from the walkthrough itself
+ *   on the framing `?step=` selects, which path-traces only while
+ *   `window.__AURELIA_STILL_SAMPLES__` is set — the same hook the lightbox
+ *   reads, set here and nowhere else. No capture-only route exists to
+ *   drift away from what the site renders.
  */
-const PLATES = [
-  { space: 'arrival', file: 'arrival.jpg', caption: 'The residence from the approach' },
-  { space: 'living', file: 'living.jpg', caption: 'Living room' },
-  { space: 'pool', file: 'pool.jpg', caption: 'Infinity edge above the coast' },
-  { space: 'master', file: 'master.jpg', caption: 'Master suite' },
-];
 
 /** See `STILL_SAMPLES` below for why this is lower than `PathTracer`'s own
  *  default — even so, generous: a plate that never converges should time
@@ -111,30 +114,48 @@ try {
     ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
   });
 
-  for (const plate of PLATES) {
+  for (const plate of ALL_PLATES) {
     // At least 4K, per the site's own cinematic gallery target: a brochure
     // plate is a still someone can zoom, where the live page is seen in
     // motion, so it earns more pixels than the on-screen frame does.
     const page = await browser.newPage({ viewport: { width: 3840, height: 2160 } });
 
-    // The gallery, not a direct `?space=` deep link: `GalleryLightbox` is
-    // the one place on the site that already runs `cinematic` — the raster
-    // journey view `/experience` opens does not. Opening the same tile a
-    // visitor would click exercises the real cinematic path end to end
-    // rather than a capture-only route that could quietly drift from it.
-    await page.goto(`${ORIGIN}/gallery`, { waitUntil: 'load', timeout: 200_000 });
     // The full 320-sample budget converges in a couple of seconds on a real
     // GPU, which is what it is tuned for. This machine has none — every
     // sample goes through SwiftShader's software rasteriser — and at
     // 3840×2160 that is measured in tens of minutes per hundred samples, not
-    // seconds. `STILL_SAMPLES` asks `GalleryLightbox` for a smaller budget
-    // for exactly this run, through the one hook built for it
-    // (`window.__AURELIA_STILL_SAMPLES__`), rather than lowering the
+    // seconds. `STILL_SAMPLES` asks for a smaller budget for exactly this
+    // run, through the one hook built for it, rather than lowering the
     // default every real visitor's GPU renders at.
-    await page.evaluate((n) => {
+    //
+    // Installed as an init script rather than evaluated after navigation:
+    // the tower reads the hook when its scene mounts, so a value set after
+    // `load` arrives too late to make that frame path-trace. An init script
+    // runs before any of the page's own scripts on every document, which
+    // makes the hook present for both buildings without a reload.
+    await page.addInitScript((n) => {
       window.__AURELIA_STILL_SAMPLES__ = n;
     }, STILL_SAMPLES);
-    await page.click(`[data-space="${plate.space}"]`, { timeout: 30_000 });
+
+    // Where the trace happens differs by building — see the note above.
+    // The tower's `?step=` is 1-based and derived from the manifest's own
+    // order, never written down: `TowerWalkthrough` indexes `TOWER_VIEWS`
+    // by it, and recording an index by hand is how a reordered array
+    // silently repoints every capture.
+    const towerStep =
+      plate.building === 'tower'
+        ? TOWER_PLATES.findIndex((entry) => entry.view === plate.view) + 1
+        : 0;
+    const target =
+      plate.building === 'tower' ? `${ORIGIN}/tower?step=${towerStep}` : `${ORIGIN}/gallery`;
+    await page.goto(target, { waitUntil: 'load', timeout: 200_000 });
+
+    // The residence needs its tile opened to reach the lightbox that
+    // traces. The tower is already on its framing and begins tracing on
+    // mount, so there is nothing to click.
+    if (plate.building === 'residence') {
+      await page.click(`[data-space="${plate.space}"]`, { timeout: 30_000 });
+    }
 
     // Wait for convergence rather than a fixed timer. `PathTracer` reports
     // its own sample count up through `GalleryLightbox`, which mounts
@@ -184,7 +205,7 @@ try {
         scale: 1,
       };
     });
-    if (!box) throw new Error(`no canvas for ${plate.space}`);
+    if (!box) throw new Error(`no canvas for ${plate.file}`);
 
     const cdp = await page.context().newCDPSession(page);
     const shot = await cdp.send('Page.captureScreenshot', {
@@ -204,4 +225,4 @@ try {
   stop();
 }
 
-console.log(`\n${PLATES.length} plates written to ${OUT}`);
+console.log(`\n${ALL_PLATES.length} plates written to ${OUT}`);

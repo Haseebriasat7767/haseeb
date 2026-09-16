@@ -58,6 +58,13 @@ const FLYOVER_VIEW: CameraView = TOWER_VIEWS.find((entry) => entry.id === 'aeria
  * any time of day. That pairing is the point of the page: the balcony at
  * golden hour and the balcony at blue hour are two different apartments.
  */
+declare global {
+  interface Window {
+    /** Set by `scripts/brochure-stills.mjs` only. See the capture note below. */
+    __AURELIA_STILL_SAMPLES__?: number;
+  }
+}
+
 export function TowerWalkthrough() {
   // `?step=` opens the walkthrough on a given framing. Deep-linking a
   // single view is what makes one of these shareable — a balcony at sunset
@@ -165,6 +172,31 @@ export function TowerWalkthrough() {
       ? unitFloorView(selectedUnit.floor)
       : view;
 
+  /**
+   * Stills capture, through the hook the gallery lightbox already reads.
+   *
+   * The residence path-traces inside `GalleryLightbox`; the tower has no
+   * lightbox, so its plates are captured from the walkthrough itself on
+   * whichever framing `?step=` selects. `window.__AURELIA_STILL_SAMPLES__`
+   * is set by `scripts/brochure-stills.mjs` and by nothing else — a
+   * visitor never has it — so this stays off in the live experience and
+   * there is no capture-only route to drift away from what the site
+   * actually renders.
+   *
+   * Read once on mount rather than watched: the capture script sets it
+   * before the scene is built, and a value that appeared later would mean
+   * re-tracing a frame mid-view for somebody who is only looking.
+   */
+  const [stillSamples, setStillSamples] = useState<number | undefined>(undefined);
+  useEffect(() => setStillSamples(window.__AURELIA_STILL_SAMPLES__), []);
+  const capturing = stillSamples !== undefined;
+
+  /** Convergence, for the marker the capture script waits on. */
+  const [converged, setConverged] = useState(0);
+  const onCinematicProgress = useCallback((samples: number, maxSamples: number) => {
+    setConverged(maxSamples > 0 ? Math.min(1, samples / maxSamples) : 0);
+  }, []);
+
   const go = useCallback((next: number) => setStep(Math.min(last, Math.max(0, next))), [last]);
 
   const scrim = useMemo(
@@ -180,12 +212,22 @@ export function TowerWalkthrough() {
         className="h-[86svh] w-full"
         view={activeView}
         mode={walking ? (flying ? 'cinematic' : 'walk') : 'fixed'}
+        // Path-traced only while a capture is running — see the note above.
+        {...(capturing
+          ? {
+              cinematic: true as const,
+              cinematicMaxSamples: stillSamples,
+              onCinematicProgress,
+            }
+          : {})}
         // A slow move on every held framing. Eighteen dead-still shots in
         // sequence is a slideshow; the parallax between near and far is what
         // tells the eye this is a place and not a picture of one. Off on
         // foot, where the visitor is doing the moving — and off in flight,
         // where `cinematic` mode's own orbit is already that movement.
-        drift={walking ? 0 : 1.6}
+        // Held perfectly still for a capture: drift is what makes a held
+        // framing feel alive, and what would smear a forty-minute trace.
+        drift={capturing || walking ? 0 : 1.6}
         content="tower"
         timeOfDay={hour}
         label={
@@ -196,6 +238,27 @@ export function TowerWalkthrough() {
               : `Three-dimensional view of the oceanfront tower — ${view.label}`
         }
       >
+        {/* Convergence, and only while a capture is resolving.
+            `scripts/brochure-stills.mjs` waits for this element to attach
+            and then detach rather than capturing on a timer — its absence
+            *is* the "traced" signal, so there is no separate done state to
+            keep in sync. Never mounted for a visitor: `capturing` is false
+            unless the stills hook was set before mount. */}
+        {capturing && converged < 1 ? (
+          <div
+            data-cinematic-progress
+            className="pointer-events-none absolute right-6 bottom-6 flex items-center gap-3"
+          >
+            <div className="bg-alabaster/20 h-px w-24 overflow-hidden">
+              <div
+                className="bg-gold h-px transition-[width] duration-300"
+                style={{ width: `${Math.round(converged * 100)}%` }}
+              />
+            </div>
+            <span className="text-eyebrow text-mist uppercase tabular-nums">Resolving</span>
+          </div>
+        ) : null}
+
         {/* Readability ground for the caption and the controls. Dropped in
             walk mode: a gradient over the bottom half of a first-person view
             is a gradient over the floor you are trying to walk on. */}
