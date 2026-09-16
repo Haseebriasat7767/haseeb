@@ -59,6 +59,13 @@ describe('residence scene export', () => {
   for (const [name, value] of Object.entries(interior)) add(`int.${name}`, value);
 
   const lights = (interior as unknown as { lights?: unknown[] }).lights ?? [];
+
+  // The soft, turned and folded geometry — sofas, cushions, lamp bases,
+  // vessels, rugs, drapery. Kept apart from the box specs by the generator
+  // because they are not prisms, and carried through here verbatim: each
+  // form already names its own material and its own construction, so the
+  // renderer rebuilds it rather than approximating it with a box.
+  const forms = (interior as unknown as { forms?: unknown[] }).forms ?? [];
   const spaces = SPACES.filter((space) => space.room).map((space) => ({
     id: space.id,
     name: space.name,
@@ -75,6 +82,15 @@ describe('residence scene export', () => {
     expect(spaces.length).toBe(13);
   });
 
+  it('carries the soft furniture, which is most of what a room looks like', () => {
+    // Without these a render is a well-lit empty shell: the boxes are the
+    // fireplace and the carcasses, and every sofa, cushion, lamp and rug
+    // lives here instead.
+    expect(forms.length).toBeGreaterThan(100);
+    const kinds = new Set(forms.map((f) => (f as { kind: string }).kind));
+    expect([...kinds].sort()).toEqual(['fold', 'soft', 'turned']);
+  });
+
   it('keeps the glazing separate, so the renderer can make it glass', () => {
     // Rendered opaque this seals the building and no daylight reaches the
     // interior — the one grouping mistake that ruins every frame at once.
@@ -82,11 +98,11 @@ describe('residence scene export', () => {
   });
 
   it('writes the scene', () => {
-    writeFileSync(OUT, JSON.stringify({ groups, lights, spaces }));
+    writeFileSync(OUT, JSON.stringify({ groups, forms, lights, spaces }));
     console.log(
       `wrote ${OUT}: ${Object.keys(groups).length} groups, ` +
         `${Object.values(groups).reduce((n, g) => n + g.length, 0)} boxes, ` +
-        `${lights.length} lights, ${spaces.length} framings`,
+        `${forms.length} forms, ${lights.length} lights, ${spaces.length} framings`,
     );
   });
 });
