@@ -27,7 +27,7 @@ import { assertBackend, backendArgs } from './lib/render-backend.mjs';
 import { CUBE_FACES } from './lib/cubemap-faces.mjs';
 import { captureCanvas, renderFace } from './lib/pano-capture.mjs';
 import { peakMiB, resolveFaceSize } from './lib/vram.mjs';
-import { spaceIds } from './lib/pano-spaces.mjs';
+import { ALL_TARGETS } from './lib/pano-spaces.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = join(REPO, 'public/assets/pano');
@@ -45,21 +45,33 @@ const CONVERGE_TIMEOUT_MS = Number(process.env.CONVERGE_TIMEOUT_MIN ?? 25) * 60_
 /** The mobile residency target. Not measured on a device — see the Phase 3 note. */
 const MOBILE_BUDGET_MIB = 224;
 
-// The render list is the rooms the navigation graph can actually reach.
-// Rendering a space with no graph edges produces an orphan panorama nothing
-// can navigate to; rendering a site space produces an interior of the outdoors.
-const spacesToRender = (only) => (only ? spaceIds.filter((id) => id === only) : [...spaceIds]);
+const TRACE = process.env.PANO_TRACE !== 'off';
+const QUALITY = TRACE ? 'traced' : 'raster';
+
+/**
+ * What to render. `only` accepts `<id>`, `<building>:<id>` or `<building>`,
+ * because the two buildings share room names and "kitchen" alone is
+ * ambiguous.
+ */
+function targetsToRender(only) {
+  if (!only) return [...ALL_TARGETS];
+  if (only === 'residence' || only === 'tower') {
+    return ALL_TARGETS.filter((t) => t.building === only);
+  }
+  const [a, b] = only.includes(':') ? only.split(':') : [null, only];
+  return ALL_TARGETS.filter((t) => t.id === b && (a === null || t.building === a));
+}
 
 async function main() {
   const only = process.argv[2];
-  const targets = spacesToRender(only);
+  const targets = targetsToRender(only);
   if (targets.length === 0) throw new Error(`no room matches "${only ?? '<all>'}"`);
 
   const peak = peakMiB(SIZE, CACHE_LIMIT);
   console.log(
-    `${targets.length} rooms x ${CUBE_FACES.length} faces = ${targets.length * CUBE_FACES.length} renders\n` +
+    `${targets.length} spaces x ${CUBE_FACES.length} faces = ${targets.length * CUBE_FACES.length} renders\n` +
       `  ${SIZE}px ${EXTENSION}${EXTENSION === 'png' ? '' : ` q${JPEG_QUALITY}`} faces, ` +
-      `${SAMPLES} samples, ${RENDER_BACKEND} backend, ` +
+      `${QUALITY}${TRACE ? ` (${SAMPLES} samples)` : ''}, ${RENDER_BACKEND} backend, ` +
       `timeout ${Math.round(CONVERGE_TIMEOUT_MS / 60_000)} min/face\n` +
       `  peak VRAM at cache limit ${CACHE_LIMIT}: ${peak.toFixed(0)} MiB`,
   );
@@ -82,8 +94,9 @@ async function main() {
       hint: `Re-run in software with: RENDER_BACKEND=swiftshader PANO_SAMPLES=32 node scripts/render-panoramas.mjs`,
     });
 
-    for (const spaceId of targets) {
-      const staging = join(ROOT, spaceId, '.staging');
+    for (const { building, id: spaceId } of targets) {
+      const label = `${building}/${spaceId}`;
+      const staging = join(ROOT, building, spaceId, '.staging');
       await rm(staging, { recursive: true, force: true });
       await mkdir(staging, { recursive: true });
 
@@ -98,17 +111,20 @@ async function main() {
       const page = await context.newPage();
 
       const t0 = Date.now();
-      await page.goto(`${ORIGIN}/render/panorama?space=${spaceId}`, {
-        waitUntil: 'load',
-        timeout: 200_000,
-      });
+      await page.goto(
+        `${ORIGIN}/render/panorama?space=${spaceId}&building=${building}${TRACE ? '' : '&trace=off'}`,
+        {
+          waitUntil: 'load',
+          timeout: 200_000,
+        },
+      );
       await page.waitForFunction('window.__panoRender !== undefined', undefined, {
         timeout: 120_000,
       });
       await page.waitForFunction('window.__panoRender.ready === true', undefined, {
         timeout: CONVERGE_TIMEOUT_MS,
       });
-      console.log(`${spaceId}  setup ${Date.now() - t0}ms`);
+      console.log(`${label}  setup ${Date.now() - t0}ms`);
 
       for (const face of CUBE_FACES) {
         const faceStart = Date.now();
@@ -118,20 +134,20 @@ async function main() {
           quality: JPEG_QUALITY,
         });
         await writeFile(join(staging, `${face}.${EXTENSION}`), image);
-        console.log(`  ${spaceId}/${face}  ${Date.now() - faceStart}ms`);
+        console.log(`  ${label}/${face}  ${Date.now() - faceStart}ms`);
       }
 
       await context.close();
 
       // Swap last, so a job that dies at face four leaves the previous
       // render readable rather than half-replaced.
-      const latest = join(ROOT, spaceId, 'latest');
-      const previous = join(ROOT, spaceId, '.previous');
+      const latest = join(ROOT, building, spaceId, 'latest');
+      const previous = join(ROOT, building, spaceId, '.previous');
       await rm(previous, { recursive: true, force: true });
       await rename(latest, previous).catch(() => {});
       await rename(staging, latest);
       await rm(previous, { recursive: true, force: true });
-      rendered.push(spaceId);
+      rendered.push(label);
     }
   } finally {
     await browser.close();
@@ -141,11 +157,12 @@ async function main() {
   const result = await emitManifest({
     // Every room, not only the ones this run touched: the emitter merges,
     // and a single-room run must not delete twelve other entries.
-    spaceIds: spacesToRender(undefined),
+    targets: targetsToRender(undefined),
     root: ROOT,
     publicPrefix: PUBLIC_PREFIX,
     size: SIZE,
     extension: EXTENSION,
+    quality: QUALITY,
     outFile: join(REPO, 'lib/pano/manifest.generated.ts'),
   });
 

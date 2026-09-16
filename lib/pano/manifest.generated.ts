@@ -3,4 +3,230 @@
 
 import type { ManifestEntry } from './manifest-types';
 
-export const PANORAMA_MANIFEST: readonly ManifestEntry[] = [];
+export const PANORAMA_MANIFEST: readonly ManifestEntry[] = [
+  {
+    "id": "bedroom2",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "2d13470940d1",
+    "basePath": "/assets/pano/residence/bedroom2/2d13470940d1",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "dining",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "18027d051abc",
+    "basePath": "/assets/pano/residence/dining/18027d051abc",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "dressing",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "03880317b70d",
+    "basePath": "/assets/pano/residence/dressing/03880317b70d",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "foyer",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "0fd8eb369f39",
+    "basePath": "/assets/pano/residence/foyer/0fd8eb369f39",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "guest",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "bdf9655db0b1",
+    "basePath": "/assets/pano/residence/guest/bdf9655db0b1",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "kitchen",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "f8c2542606a1",
+    "basePath": "/assets/pano/residence/kitchen/f8c2542606a1",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "library",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "e094027720cf",
+    "basePath": "/assets/pano/residence/library/e094027720cf",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "living",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "4e0d08b01594",
+    "basePath": "/assets/pano/residence/living/4e0d08b01594",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "master",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "311c70b2a69b",
+    "basePath": "/assets/pano/residence/master/311c70b2a69b",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "masterBath",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "76e790fc2fae",
+    "basePath": "/assets/pano/residence/masterBath/76e790fc2fae",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "stair",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "51fcad2a1b3c",
+    "basePath": "/assets/pano/residence/stair/51fcad2a1b3c",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "study",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "67fb9aa91eca",
+    "basePath": "/assets/pano/residence/study/67fb9aa91eca",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "upperLounge",
+    "building": "residence",
+    "quality": "raster",
+    "hash": "73f9e7220af6",
+    "basePath": "/assets/pano/residence/upperLounge/73f9e7220af6",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "atrium",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "216a181805d1",
+    "basePath": "/assets/pano/tower/atrium/216a181805d1",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "balcony",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "000e6da5ba15",
+    "basePath": "/assets/pano/tower/balcony/000e6da5ba15",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "bathroom",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "f9a9242ca62d",
+    "basePath": "/assets/pano/tower/bathroom/f9a9242ca62d",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "bedroom",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "a00bb6dfdfc4",
+    "basePath": "/assets/pano/tower/bedroom/a00bb6dfdfc4",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "cinema",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "af4c0e9c670e",
+    "basePath": "/assets/pano/tower/cinema/af4c0e9c670e",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "foodHall",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "90512f1af717",
+    "basePath": "/assets/pano/tower/foodHall/90512f1af717",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "gallery",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "3544a29291a9",
+    "basePath": "/assets/pano/tower/gallery/3544a29291a9",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "gym",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "028003736485",
+    "basePath": "/assets/pano/tower/gym/028003736485",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "kitchen",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "a4057aad6004",
+    "basePath": "/assets/pano/tower/kitchen/a4057aad6004",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "lobby",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "8dfe5b347657",
+    "basePath": "/assets/pano/tower/lobby/8dfe5b347657",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "residence",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "80c76c48d5bd",
+    "basePath": "/assets/pano/tower/residence/80c76c48d5bd",
+    "extension": "jpg",
+    "size": 1024
+  },
+  {
+    "id": "spa",
+    "building": "tower",
+    "quality": "raster",
+    "hash": "0ef971000cb5",
+    "basePath": "/assets/pano/tower/spa/0ef971000cb5",
+    "extension": "jpg",
+    "size": 1024
+  }
+];

@@ -13,13 +13,17 @@ import { PanoRenderClient } from '@/components/render/PanoRenderClient';
 export default async function RenderPanoramaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ space?: string }>;
+  searchParams: Promise<{ space?: string; building?: string; trace?: string }>;
 }) {
-  const { space } = await searchParams;
+  const { space, building, trace } = await searchParams;
 
   return (
     <main className="bg-obsidian fixed inset-0 h-screen w-screen overflow-hidden">
-      <PanoRenderClient spaceId={space ?? ''} />
+      <PanoRenderClient
+        spaceId={space ?? ''}
+        building={building === 'tower' ? 'tower' : 'residence'}
+        trace={trace !== 'off'}
+      />
     </main>
   );
 }

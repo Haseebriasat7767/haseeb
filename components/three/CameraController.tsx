@@ -49,6 +49,21 @@ type CameraControllerProps = {
    */
   near?: number;
   far?: number;
+  /**
+   * Hands the camera to something else entirely.
+   *
+   * The frame loop below does not merely set a camera once — it lerps the
+   * position, eases the look-at target and damps the fov back to the
+   * authored framing on every single frame. Anything that positions the
+   * camera imperatively is therefore fighting it, and loses: the panorama
+   * render job set six different cube-face orientations and got faces that
+   * were byte-identical to each other, because the controller had dragged
+   * the camera back before the shutter.
+   *
+   * `orbit` already steps aside for `OrbitControls`. This is the same
+   * concession for a caller that owns the camera outright.
+   */
+  external?: boolean;
 };
 
 /** Seconds-independent critical damping: the fraction remaining after `dt`. */
@@ -134,6 +149,7 @@ export function CameraController({
   reducedMotion = false,
   near = 0.1,
   far = 260,
+  external = false,
 }: CameraControllerProps) {
   const cameraRef = useRef<ThreePerspectiveCamera>(null);
   const pointer = useThree((state) => state.pointer);
@@ -202,7 +218,7 @@ export function CameraController({
 
   useFrame((_state, delta) => {
     const camera = cameraRef.current;
-    if (!camera || mode === 'orbit') return;
+    if (!camera || mode === 'orbit' || external) return;
 
     // Clamp the step so a backgrounded tab returning does not teleport.
     const step = Math.min(delta, 0.1);

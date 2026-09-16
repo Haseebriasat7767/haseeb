@@ -1,5 +1,5 @@
 import { PANORAMA_MANIFEST } from './manifest.generated';
-import type { ManifestEntry } from './manifest-types';
+import type { ManifestEntry, PanoBuilding } from './manifest-types';
 import type { PanoramaSource } from './panoLoader';
 
 /**
@@ -16,29 +16,50 @@ import type { PanoramaSource } from './panoLoader';
  * do not. Every consumer treats a missing entry as "this room cannot be
  * entered yet" and shows nothing.
  */
-const BY_ID: ReadonlyMap<string, ManifestEntry> = new Map(
-  PANORAMA_MANIFEST.map((entry) => [entry.id, entry] as const),
+/**
+ * Keyed by building *and* id, because the ids are not unique across the two:
+ * the residence has a kitchen and a bathroom, and so does the tower's
+ * apartment. Keying on the bare id would serve one building's room from the
+ * other's faces, which would look like a rendering bug and be a lookup bug.
+ */
+function key(building: PanoBuilding, spaceId: string): string {
+  return `${building}:${spaceId}`;
+}
+
+const BY_KEY: ReadonlyMap<string, ManifestEntry> = new Map(
+  PANORAMA_MANIFEST.map((entry) => [key(entry.building, entry.id), entry] as const),
 );
 
-export function panoramaFor(spaceId: string): PanoramaSource | null {
-  const entry = BY_ID.get(spaceId);
+export function panoramaFor(
+  spaceId: string,
+  building: PanoBuilding = 'residence',
+): PanoramaSource | null {
+  const entry = BY_KEY.get(key(building, spaceId));
   if (!entry) return null;
   return {
     kind: 'cube',
-    // The space id, which is also the loader's cache key. The content hash
-    // lives in `basePath`, so a rebuild gets a new immutable URL without
-    // disturbing cache identity.
-    id: entry.id,
+    // `building:id` — the loader's cache key. The content hash lives in
+    // `basePath`, so a rebuild gets a new immutable URL without disturbing
+    // cache identity.
+    id: key(entry.building, entry.id),
     basePath: entry.basePath,
     extension: entry.extension,
   };
 }
 
-export function hasPanorama(spaceId: string): boolean {
-  return BY_ID.has(spaceId);
+export function hasPanorama(spaceId: string, building: PanoBuilding = 'residence'): boolean {
+  return BY_KEY.has(key(building, spaceId));
 }
 
 /** Space ids with a rendered panorama, for coverage reporting. */
-export function panoramaCoverage(): readonly string[] {
-  return PANORAMA_MANIFEST.map((entry) => entry.id);
+export function panoramaCoverage(building?: PanoBuilding): readonly string[] {
+  return PANORAMA_MANIFEST.filter((entry) => !building || entry.building === building).map(
+    (entry) => entry.id,
+  );
+}
+
+/** How a building's faces were produced, when any exist. */
+export function panoramaQuality(building: PanoBuilding = 'residence'): string | null {
+  const entry = PANORAMA_MANIFEST.find((candidate) => candidate.building === building);
+  return entry ? entry.quality : null;
 }

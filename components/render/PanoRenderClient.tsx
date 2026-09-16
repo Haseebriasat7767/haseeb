@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import type { PanoBuilding } from '@/lib/pano/manifest-types';
 
 /**
  * The client boundary the dynamic import needs.
@@ -15,6 +16,14 @@ const PanoRenderBridge = dynamic(
   { ssr: false },
 );
 
-export function PanoRenderClient({ spaceId }: { spaceId: string }) {
-  return <PanoRenderBridge spaceId={spaceId} />;
+export function PanoRenderClient({
+  spaceId,
+  building,
+  trace,
+}: {
+  spaceId: string;
+  building: PanoBuilding;
+  trace: boolean;
+}) {
+  return <PanoRenderBridge spaceId={spaceId} building={building} trace={trace} />;
 }

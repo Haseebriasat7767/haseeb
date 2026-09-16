@@ -19,3 +19,9 @@ design-system/dist
 
 # Panorama renders are produced by `npm run render:panoramas` on a GPU.
 # Committed deliberately when they are final; never as unconverged output.
+
+# Panorama working directories. Only the content-hashed directory is served;
+# `latest/` is the render job's staging target and doubles the repo weight.
+public/assets/pano/*/*/latest/
+public/assets/pano/*/*/.staging/
+public/assets/pano/*/*/.previous/

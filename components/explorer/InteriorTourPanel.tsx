@@ -3,8 +3,8 @@
 import dynamic from 'next/dynamic';
 import { useCallback, useState } from 'react';
 import { ViewportSkeleton } from '@/components/experience/ViewportSkeleton';
-import { panoramaCoverage } from '@/lib/pano/manifest';
-import { findSpace } from '@/lib/experience/spaces';
+import { hasPanorama, panoramaCoverage } from '@/lib/pano/manifest';
+import { ROOM_SPACES, findSpace } from '@/lib/experience/spaces';
 
 /**
  * The mount point for the interior tour, and the only place its
@@ -32,9 +32,21 @@ const InteriorPanoExperience = dynamic(
   { ssr: false, loading: () => <ViewportSkeleton /> },
 );
 
+/**
+ * Where the tour opens.
+ *
+ * The first rendered room in `SPACES` order, which is the order the
+ * residence is authored to be read in — arrival, then the foyer, then the
+ * principal rooms. Taking whatever the manifest happened to list first
+ * opened the tour in the second bedroom, which is a true statement about
+ * the render coverage and a poor way to walk into a house.
+ */
+function openingRoom(): string | null {
+  return ROOM_SPACES.find((space) => hasPanorama(space.id))?.id ?? null;
+}
+
 export function InteriorTourPanel({ className }: { className?: string }) {
-  const coverage = panoramaCoverage();
-  const opening = coverage[0] ?? null;
+  const opening = openingRoom();
 
   const [requested, setRequested] = useState<string | null>(opening);
   const [current, setCurrent] = useState<string | null>(null);

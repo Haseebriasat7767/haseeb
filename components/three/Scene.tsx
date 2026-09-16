@@ -99,6 +99,12 @@ type SceneProps = {
   cinematicMaxSamples?: number;
   /** Resets the tracer's accumulation when the camera is moved externally. */
   cinematicCameraEpoch?: number;
+  /**
+   * Hands the camera to the caller. `CameraController` stops driving it, so
+   * something outside can aim it — a cube face, for instance — without the
+   * controller easing it back the next frame.
+   */
+  cameraExternal?: boolean;
   /** Convergence progress, so chrome can show it and then withdraw. */
   onCinematicProgress?: (samples: number, maxSamples: number) => void;
   /** Extra scene contents mounted alongside the building (hotspots, helpers). */
@@ -131,6 +137,7 @@ export function Scene({
   cinematic = false,
   cinematicMaxSamples,
   cinematicCameraEpoch,
+  cameraExternal = false,
   onCinematicProgress,
   onReady,
   content = 'villa',
@@ -232,7 +239,13 @@ export function Scene({
       // A held framing costs nothing on demand — but a DRIFTING held framing
       // is never finished moving, and `demand` would render the first second
       // of the drift and then stop dead.
-      frameloop={mode === 'fixed' && !cinematic && drift <= 0 ? 'demand' : 'always'}
+      // ...and a scene whose camera is driven from outside renders every
+      // frame too. `demand` only redraws when react-three-fiber sees a
+      // reason to, and an imperative camera move is not one it can see — the
+      // panorama job set six faces and got no frames drawn for any of them.
+      frameloop={
+        mode === 'fixed' && !cinematic && drift <= 0 && !cameraExternal ? 'demand' : 'always'
+      }
       // The canvas is the picture; the DOM that react-three-fiber wraps it in
       // is shared with drei's `Html` hotspots, so the role belongs here and
       // nowhere further out.
@@ -254,6 +267,7 @@ export function Scene({
           parallax={parallax}
           drift={drift}
           reducedMotion={reducedMotion}
+          external={cameraExternal}
           // The tower stands on an ocean that runs to the horizon. Near is
           // lifted with far to keep the depth ratio sane — nothing in this
           // scene is ever within a quarter metre of the eye.

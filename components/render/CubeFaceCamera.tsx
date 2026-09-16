@@ -1,8 +1,8 @@
 'use client';
 
-import { useThree } from '@react-three/fiber';
-import { useLayoutEffect } from 'react';
-import { PerspectiveCamera } from 'three';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useLayoutEffect, useMemo } from 'react';
+import { PerspectiveCamera, Vector3 } from 'three';
 import { CUBE_FACES, CUBE_FACE_FOV, type CubeFaceId } from '@/lib/pano/cube-faces';
 
 /**
@@ -51,6 +51,29 @@ export function CubeFaceCamera({ centre, face }: CubeFaceCameraProps) {
     camera.aspect = 1;
     camera.updateProjectionMatrix();
   }, [camera, centre, face]);
+
+  // Report whether the camera is actually pointing where this face asked.
+  //
+  // It is not a rhetorical question. `CameraController` used to lerp the
+  // camera back to the authored framing every frame, and the panorama job
+  // happily captured six faces of which two were byte-identical — a broken
+  // cubemap that looked like a plausible set of interior photographs. The
+  // aim is now asserted per face by the render job, because the images
+  // themselves do not reveal it.
+  const probe = useMemo(() => new Vector3(), []);
+  useFrame(() => {
+    const entry = CUBE_FACES.find((candidate) => candidate.id === face);
+    const api = (window as unknown as { __panoRender?: { dir?: number[]; aimed?: boolean } })
+      .__panoRender;
+    if (!entry || !api) return;
+
+    const direction = camera.getWorldDirection(probe);
+    api.dir = [direction.x, direction.y, direction.z].map((n) => Math.round(n * 1000) / 1000);
+    api.aimed =
+      Math.abs(direction.x - entry.dir[0]) < 0.01 &&
+      Math.abs(direction.y - entry.dir[1]) < 0.01 &&
+      Math.abs(direction.z - entry.dir[2]) < 0.01;
+  });
 
   return null;
 }

@@ -1,11 +1,29 @@
 'use client';
 
+import { useFrame } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Scene } from '@/components/three/Scene';
 import { CubeFaceCamera } from './CubeFaceCamera';
 import { CUBE_FACES, type CubeFaceId } from '@/lib/pano/cube-faces';
 import { findSpace } from '@/lib/experience/spaces';
-import type { CameraView } from '@/types';
+import { TOWER_VIEWS } from '@/lib/three/tower-views';
+import type { PanoBuilding } from '@/lib/pano/manifest-types';
+import type { CameraView, SceneContent } from '@/types';
+
+/**
+ * The camera a building frames a given space with.
+ *
+ * Both buildings are rendered by the same `Scene`; only the content flag and
+ * the source of framings differ. The tower has no room schedule — its twelve
+ * interiors are camera positions, not a generated plan — so it is rendered
+ * from `TOWER_VIEWS` directly.
+ */
+function viewFor(building: PanoBuilding, spaceId: string): CameraView | undefined {
+  if (building === 'tower') return TOWER_VIEWS.find((view) => view.id === spaceId);
+  return findSpace(spaceId)?.view;
+}
+
+const CONTENT: Record<PanoBuilding, SceneContent> = { residence: 'villa', tower: 'tower' };
 
 /**
  * The render job's view of the scene: the residence, path-traced, pointed at
@@ -33,6 +51,10 @@ type PanoRenderApi = {
   renderFace(face: CubeFaceId): void;
   /** Sample count of the trace in flight, for calibration. */
   samples(): number;
+  /** The camera's live world direction, for asserting the face is aimed right. */
+  dir?: number[];
+  /** Whether that direction matches the face currently requested. */
+  aimed?: boolean;
 };
 
 declare global {
@@ -42,8 +64,67 @@ declare global {
   }
 }
 
-export function PanoRenderBridge({ spaceId }: { spaceId: string }) {
-  const space = findSpace(spaceId);
+export type PanoRenderBridgeProps = {
+  spaceId: string;
+  building?: PanoBuilding;
+  /**
+   * `false` captures the rasterizer instead of the path tracer.
+   *
+   * Not a shortcut — it is the only mode that produces a usable face without
+   * a GPU, and what it captures is exactly the image a visitor with WebGL
+   * already sees at that camera position. Path tracing at a real sample
+   * count is hours per room in software, and what it produces short of that
+   * is noise. A raster face is honest and clean; it simply is not photoreal,
+   * and the manifest records which it is.
+   */
+  trace?: boolean;
+};
+
+/**
+ * Frames to let the rasterizer settle before the shutter.
+ *
+ * Only the camera changes between faces — the scene, its lights and its
+ * shadow maps are all static — so this needs to cover a few frames of
+ * material and environment settling, not a convergence. Each frame is
+ * seconds under software rendering, so the number is worth being honest
+ * about rather than padding.
+ */
+const RASTER_SETTLE_FRAMES = Number(process.env.NEXT_PUBLIC_PANO_SETTLE_FRAMES ?? 4);
+
+/**
+ * Reports when the rasterizer has drawn enough frames for the new camera.
+ *
+ * A raster frame has no convergence to wait for, but it does have work that
+ * lands over several frames: shadow maps re-render, the environment
+ * resolves, and drei's own effects settle. Capturing on the first frame
+ * after a camera move catches the scene mid-update. Counting frames is
+ * crude and sufficient — there is nothing to converge, only to finish.
+ */
+function RasterSettle({ epoch, onSettled }: { epoch: number; onSettled: () => void }) {
+  const frames = useRef(0);
+  const fired = useRef(-1);
+
+  useEffect(() => {
+    frames.current = 0;
+  }, [epoch]);
+
+  useFrame(() => {
+    frames.current += 1;
+    if (frames.current >= RASTER_SETTLE_FRAMES && fired.current !== epoch) {
+      fired.current = epoch;
+      onSettled();
+    }
+  });
+
+  return null;
+}
+
+export function PanoRenderBridge({
+  spaceId,
+  building = 'residence',
+  trace = true,
+}: PanoRenderBridgeProps) {
+  const view = viewFor(building, spaceId);
   const [face, setFace] = useState<CubeFaceId>(CUBE_FACES[0].id);
   const [epoch, setEpoch] = useState(0);
   const [tracing, setTracing] = useState(true);
@@ -68,6 +149,9 @@ export function PanoRenderBridge({ spaceId }: { spaceId: string }) {
       renderFace(next: CubeFaceId) {
         const self = api.current;
         if (self) {
+          // In raster mode `ready` is re-earned per face by RasterSettle;
+          // in traced mode by the first sample. Either way it is false
+          // until this face has actually been drawn.
           self.ready = false;
           self.done = false;
           self.face = next;
@@ -85,6 +169,16 @@ export function PanoRenderBridge({ spaceId }: { spaceId: string }) {
     };
   }
 
+  /** The raster equivalent of convergence: enough frames have been drawn. */
+  const onRasterSettled = useCallback(() => {
+    const self = api.current;
+    if (self) {
+      self.ready = true;
+      self.done = true;
+    }
+    setTracing(false);
+  }, []);
+
   const onProgress = useCallback((value: number, limit: number) => {
     samples.current = value;
     const self = api.current;
@@ -98,39 +192,53 @@ export function PanoRenderBridge({ spaceId }: { spaceId: string }) {
   }, []);
 
   useEffect(() => {
-    if (!space || !api.current) return;
+    if (!view || !api.current) return;
     window.__panoRender = api.current;
     return () => {
       delete window.__panoRender;
     };
-  }, [space]);
+  }, [view]);
 
-  const view = useMemo((): CameraView | undefined => {
-    if (!space) return undefined;
+  const framing = useMemo((): CameraView | undefined => {
+    if (!view) return undefined;
     // Position is what matters; the target is overridden by
     // `CubeFaceCamera`, which is the only thing that can express a pole
     // face's roll. Exposure is carried through so all six faces of a room
     // are graded identically — a per-face difference shows as a seam.
-    return { ...space.view, fov: 90 };
-  }, [space]);
+    return { ...view, fov: 90 };
+  }, [view]);
 
-  if (!space || !view) {
-    return <div data-pano-error={`unknown space: ${spaceId}`} />;
+  if (!view || !framing) {
+    return <div data-pano-error={`unknown ${building} space: ${spaceId}`} />;
   }
 
   return (
     <>
       <Scene
-        view={view}
+        view={framing}
+        content={CONTENT[building]}
         mode="fixed"
+        // The render job aims the camera itself, face by face. Without this
+        // `CameraController` eases it back to the authored framing every
+        // frame and the six faces come out as six copies of one shot.
+        cameraExternal
         timeOfDay="goldenHour"
         parallax={0}
         drift={0}
-        cinematic
-        cinematicCameraEpoch={epoch}
-        {...(maxSamples ? { cinematicMaxSamples: maxSamples } : {})}
-        onCinematicProgress={onProgress}
-        overlay={<CubeFaceCamera centre={space.view.position} face={face} />}
+        {...(trace
+          ? {
+              cinematic: true as const,
+              cinematicCameraEpoch: epoch,
+              ...(maxSamples ? { cinematicMaxSamples: maxSamples } : {}),
+              onCinematicProgress: onProgress,
+            }
+          : {})}
+        overlay={
+          <>
+            <CubeFaceCamera centre={view.position} face={face} />
+            {trace ? null : <RasterSettle epoch={epoch} onSettled={onRasterSettled} />}
+          </>
+        }
       />
       {/* The same convergence signal the stills job already waits on: this
           node exists for exactly as long as the trace is still resolving,

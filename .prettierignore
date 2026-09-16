@@ -8,3 +8,8 @@ public/assets/draco
 
 # Build output of the primitives package — generated, never hand-edited.
 design-system/dist
+
+# Emitted by scripts/render-panoramas.mjs from what is on disk. Formatting it
+# here would mean the file differs from what the render job writes, so every
+# render would show a spurious diff.
+lib/pano/manifest.generated.ts
