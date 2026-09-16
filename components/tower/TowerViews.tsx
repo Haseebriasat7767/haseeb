@@ -1,4 +1,5 @@
 import { TrackedViewLink } from './TrackedViewLink';
+import { PlateImage } from '@/components/gallery/PlateImage';
 import { Reveal } from '@/components/effects/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { TOWER_VIEWS, TOWER_VIEW_NOTES } from '@/lib/three/tower-views';
@@ -58,20 +59,30 @@ export function TowerViews() {
                 href={`/tower?step=${step}`}
                 data-cursor="link"
                 className={cn(
-                  'group ease-luxe flex h-full flex-col items-start gap-3 p-7 sm:p-8',
-                  'hover:bg-ink transition-colors duration-500',
+                  // `relative` and a held ratio so the plate has a box to
+                  // fill: it is absolutely positioned, and a flex column
+                  // that sizes to its text gives it nothing to cover. The
+                  // ratio matches the residence gallery, so the two
+                  // buildings' grids read as one system.
+                  'group ease-luxe relative flex h-full flex-col items-start gap-3 overflow-hidden p-7 sm:p-8',
+                  'hover:bg-ink aspect-[4/3] transition-colors duration-500',
                 )}
               >
-                <span className="text-eyebrow text-stone uppercase tabular-nums">
+                {/* The plate, where this framing has one. Returns nothing
+                    until the tower's plates are rendered, so the tile keeps
+                    the type-only form it has now rather than showing a gap. */}
+                <PlateImage building="tower" space={view.id} priority={index < 2} />
+
+                <span className="text-eyebrow text-stone relative uppercase tabular-nums">
                   {String(step).padStart(2, '0')}
                 </span>
-                <span className="font-display text-alabaster text-2xl leading-none font-semibold">
+                <span className="font-display text-alabaster relative mt-auto text-2xl leading-none font-semibold">
                   {view.label}
                 </span>
                 {note ? (
-                  <span className="text-mist mt-1 text-sm leading-relaxed">{note}</span>
+                  <span className="text-mist relative mt-1 text-sm leading-relaxed">{note}</span>
                 ) : null}
-                <span className="text-eyebrow text-gold mt-auto flex items-center gap-2 pt-6 uppercase">
+                <span className="text-eyebrow text-gold relative flex items-center gap-2 pt-6 uppercase">
                   Enter this space
                   <span
                     aria-hidden="true"

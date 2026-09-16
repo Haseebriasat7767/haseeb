@@ -1,7 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { PLATES, plateCoverage, plateFor } from '@/lib/experience/plates';
+import { PLATES, plateCoverage, plateFor, type Plate } from '@/lib/experience/plates';
 import { SPACES, findSpace } from '@/lib/experience/spaces';
 
 /**
@@ -49,36 +49,47 @@ describe('plate manifest', () => {
   it('returns null for a space with no plate rather than guessing one', () => {
     const uncovered = SPACES.find((space) => !PLATES.some((p) => p.space === space.id));
     expect(uncovered, 'expected at least one space without a plate').toBeDefined();
-    expect(plateFor(uncovered!.id)).toBeNull();
-    expect(plateFor('not-a-space')).toBeNull();
+    expect(plateFor('residence', uncovered!.id)).toBeNull();
+    expect(plateFor('residence', 'not-a-space')).toBeNull();
   });
 
-  it('prefers a finished plate over a traced one for the same space', () => {
-    const traced = {
+  it('prefers a finished plate over a traced one for the same framing', () => {
+    const traced: Plate = {
       space: 'living',
+      building: 'residence',
       src: '/x.jpg',
-      grade: 'traced' as const,
+      grade: 'traced',
       width: 1,
       height: 1,
     };
-    const photoreal = { ...traced, grade: 'photoreal' as const };
-    // The resolver's rule, exercised directly: order must not decide.
-    const pick = (rows: typeof PLATES) => {
-      const map = new Map<string, (typeof rows)[number]>();
+    const photoreal: Plate = { ...traced, grade: 'photoreal' };
+    // The resolver's rule, written out: the finished plate wins and the
+    // order of the rows must not decide it. Keyed by building and id
+    // together, because the two buildings' ids overlap.
+    const pick = (rows: readonly Plate[]) => {
+      const map = new Map<string, Plate>();
       for (const row of rows) {
-        const seen = map.get(row.space);
-        if (!seen || (seen.grade === 'traced' && row.grade === 'photoreal'))
-          map.set(row.space, row);
+        const id = `${row.building}:${row.space}`;
+        const seen = map.get(id);
+        if (!seen || (seen.grade === 'traced' && row.grade === 'photoreal')) map.set(id, row);
       }
-      return map.get('living');
+      return map.get('residence:living');
     };
     expect(pick([traced, photoreal])?.grade).toBe('photoreal');
     expect(pick([photoreal, traced])?.grade).toBe('photoreal');
   });
 
+  it('keeps the two buildings apart where their ids collide', () => {
+    // `arrival` names the residence approach and the tower's view from the
+    // road. Keyed by id alone the tower would show the villa.
+    const residence = plateFor('residence', 'arrival');
+    expect(residence?.building).toBe('residence');
+    expect(plateFor('tower', 'arrival')).toBeNull();
+  });
+
   it('reports coverage honestly', () => {
     const { total, photoreal } = plateCoverage();
-    expect(total).toBe(new Set(PLATES.map((p) => p.space)).size);
+    expect(total).toBe(new Set(PLATES.map((p) => `${p.building}:${p.space}`)).size);
     expect(photoreal).toBeLessThanOrEqual(total);
     expect(total).toBeLessThanOrEqual(SPACES.length);
   });

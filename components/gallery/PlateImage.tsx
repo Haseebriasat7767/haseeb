@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { plateFor } from '@/lib/experience/plates';
+import { plateFor, type PlateBuilding } from '@/lib/experience/plates';
 import { cn } from '@/lib/utils/cn';
 
 /**
@@ -21,18 +21,21 @@ import { cn } from '@/lib/utils/cn';
  * sits under a photograph wherever one has arrived.
  */
 export function PlateImage({
+  building,
   space,
   /** Tiles are small and there are eighteen; the lightbox gets the full file. */
   sizes = '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw',
   className,
   priority = false,
 }: {
+  /** Which building's framing list `space` names — the two overlap. */
+  building: PlateBuilding;
   space: string;
   sizes?: string;
   className?: string;
   priority?: boolean;
 }) {
-  const plate = plateFor(space);
+  const plate = plateFor(building, space);
   if (!plate) return null;
 
   return (

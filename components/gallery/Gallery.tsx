@@ -65,7 +65,7 @@ export function Gallery() {
                   The first two are eager: they are above the fold on every
                   width and a gallery that greys in under the cursor is the
                   opposite of the impression this page exists to make. */}
-              <PlateImage space={space.id} priority={index < 2} />
+              <PlateImage building="residence" space={space.id} priority={index < 2} />
 
               {/* The device under the plate, and the whole tile without one:
                   the space's own initial, oversized and faint, angled by its

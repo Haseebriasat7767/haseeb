@@ -12,10 +12,18 @@
  * long way short of the finished grade — but it beats a blank card, so a
  * space that has one and no finished plate still shows something real.
  *
- * A space with neither shows the gallery's typographic tile. Nothing here
+ * A framing with neither shows the tile's typographic device. Nothing here
  * ever points at a file that does not exist: `tests/plates.test.ts` reads
  * `public/` and fails if a path below is missing, which is the only way a
  * manifest like this stays true as plates are added a few at a time.
+ *
+ * ## Why a plate is keyed by building as well as id
+ *
+ * The two buildings name framings independently, and they already
+ * collide: `arrival` is the residence's approach and also the tower's
+ * view from the road. Keyed by id alone, the tower's first tile would
+ * quietly show the villa. The building is therefore part of the key
+ * everywhere, and `plateFor` takes both.
  *
  * ## These are renders, and the site says so
  *
@@ -27,9 +35,13 @@
 
 export type PlateGrade = 'photoreal' | 'traced';
 
+/** Which building's framing list `space` indexes into. */
+export type PlateBuilding = 'residence' | 'tower';
+
 export type Plate = {
-  /** The `SPACES` entry this plate frames. */
+  /** A `SPACES` id for the residence, a `TOWER_VIEWS` id for the tower. */
   space: string;
+  building: PlateBuilding;
   src: string;
   grade: PlateGrade;
   /** Intrinsic size, so the layout reserves the right box before it loads. */
@@ -48,6 +60,7 @@ export type Plate = {
 export const PLATES: readonly Plate[] = [
   {
     space: 'arrival',
+    building: 'residence',
     src: '/assets/brochure/arrival.jpg',
     grade: 'traced',
     width: 3840,
@@ -55,14 +68,23 @@ export const PLATES: readonly Plate[] = [
   },
   {
     space: 'living',
+    building: 'residence',
     src: '/assets/brochure/living.jpg',
     grade: 'traced',
     width: 3840,
     height: 2160,
   },
-  { space: 'pool', src: '/assets/brochure/pool.jpg', grade: 'traced', width: 3840, height: 2160 },
+  {
+    space: 'pool',
+    building: 'residence',
+    src: '/assets/brochure/pool.jpg',
+    grade: 'traced',
+    width: 3840,
+    height: 2160,
+  },
   {
     space: 'master',
+    building: 'residence',
     src: '/assets/brochure/master.jpg',
     grade: 'traced',
     width: 3840,
@@ -70,26 +92,34 @@ export const PLATES: readonly Plate[] = [
   },
 ];
 
-const BY_SPACE: ReadonlyMap<string, Plate> = (() => {
+/** `building:id`, because the two buildings' ids overlap. */
+function key(building: PlateBuilding, space: string): string {
+  return `${building}:${space}`;
+}
+
+const BY_FRAMING: ReadonlyMap<string, Plate> = (() => {
   const map = new Map<string, Plate>();
   for (const plate of PLATES) {
-    const existing = map.get(plate.space);
+    const id = key(plate.building, plate.space);
+    const existing = map.get(id);
     // A finished plate always wins, whichever order the rows are written in.
     if (!existing || (existing.grade === 'traced' && plate.grade === 'photoreal')) {
-      map.set(plate.space, plate);
+      map.set(id, plate);
     }
   }
   return map;
 })();
 
-/** The best plate for a space, or `null` when it has none yet. */
-export function plateFor(space: string): Plate | null {
-  return BY_SPACE.get(space) ?? null;
+/** The best plate for one building's framing, or `null` when it has none. */
+export function plateFor(building: PlateBuilding, space: string): Plate | null {
+  return BY_FRAMING.get(key(building, space)) ?? null;
 }
 
-/** How many spaces have a plate, and how many of those are finished. */
-export function plateCoverage(): { total: number; photoreal: number } {
-  const plates = [...BY_SPACE.values()];
+/** How many framings have a plate, and how many of those are finished. */
+export function plateCoverage(building?: PlateBuilding): { total: number; photoreal: number } {
+  const plates = [...BY_FRAMING.values()].filter(
+    (plate) => building === undefined || plate.building === building,
+  );
   return {
     total: plates.length,
     photoreal: plates.filter((plate) => plate.grade === 'photoreal').length,
