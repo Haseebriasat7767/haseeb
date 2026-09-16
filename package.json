@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "test:a11y": "node scripts/a11y.mjs",
     "brochure:stills": "node scripts/brochure-stills.mjs",
-    "build:ds": "node design-system/build.mjs"
+    "build:ds": "node design-system/build.mjs",
+    "check:gpu": "node scripts/check-gpu.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
