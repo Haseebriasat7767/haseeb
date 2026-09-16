@@ -95,6 +95,35 @@ if (!Number.isFinite(STILL_SAMPLES) || STILL_SAMPLES < 1) {
 }
 
 /**
+ * The capture resolution.
+ *
+ * 3840×2160 is what a brochure plate wants: a still someone can zoom,
+ * where the live page is only ever seen in motion.
+ *
+ * It is four times the pixels of 1080p and roughly four times the trace,
+ * which is the difference between a render that fits an evening on modest
+ * hardware and one that does not. It is also more than the finishing pass
+ * consumes — that returns around 1–2K — so for plates headed straight
+ * through it, 1920×1080 costs nothing that survives:
+ *
+ *   RENDER_WIDTH=1920 RENDER_HEIGHT=1080 node scripts/brochure-stills.mjs
+ *
+ * Render at 4K when the plate is the final artefact; render at 1080p when
+ * it is a base for the finishing pass.
+ */
+const RENDER_WIDTH = Number(process.env.RENDER_WIDTH ?? 3840);
+const RENDER_HEIGHT = Number(process.env.RENDER_HEIGHT ?? 2160);
+
+for (const [name, value] of [
+  ['RENDER_WIDTH', RENDER_WIDTH],
+  ['RENDER_HEIGHT', RENDER_HEIGHT],
+]) {
+  if (!Number.isFinite(value) || value < 256) {
+    throw new Error(`${name} must be a number of at least 256, got "${value}"`);
+  }
+}
+
+/**
  * What renders the plates.
  *
  * `gpu` is the default because that is the only thing 320 samples
@@ -129,7 +158,7 @@ const BACKEND_ARGS =
 const CONVERGE_TIMEOUT_MS = Number(process.env.CONVERGE_TIMEOUT_MIN ?? 25) * 60_000;
 
 console.log(
-  `${ALL_PLATES.length} plates at ${STILL_SAMPLES} samples, ${RENDER_BACKEND} backend ` +
+  `${ALL_PLATES.length} plates at ${RENDER_WIDTH}x${RENDER_HEIGHT}, ${STILL_SAMPLES} samples, ${RENDER_BACKEND} backend ` +
     `(timeout ${Math.round(CONVERGE_TIMEOUT_MS / 60_000)} min/plate)\n` +
     `  no GPU? RENDER_BACKEND=swiftshader STILL_SAMPLES=90`,
 );
@@ -205,7 +234,9 @@ try {
     // At least 4K, per the site's own cinematic gallery target: a brochure
     // plate is a still someone can zoom, where the live page is seen in
     // motion, so it earns more pixels than the on-screen frame does.
-    const page = await browser.newPage({ viewport: { width: 3840, height: 2160 } });
+    const page = await browser.newPage({
+      viewport: { width: RENDER_WIDTH, height: RENDER_HEIGHT },
+    });
 
     // The full 320-sample budget converges in a couple of seconds on a real
     // GPU, which is what it is tuned for. This machine has none — every
