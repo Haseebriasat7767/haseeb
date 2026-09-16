@@ -140,7 +140,12 @@ export function ExperienceViewport({
           <ViewportPlaceholder />
         )}
       </div>
-      {children}
+      {/* Chrome belongs to a live scene. Without WebGL the hour dial changes
+          no light, prev/next reframes no camera and the markers point at
+          nothing — and drawn over the static elevation they collide with
+          the fallback's own copy. The fallback carries its own title and
+          its own way onward, so it stands alone. */}
+      {webgl === false ? null : children}
     </div>
   );
 }

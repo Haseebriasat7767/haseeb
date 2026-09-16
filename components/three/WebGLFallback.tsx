@@ -1,5 +1,6 @@
 import { Eyebrow } from '@/components/ui/Eyebrow';
 import { Button } from '@/components/ui/Button';
+import { StaticVillaHero } from '@/components/fallback/StaticVillaHero';
 
 type WebGLFallbackProps = {
   /** Distinguishes "no WebGL at all" from "the scene failed to start". */
@@ -33,19 +34,22 @@ export function WebGLFallback({ reason = 'unsupported' }: WebGLFallbackProps) {
     <div
       role="status"
       aria-live="polite"
-      className="bg-ink absolute inset-0 flex items-center justify-center overflow-hidden"
+      className="bg-ink absolute inset-0 flex items-end justify-center overflow-hidden"
     >
+      {/* The building, drawn from the same layout the 3D scene is built
+          from. This replaced a grid pattern: a visitor without WebGL could
+          read what the residence was and never see it, which on a page
+          whose subject is the architecture is the proposition lost. */}
+      <StaticVillaHero />
+
+      {/* The copy sits over the lower half of the elevation, where the
+          drawing is darkest, with its own ground so the type never lands
+          on the lit gap between the wings. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 opacity-[0.18]"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, rgba(244,241,236,.25) 1px, transparent 1px),' +
-            'linear-gradient(to bottom, rgba(244,241,236,.25) 1px, transparent 1px)',
-          backgroundSize: '64px 64px',
-        }}
+        className="from-obsidian via-obsidian/92 absolute inset-x-0 bottom-0 h-4/5 bg-gradient-to-t to-transparent"
       />
-      <div className="px-gutter relative flex max-w-md flex-col items-center gap-6 text-center">
+      <div className="px-gutter relative flex max-w-lg flex-col items-center gap-5 pb-10 text-center sm:pb-14">
         <Eyebrow>{copy.eyebrow}</Eyebrow>
         <p className="font-display text-alabaster text-2xl leading-tight sm:text-3xl">
           {copy.title}
