@@ -202,3 +202,18 @@
     transform: translateX(300%);
   }
 }
+
+/* The skeleton's shimmer, for a viewport that has not started loading yet.
+   Slower and fainter than `viewport-sweep`: that one reports work in
+   progress, this one only says a picture belongs here. Applied through
+   Tailwind's `motion-safe:` variant, so reduced-motion leaves the surface
+   in place and simply stops moving it. */
+@keyframes viewport-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  60%,
+  100% {
+    transform: translateX(200%);
+  }
+}

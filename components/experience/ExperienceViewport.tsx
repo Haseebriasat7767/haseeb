@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { ViewportPlaceholder } from '@/components/three/ViewportPlaceholder';
+import { ViewportErrorBoundary } from './ViewportErrorBoundary';
+import { ViewportSkeleton } from './ViewportSkeleton';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
 import type { HotspotConfig } from '@/lib/experience/spaces';
 import { cn } from '@/lib/utils/cn';
@@ -44,6 +46,8 @@ type ExperienceViewportProps = {
   className?: string;
   /** Accessible description of what the canvas depicts. */
   label?: string;
+  /** Names the space in the skeleton shown before the region is reached. */
+  skeletonSpaceId?: string;
 };
 
 /**
@@ -79,6 +83,7 @@ export function ExperienceViewport({
   children,
   className,
   label = 'Interactive three-dimensional view of the residence',
+  skeletonSpaceId,
 }: ExperienceViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
@@ -116,29 +121,36 @@ export function ExperienceViewport({
           are part of a picture. Labelling the render surface leaves the
           chrome as ordinary siblings that can still be reached. */}
       <div className="absolute inset-0">
-        {webgl === false ? (
-          <UnsupportedNotice onReady={onReady} />
-        ) : webgl && inView ? (
-          <ExperienceCanvas
-            label={label}
-            view={view}
-            mode={mode}
-            content={content}
-            timeOfDay={timeOfDay}
-            parallax={parallax}
-            drift={drift}
-            hotspots={hotspots}
-            cinematic={cinematic}
-            cinematicMaxSamples={cinematicMaxSamples}
-            onCinematicProgress={onCinematicProgress}
-            onReady={onReady}
-          />
-        ) : (
-          // Still deciding whether WebGL exists, or the viewport has not been
-          // scrolled to yet. Both used to render null, which is the same black
-          // rectangle by another route.
-          <ViewportPlaceholder />
-        )}
+        <ViewportErrorBoundary>
+          {webgl === false ? (
+            <UnsupportedNotice onReady={onReady} />
+          ) : webgl && inView ? (
+            <ExperienceCanvas
+              label={label}
+              view={view}
+              mode={mode}
+              content={content}
+              timeOfDay={timeOfDay}
+              parallax={parallax}
+              drift={drift}
+              hotspots={hotspots}
+              cinematic={cinematic}
+              cinematicMaxSamples={cinematicMaxSamples}
+              onCinematicProgress={onCinematicProgress}
+              onReady={onReady}
+            />
+          ) : webgl === null ? (
+            // WebGL support is still being decided, which means a renderer
+            // may be about to mount. That is work in progress, so it gets
+            // the loading treatment.
+            <ViewportPlaceholder />
+          ) : (
+            // Supported, but the region has not been scrolled near yet and
+            // nothing has deliberately been loaded. A progress indicator
+            // here would be reporting work that has not started.
+            <ViewportSkeleton spaceId={skeletonSpaceId ?? view?.id} />
+          )}
+        </ViewportErrorBoundary>
       </div>
       {/* Chrome belongs to a live scene. Without WebGL the hour dial changes
           no light, prev/next reframes no camera and the markers point at
