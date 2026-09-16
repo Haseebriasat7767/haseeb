@@ -97,6 +97,8 @@ type SceneProps = {
   cinematic?: boolean;
   /** Overrides `PathTracer`'s own sample budget. Stills capture only. */
   cinematicMaxSamples?: number;
+  /** Resets the tracer's accumulation when the camera is moved externally. */
+  cinematicCameraEpoch?: number;
   /** Convergence progress, so chrome can show it and then withdraw. */
   onCinematicProgress?: (samples: number, maxSamples: number) => void;
   /** Extra scene contents mounted alongside the building (hotspots, helpers). */
@@ -128,6 +130,7 @@ export function Scene({
   mode = 'orbit',
   cinematic = false,
   cinematicMaxSamples,
+  cinematicCameraEpoch,
   onCinematicProgress,
   onReady,
   content = 'villa',
@@ -272,6 +275,7 @@ export function Scene({
           active
           onProgress={onCinematicProgress}
           {...(cinematicMaxSamples ? { maxSamples: cinematicMaxSamples } : {})}
+          {...(cinematicCameraEpoch === undefined ? {} : { cameraEpoch: cinematicCameraEpoch })}
         />
       ) : post.enabled ? (
         <PostProcessing profile={post} grade={grade} />

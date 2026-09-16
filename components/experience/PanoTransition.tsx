@@ -33,6 +33,13 @@ export type PanoTransitionProps = {
   /** The space to show. Changing it starts a transition. */
   spaceId: string | null;
   durationMs?: number;
+  /**
+   * Fires when a room's panorama is on screen — the moment "which room am I
+   * in" becomes true. This is the single source of that fact: `spaceId` is
+   * only the request, and between the request and this callback the picture
+   * is still the previous room.
+   */
+  onCurrentSpaceChange?: (spaceId: string) => void;
   /** Fires once the incoming room has fully covered the one behind it. */
   onTransitionEnd?: (spaceId: string) => void;
 };
@@ -42,6 +49,7 @@ type Layer = { spaceId: string; panorama: LoadedPanorama };
 export function PanoTransition({
   spaceId,
   durationMs = DEFAULT_TRANSITION_MS,
+  onCurrentSpaceChange,
   onTransitionEnd,
 }: PanoTransitionProps) {
   const source = useMemo(() => (spaceId ? panoramaFor(spaceId) : null), [spaceId]);
@@ -65,6 +73,8 @@ export function PanoTransition({
 
   const endRef = useRef(onTransitionEnd);
   endRef.current = onTransitionEnd;
+  const currentRef = useRef(onCurrentSpaceChange);
+  currentRef.current = onCurrentSpaceChange;
 
   useEffect(() => {
     if (state.status !== 'ready' || !spaceId) return;
@@ -80,6 +90,7 @@ export function PanoTransition({
     setOutgoing(incoming);
     setIncoming({ spaceId, panorama: state.panorama });
     controller.start();
+    currentRef.current?.(spaceId);
     // `incoming` is read to promote it, and including it would restart the
     // transition it is the product of.
     // eslint-disable-next-line react-hooks/exhaustive-deps

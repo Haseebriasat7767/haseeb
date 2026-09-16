@@ -17,7 +17,9 @@
     "test:a11y": "node scripts/a11y.mjs",
     "brochure:stills": "node scripts/brochure-stills.mjs",
     "build:ds": "node design-system/build.mjs",
-    "check:gpu": "node scripts/check-gpu.mjs"
+    "check:gpu": "node scripts/check-gpu.mjs",
+    "render:panoramas": "node scripts/render-panoramas.mjs",
+    "calibrate:panoramas": "node scripts/calibrate-panoramas.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",

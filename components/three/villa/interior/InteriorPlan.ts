@@ -73,6 +73,68 @@ function portal(across: Range, floorY: number, height = PORTAL_HEIGHT): WallGap 
 }
 
 /**
+ * A real opening in a partition — a door or a wide portal.
+ *
+ * Retained from generation rather than recovered afterwards. `partition()`
+ * knows exactly where it cut each gap; the alternative is inferring openings
+ * from the spaces between consecutive wall boxes, which is a derivation that
+ * moves whenever a tolerance does. Two rooms either side of a wall with no
+ * door in it are not connected, and only this record can say so.
+ */
+export type PlanOpening = {
+  /** The partition this pierces. */
+  partition: string;
+  /** `'x'` means the wall stands at a constant x and runs along z. */
+  axis: 'x' | 'z';
+  /** The partition's plan line, on `axis`. */
+  at: number;
+  /** Extent along the wall. */
+  across: Range;
+  /** Clear height. */
+  y: Range;
+  /** Clear width, in metres. */
+  width: number;
+  /** World-space centre of the opening. */
+  midpoint: readonly [number, number, number];
+};
+
+/**
+ * A partition line, retained alongside its openings.
+ *
+ * Needed because an opening only answers half the question. Two rooms with a
+ * wall and no door are not connected — but two rooms with *no wall between
+ * them* are, and in this residence that is the normal case: the principal
+ * rooms are open plan and share no partition at all. Without the wall
+ * schedule, "no opening" cannot be told apart from "nothing to open".
+ */
+export type PlanWall = {
+  key: string;
+  /** `'x'` means the wall stands at a constant x and runs along z. */
+  axis: 'x' | 'z';
+  /** The wall's plan line, on `axis`. */
+  at: number;
+  /** Extent along the wall. */
+  across: Range;
+  /** Storey height range. */
+  y: Range;
+};
+
+/** Projects a gap in a named partition into a standalone opening record. */
+function opening(key: string, axis: 'x' | 'z', at: number, gap: WallGap): PlanOpening {
+  const alongMid = (gap.across[0] + gap.across[1]) / 2;
+  const yMid = (gap.y[0] + gap.y[1]) / 2;
+  return {
+    partition: key,
+    axis,
+    at,
+    across: gap.across,
+    y: gap.y,
+    width: gap.across[1] - gap.across[0],
+    midpoint: axis === 'x' ? [at, yMid, alongMid] : [alongMid, yMid, at],
+  };
+}
+
+/**
  * A partition wall centred on a plan line, punched with its own doors. The
  * villa's structural `punchedWall` is not reused here because partitions are
  * thin, non-structural, and always full storey height — a single dedicated
@@ -369,32 +431,47 @@ export function createInteriorPlan(plan: VillaPlan, levels: VillaLevels) {
   } as const;
 
   // ── Partitions ────────────────────────────────────────────────────────
+  //
+  // `wall` is `partition` plus a tap: every gap it cuts is also recorded as
+  // a `PlanOpening`, so the door schedule and the wall geometry cannot
+  // disagree — they are produced by the same call.
+  const openings: PlanOpening[] = [];
+  const walls: PlanWall[] = [];
+  const wall = (
+    key: string,
+    axis: 'x' | 'z',
+    at: number,
+    across: Range,
+    y: Range,
+    gaps: readonly WallGap[] = [],
+  ): BoxSpec[] => {
+    walls.push({ key, axis, at, across, y });
+    for (const gap of gaps) openings.push(opening(key, axis, at, gap));
+    return partition(key, axis, at, across, y, gaps);
+  };
+
   const partitions: BoxSpec[] = [
-    ...partition('part-guest-bath', 'x', guestBathX, barZ, gfY, [door(barMidZ - 2.5, groundY)]),
-    ...partition('part-bath-stair', 'x', plan.entranceX[0], barZ, gfY),
-    ...partition('part-stair-kitchen', 'x', plan.entranceX[1], barZ, gfY, [
+    ...wall('part-guest-bath', 'x', guestBathX, barZ, gfY, [door(barMidZ - 2.5, groundY)]),
+    ...wall('part-bath-stair', 'x', plan.entranceX[0], barZ, gfY),
+    ...wall('part-stair-kitchen', 'x', plan.entranceX[1], barZ, gfY, [
       door(barMidZ - 1.1, groundY),
     ]),
-    ...partition('part-kitchen-pantry', 'x', kitchenEastX, barZ, gfY, [
-      door(barMidZ - 0.3, groundY),
-    ]),
-    ...partition('part-pantry-utility', 'x', pantryEastX, barZ, gfY, [
-      door(barMidZ - 0.3, groundY),
-    ]),
+    ...wall('part-kitchen-pantry', 'x', kitchenEastX, barZ, gfY, [door(barMidZ - 0.3, groundY)]),
+    ...wall('part-pantry-utility', 'x', pantryEastX, barZ, gfY, [door(barMidZ - 0.3, groundY)]),
 
-    ...partition('part-master', 'z', masterBackZ, [barWestX, masterEastX], upY, [
+    ...wall('part-master', 'z', masterBackZ, [barWestX, masterEastX], upY, [
       door(-13, upperFloorY),
       door(-10, upperFloorY),
     ]),
-    ...partition('part-master-bath', 'x', masterBathEastX, [upperBarZ, masterBackZ], upY),
-    ...partition('part-bedrooms', 'z', bedroomFrontZ, [upperWestX, upperEastX], upY, [
+    ...wall('part-master-bath', 'x', masterBathEastX, [upperBarZ, masterBackZ], upY),
+    ...wall('part-bedrooms', 'z', bedroomFrontZ, [upperWestX, upperEastX], upY, [
       door(-1, upperFloorY),
       door(4.9, upperFloorY),
       door(10.2, upperFloorY),
     ]),
-    ...partition('part-bed2-bath2', 'x', bedroom2EastX, [upperBarZ, bedroomFrontZ], upY),
-    ...partition('part-bath2-bed3', 'x', bath2EastX, [upperBarZ, bedroomFrontZ], upY),
-    ...partition(
+    ...wall('part-bed2-bath2', 'x', bedroom2EastX, [upperBarZ, bedroomFrontZ], upY),
+    ...wall('part-bath2-bed3', 'x', bath2EastX, [upperBarZ, bedroomFrontZ], upY),
+    ...wall(
       'part-lounge-library',
       'x',
       plan.cantileverAxisX[0],
@@ -442,7 +519,18 @@ export function createInteriorPlan(plan: VillaPlan, levels: VillaLevels) {
   // arrival edge. Sized from the flights below, not chosen by eye.
   const stairwellZ: Range = [-8.5, -5.2];
 
-  return { rooms, partitions, shellGaps, stairwellZ, barZ, barMidZ, hallFrontZ, bedroomFrontZ };
+  return {
+    rooms,
+    partitions,
+    walls,
+    openings,
+    shellGaps,
+    stairwellZ,
+    barZ,
+    barMidZ,
+    hallFrontZ,
+    bedroomFrontZ,
+  };
 }
 
 export type InteriorPlanResult = ReturnType<typeof createInteriorPlan>;

@@ -1,4 +1,9 @@
-import { createFloorPlanModel, type PlanRoom } from '@/lib/experience/floorplan';
+import {
+  createFloorPlanModel,
+  type PlanDoorway,
+  type PlanPartition,
+  type PlanRoom,
+} from '@/lib/experience/floorplan';
 import { ROOM_SPACES, findSpace, type Space } from '@/lib/experience/spaces';
 
 /**
@@ -24,13 +29,21 @@ import { ROOM_SPACES, findSpace, type Space } from '@/lib/experience/spaces';
 
 /**
  * The widest gap, in metres, between two rectangles that nonetheless share a
- * wall. The generator insets corridor-facing rooms, so touching rooms are
- * not always flush; this is measured from the plan it emits, not chosen.
+ * boundary. The generator insets corridor-facing rooms, so abutting rooms
+ * are not always flush; this is measured from the plan it emits, not chosen.
+ *
+ * Note what this is now used for. It decides whether two rooms *share a
+ * boundary at all* — pure geometry. Whether that boundary can be walked
+ * through is a separate question, answered by the retained door schedule
+ * rather than by any tolerance here.
  */
-const WALL_TOLERANCE = 0.7;
+const BOUNDARY_TOLERANCE = 0.7;
 
-/** ...and they must share at least this much of that wall — a door's worth. */
-const MIN_SHARED_EDGE = 0.8;
+/**
+ * How close a partition line has to be to the shared boundary to count as
+ * standing on it.
+ */
+const WALL_MATCH = 0.5;
 
 /** How many unnamed connectors a link may pass through before it stops being a door. */
 const MAX_CONNECTOR_HOPS = 1;
@@ -67,13 +80,95 @@ function overlap(aMin: number, aMax: number, bMin: number, bMax: number): number
   return Math.min(aMax, bMax) - Math.max(aMin, bMin);
 }
 
-function touching(a: Rect, b: Rect): boolean {
+/**
+ * The boundary two rooms share, if they share one: which axis it lies on,
+ * where, and the span they have in common along it.
+ *
+ * `axis: 'x'` means the boundary is a line of constant x — matching
+ * `PlanPartition.axis`, so a wall can be tested against it directly.
+ */
+type Boundary = { axis: 'x' | 'z'; at: number; span: Rangeish };
+type Rangeish = readonly [number, number];
+
+function sharedBoundary(a: Rect, b: Rect): Boundary | null {
   const x = overlap(a.x, a.x + a.width, b.x, b.x + b.width);
   const z = overlap(a.z, a.z + a.depth, b.z, b.z + b.depth);
 
-  const alongZ = x >= MIN_SHARED_EDGE && z >= -WALL_TOLERANCE && z <= WALL_TOLERANCE;
-  const alongX = z >= MIN_SHARED_EDGE && x >= -WALL_TOLERANCE && x <= WALL_TOLERANCE;
-  return alongZ || alongX;
+  // Abutting across a line of constant x: they overlap in z and meet in x.
+  if (z > 0 && x >= -BOUNDARY_TOLERANCE && x <= BOUNDARY_TOLERANCE) {
+    const at = (Math.min(a.x + a.width, b.x + b.width) + Math.max(a.x, b.x)) / 2;
+    return {
+      axis: 'x',
+      at,
+      span: [Math.max(a.z, b.z), Math.min(a.z + a.depth, b.z + b.depth)],
+    };
+  }
+
+  // ...or across a line of constant z.
+  if (x > 0 && z >= -BOUNDARY_TOLERANCE && z <= BOUNDARY_TOLERANCE) {
+    const at = (Math.min(a.z + a.depth, b.z + b.depth) + Math.max(a.z, b.z)) / 2;
+    return {
+      axis: 'z',
+      at,
+      span: [Math.max(a.x, b.x), Math.min(a.x + a.width, b.x + b.width)],
+    };
+  }
+
+  return null;
+}
+
+/** Partitions standing on this boundary, within the rooms' shared span. */
+function wallsOn(
+  boundary: Boundary,
+  level: 'ground' | 'upper',
+  partitions: readonly PlanPartition[],
+): PlanPartition[] {
+  return partitions.filter(
+    (partition) =>
+      partition.level === level &&
+      partition.axis === boundary.axis &&
+      Math.abs(partition.at - boundary.at) <= WALL_MATCH &&
+      overlap(partition.across[0], partition.across[1], boundary.span[0], boundary.span[1]) > 0,
+  );
+}
+
+/**
+ * Can a person walk from one of these rooms to the other?
+ *
+ * Three cases, and only the first two used to be distinguished:
+ *
+ *  - **No shared boundary.** Not connected. Geometry alone settles it.
+ *  - **A shared boundary with no partition on it.** Connected — this is the
+ *    open plan, and it is the normal case for the principal rooms. Requiring
+ *    a door here would disconnect the living room from the dining room.
+ *  - **A shared boundary with a partition on it.** Connected only if one of
+ *    that partition's retained openings falls inside the shared span. A wall
+ *    with no door in it is a wall.
+ *
+ * Phase 2 collapsed the last two into "the rooms are close and share at
+ * least a door's width of edge", which cannot tell a doorway from masonry.
+ */
+function connected(
+  a: Rect,
+  b: Rect,
+  level: 'ground' | 'upper',
+  partitions: readonly PlanPartition[],
+  doorways: readonly PlanDoorway[],
+): boolean {
+  const boundary = sharedBoundary(a, b);
+  if (!boundary) return false;
+
+  const walls = wallsOn(boundary, level, partitions);
+  if (walls.length === 0) return true;
+
+  const keys = new Set(walls.map((wall) => wall.key));
+  return doorways.some((doorway) => {
+    if (!keys.has(doorway.partition)) return false;
+    // A doorway's position along its own wall is its plan coordinate on the
+    // axis the wall runs along — the opposite axis to the wall's line.
+    const along = boundary.axis === 'x' ? doorway.y : doorway.x;
+    return along >= boundary.span[0] && along <= boundary.span[1];
+  });
 }
 
 function planOverlapArea(a: Rect, b: Rect): number {
@@ -107,14 +202,18 @@ function hotspotBetween(from: Space, to: Space, target: Rect): PanoHotspot {
   };
 }
 
-function buildNodes(): RoomNode[] {
+function buildNodes(): {
+  nodes: RoomNode[];
+  partitions: readonly PlanPartition[];
+  doorways: readonly PlanDoorway[];
+} {
   const plan = createFloorPlanModel();
   const spaceByRoom = new Map<string, string>();
   for (const space of ROOM_SPACES) {
     if (space.room) spaceByRoom.set(space.room, space.id);
   }
 
-  return plan.levels.flatMap((level) =>
+  const nodes = plan.levels.flatMap((level) =>
     level.rooms.map((room) => ({
       id: room.id,
       level: level.id,
@@ -122,6 +221,8 @@ function buildNodes(): RoomNode[] {
       spaceId: spaceByRoom.get(room.id) ?? null,
     })),
   );
+
+  return { nodes, partitions: plan.partitions, doorways: plan.doorways };
 }
 
 /**
@@ -143,7 +244,11 @@ function verticalEdge(nodes: readonly RoomNode[]): [string, string] | null {
   return best ? [stair.id, best.id] : null;
 }
 
-function buildRoomAdjacency(nodes: readonly RoomNode[]): Map<string, Set<string>> {
+function buildRoomAdjacency(
+  nodes: readonly RoomNode[],
+  partitions: readonly PlanPartition[],
+  doorways: readonly PlanDoorway[],
+): Map<string, Set<string>> {
   const adjacency = new Map<string, Set<string>>(nodes.map((node) => [node.id, new Set<string>()]));
   const link = (a: string, b: string) => {
     adjacency.get(a)?.add(b);
@@ -155,7 +260,7 @@ function buildRoomAdjacency(nodes: readonly RoomNode[]): Map<string, Set<string>
       const a = nodes[i]!;
       const b = nodes[j]!;
       if (a.level !== b.level) continue;
-      if (touching(a.rect, b.rect)) link(a.id, b.id);
+      if (connected(a.rect, b.rect, a.level, partitions, doorways)) link(a.id, b.id);
     }
   }
 
@@ -209,9 +314,9 @@ let cached: ReadonlyMap<string, readonly PanoHotspot[]> | null = null;
 export function panoGraph(): ReadonlyMap<string, readonly PanoHotspot[]> {
   if (cached) return cached;
 
-  const nodes = buildNodes();
+  const { nodes, partitions, doorways } = buildNodes();
   const byId = new Map(nodes.map((node) => [node.id, node]));
-  const adjacency = buildRoomAdjacency(nodes);
+  const adjacency = buildRoomAdjacency(nodes, partitions, doorways);
   const named = nodes.filter(
     (node): node is RoomNode & { spaceId: string } => node.spaceId !== null,
   );

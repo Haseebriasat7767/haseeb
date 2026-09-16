@@ -16,3 +16,6 @@ npm-debug.log*
 
 # Build output of the primitives package — rebuilt by `npm run build:ds`.
 design-system/dist
+
+# Panorama renders are produced by `npm run render:panoramas` on a GPU.
+# Committed deliberately when they are final; never as unconverged output.

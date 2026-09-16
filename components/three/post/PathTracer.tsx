@@ -17,6 +17,18 @@ type PathTracerProps = {
   onProgress?: (samples: number, maxSamples: number) => void;
   /** Multiplier on the hour's exposure while tracing. See the note below. */
   exposureBoost?: number;
+  /**
+   * Bump this whenever the camera has been moved from outside react — a
+   * cube face step, for instance.
+   *
+   * The tracer accumulates into a buffer that is only reset when it is told
+   * the camera changed. Nothing about mutating `camera.position` or
+   * `camera.quaternion` reaches react, so without this the tracer keeps
+   * adding samples taken from the new orientation to an image made from the
+   * old one, and six cube faces come out as six progressive smears of each
+   * other rather than six faces.
+   */
+  cameraEpoch?: number;
 };
 
 /**
@@ -103,6 +115,7 @@ export function PathTracer({
   maxSamples = 320,
   onProgress,
   exposureBoost = 2.6,
+  cameraEpoch = 0,
 }: PathTracerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
@@ -197,8 +210,11 @@ export function PathTracer({
 
   useEffect(() => {
     if (!active) return;
+    // `updateCamera` is what resets accumulation. Resizing is one reason to
+    // call it; an externally moved camera is the other, and only
+    // `cameraEpoch` can report that one.
     tracer.updateCamera();
-  }, [active, tracer, size.width, size.height]);
+  }, [active, tracer, size.width, size.height, cameraEpoch]);
 
   useEffect(() => {
     if (!active) return;

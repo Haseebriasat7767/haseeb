@@ -103,9 +103,23 @@ const inFlight = new Map<string, Promise<LoadedPanorama>>();
 let cacheLimit = 6;
 
 /**
- * How many panoramas stay resident. A cube face set is a few megabytes of
- * GPU memory each, so this is a real ceiling rather than a tuning knob —
- * without it, a long visit accumulates every room ever entered.
+ * How many panoramas stay resident.
+ *
+ * This is an **eviction policy, not a ceiling**. `evict()` runs on load, so
+ * residency never exceeds the limit — but peak is `limit + 1`, because
+ * `PanoTransition` holds the outgoing shell through the ~600ms crossfade and
+ * React still references its texture after the cache has let go of it.
+ *
+ * **There is no prefetch**, here or in `PanoTransition`, and Phase 3 ships
+ * without one. That is what keeps the peak figure at `limit + 1` with no
+ * in-flight term: nothing is ever loading except the room being entered.
+ * Adding prefetch-on-hover would raise peak to `limit + 1 + in-flight`, and
+ * `scripts/lib/vram.ts` takes an `inFlight` parameter so the number stays
+ * honest if that ever changes.
+ *
+ * Sized against the chosen face resolution — see `peakMiB`. At 1024² a room
+ * is 24 MiB, so a limit of 6 peaks at 168 MiB; at 2048² the same limit peaks
+ * at 672 MiB, which is not a mobile budget.
  */
 export function setPanoramaCacheLimit(limit: number): void {
   cacheLimit = Math.max(1, Math.floor(limit));
