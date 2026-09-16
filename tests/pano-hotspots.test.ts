@@ -144,6 +144,76 @@ describe('a wall is not a door', () => {
     expect(panoHotspotsFor('masterBath').map((h) => h.id)).toContain('master');
   });
 
+  it('backs every edge with either an opening or the absence of a wall', () => {
+    // The whole graph, not a spot check. For each edge, find the boundary
+    // the two rooms share and prove one of exactly two things: no partition
+    // stands on it, or a retained opening pierces the partition that does.
+    // An edge that satisfies neither walks a visitor through masonry.
+    const rooms = new Map(
+      plan.levels.flatMap((level) =>
+        level.rooms.map((room) => [room.id, { ...room, level: level.id }] as const),
+      ),
+    );
+
+    let checked = 0;
+    for (const [id, hotspots] of panoGraph()) {
+      const from = findSpace(id);
+      const fromRoom = from?.room === undefined ? undefined : rooms.get(from.room);
+      if (!from || !fromRoom) continue;
+
+      for (const hotspot of hotspots) {
+        const to = findSpace(hotspot.id);
+        const toRoom = to?.room === undefined ? undefined : rooms.get(to.room);
+        if (!to || !toRoom) continue;
+
+        // Cross-level edges go through the stair, which is a storey change
+        // rather than a doorway — covered by its own test above.
+        if (from.level !== to.level) continue;
+
+        const overlapX =
+          Math.min(fromRoom.x + fromRoom.width, toRoom.x + toRoom.width) -
+          Math.max(fromRoom.x, toRoom.x);
+        const overlapZ =
+          Math.min(fromRoom.y + fromRoom.height, toRoom.y + toRoom.height) -
+          Math.max(fromRoom.y, toRoom.y);
+
+        // Rooms that do not abut are reached through a connector (landing,
+        // upper hall, pantry) — a route made of edges each checked in turn.
+        const abutsOnX = overlapZ > 0 && Math.abs(overlapX) <= 0.7;
+        const abutsOnZ = overlapX > 0 && Math.abs(overlapZ) <= 0.7;
+        if (!abutsOnX && !abutsOnZ) continue;
+
+        const axis = abutsOnX ? 'x' : 'z';
+        const at = abutsOnX
+          ? (Math.min(fromRoom.x + fromRoom.width, toRoom.x + toRoom.width) +
+              Math.max(fromRoom.x, toRoom.x)) /
+            2
+          : (Math.min(fromRoom.y + fromRoom.height, toRoom.y + toRoom.height) +
+              Math.max(fromRoom.y, toRoom.y)) /
+            2;
+
+        const walls = plan.partitions.filter(
+          (wall) =>
+            wall.level === from.level && wall.axis === axis && Math.abs(wall.at - at) <= 0.5,
+        );
+        if (walls.length === 0) {
+          checked += 1;
+          continue;
+        }
+
+        const keys = new Set(walls.map((wall) => wall.key));
+        const pierced = plan.doorways.some((doorway) => keys.has(doorway.partition));
+        expect(
+          pierced,
+          `${id} -> ${hotspot.id} crosses ${[...keys].join(', ')} with no opening in it`,
+        ).toBe(true);
+        checked += 1;
+      }
+    }
+
+    expect(checked).toBeGreaterThan(0);
+  });
+
   it('connects rooms that share a boundary with no partition on it at all', () => {
     // The open plan. Requiring a door here would disconnect the principal
     // rooms from each other, because there is no wall between them to put

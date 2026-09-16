@@ -1,9 +1,12 @@
 'use client';
 
 import { Html } from '@react-three/drei';
-import { useEffect, useMemo, useState } from 'react';
+import { useThree } from '@react-three/fiber';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { PerspectiveCamera, Vector3 } from 'three';
 import { panoHotspotsFor, type PanoHotspot } from '@/lib/pano/hotspots';
 import { hasPanorama } from '@/lib/pano/manifest';
+import { horizontalHalfFov, offscreenHint } from '@/lib/pano/offscreen';
 import { cn } from '@/lib/utils/cn';
 
 /**
@@ -26,6 +29,59 @@ export type PanoHotspotsProps = {
   disabled?: boolean;
 };
 
+/**
+ * Which doors are currently off-screen, and which way to turn for them.
+ *
+ * Recomputed on a rAF loop rather than per React render: the answer changes
+ * continuously while the visitor drags, and a state update per frame to move
+ * two chevrons would cost more than the panorama behind them. Only a change
+ * in the *set* of off-screen doors reaches React.
+ */
+function useOffscreenDoors(hotspots: readonly PanoHotspot[]): Record<string, 'left' | 'right'> {
+  const camera = useThree((state) => state.camera);
+  const [sides, setSides] = useState<Record<string, 'left' | 'right'>>({});
+  const previous = useRef('');
+
+  useEffect(() => {
+    if (hotspots.length === 0) {
+      setSides({});
+      return;
+    }
+    let raf = 0;
+    const scratch = new Vector3();
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      if (!(camera instanceof PerspectiveCamera)) return;
+
+      const forward = camera.getWorldDirection(scratch);
+      const yaw = Math.atan2(forward.x, forward.z);
+      // Portrait is the case this exists for: there the horizontal angle is
+      // narrower than the vertical fov, so doors leave the frame sooner than
+      // the camera's own `fov` number suggests.
+      const halfFov = horizontalHalfFov(camera.fov, camera.aspect);
+
+      const next: Record<string, 'left' | 'right'> = {};
+      for (const hotspot of hotspots) {
+        const hint = offscreenHint(yaw, hotspot.yaw, halfFov);
+        if (hint) next[hotspot.id] = hint.side;
+      }
+
+      const key = Object.entries(next)
+        .map(([id, side]) => `${id}:${side}`)
+        .sort()
+        .join('|');
+      if (key !== previous.current) {
+        previous.current = key;
+        setSides(next);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [camera, hotspots]);
+
+  return sides;
+}
+
 export function PanoHotspots({ spaceId, onNavigate, disabled = false }: PanoHotspotsProps) {
   // Only offer a door that leads somewhere rendered. A marker onto a room
   // with no panorama is a promise the experience cannot keep.
@@ -34,8 +90,42 @@ export function PanoHotspots({ spaceId, onNavigate, disabled = false }: PanoHots
     [spaceId],
   );
 
+  const offscreen = useOffscreenDoors(hotspots);
+
   return (
     <>
+      {/* Doors the visitor cannot see. Without this, a phone held upright
+          shows about 50 degrees of a room that has exits all around it, and
+          nothing on screen says there is anywhere to go. The compass gives
+          heading, which answers a different question. */}
+      {hotspots.some((hotspot) => offscreen[hotspot.id]) ? (
+        <Html fullscreen zIndexRange={[30, 20]}>
+          <div className="pointer-events-none absolute inset-0">
+            {(['left', 'right'] as const).map((side) => {
+              const waiting = hotspots.filter((hotspot) => offscreen[hotspot.id] === side);
+              if (waiting.length === 0) return null;
+              return (
+                <div
+                  key={side}
+                  data-pano-offscreen={side}
+                  className={cn(
+                    'text-alabaster/70 absolute top-1/2 -translate-y-1/2 text-2xl',
+                    side === 'left' ? 'left-3' : 'right-3',
+                  )}
+                >
+                  <span aria-hidden="true">{side === 'left' ? '\u2039' : '\u203a'}</span>
+                  <span className="sr-only">
+                    {waiting.length === 1
+                      ? `${waiting[0]!.label} is to the ${side}. Turn to see it.`
+                      : `${waiting.length} more rooms are to the ${side}. Turn to see them.`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Html>
+      ) : null}
+
       {hotspots.map((hotspot) => (
         <Html
           key={hotspot.id}

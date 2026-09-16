@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { InteriorPanoViewer } from './InteriorPanoViewer';
 import { PanoCompass, PanoHotspots } from './PanoHotspots';
 import { PanoTransition } from './PanoTransition';
@@ -16,55 +16,63 @@ import { cn } from '@/lib/utils/cn';
  *
  * ## One source of "which room am I in"
  *
- * There are two candidates and only one of them is true. `requestedId` is
- * where the visitor asked to go; `currentId` is the room whose panorama is
- * actually on screen, reported by `PanoTransition` when it promotes a
- * loaded texture. Between the two there is a real interval — the load, then
- * the 600ms crossfade — and everything the visitor can see or hear must
- * read the second one.
+ * This component holds none of it. Both `requested` — where the visitor
+ * asked to go — and `current` — the room whose panorama is actually on
+ * screen — are props, owned by whatever mounts the tour.
  *
- * Phase 2 had both and treated the request as the truth. It cost two bugs:
- * a caption that changed while the picture didn't, and a canvas label that
- * named a room the screen reader's user was not yet in. So the request is
- * held only long enough to hand it to the transition, and never read for
- * anything else.
+ * They are genuinely different facts, separated by a real interval: the
+ * load, then the 600ms crossfade. Phase 2 kept both and read the request as
+ * the truth, which cost a caption that changed while the picture didn't and
+ * a canvas label naming a room the screen-reader user was not yet in. Phase
+ * 3 split them but kept them here, which was fine while nothing else was on
+ * the page. Mounting the tour beside the exterior explorer puts two systems
+ * in one tree, so ownership moves up: there is one place to look, and no
+ * second copy can drift from it.
  *
  * The camera belongs to `InteriorPanoViewer`, the textures belong to the
  * loader's cache, and the route between rooms belongs to the generated plan.
  */
 export type InteriorPanoExperienceProps = {
-  /** Where the tour opens. Must be a space id from `spaces.ts`. */
-  initialSpaceId: string;
+  /** The room the visitor has asked for. A request, not a fact. */
+  requestedSpaceId: string;
+  /** The room whose panorama is on screen. Null until the first promotion. */
+  currentSpaceId: string | null;
+  /** A door was taken. The owner decides what the new request is. */
+  onRequest: (spaceId: string) => void;
+  /** A panorama was promoted — this is the moment `current` becomes true. */
+  onCurrentSpaceChange: (spaceId: string) => void;
+  /** The crossfade finished. Doors are live again. */
+  onSettled?: () => void;
+  /** Doors are suppressed while a transition runs. */
+  moving?: boolean;
   className?: string;
 };
 
-export function InteriorPanoExperience({ initialSpaceId, className }: InteriorPanoExperienceProps) {
-  const [requestedId, setRequestedId] = useState(initialSpaceId);
-  const [currentId, setCurrentId] = useState<string | null>(null);
-  const [moving, setMoving] = useState(false);
+export function InteriorPanoExperience({
+  requestedSpaceId,
+  currentSpaceId,
+  onRequest,
+  onCurrentSpaceChange,
+  onSettled,
+  moving = false,
+  className,
+}: InteriorPanoExperienceProps) {
   const yaw = useRef(0);
-
-  const navigate = useCallback((targetId: string) => {
-    setMoving(true);
-    setRequestedId(targetId);
-  }, []);
-
-  const handleArrived = useCallback(() => setMoving(false), []);
-  const handleYaw = useCallback((value: number) => {
+  const handleYaw = (value: number) => {
     yaw.current = value;
-  }, []);
+  };
 
   // Until a panorama has been promoted there is no room to be in, so the
   // first arrival shows the skeleton for the room being loaded.
-  const space = currentId === null ? undefined : findSpace(currentId);
-  const requested = findSpace(requestedId);
+  const space = currentSpaceId === null ? undefined : findSpace(currentSpaceId);
+  const requested = findSpace(requestedSpaceId);
 
   // No render for this room means no room. Saying so is the honest state;
   // a stand-in panorama would be a picture of a place that does not exist.
-  if (!requested || !hasPanorama(requestedId)) {
+  if (!requested || !hasPanorama(requestedSpaceId)) {
     return (
       <div className={cn('bg-obsidian relative', className)}>
-        <ViewportSkeleton spaceId={requested ? requestedId : undefined} />
+        <ViewportSkeleton spaceId={requested ? requestedSpaceId : undefined} />
       </div>
     );
   }
@@ -105,15 +113,15 @@ export function InteriorPanoExperience({ initialSpaceId, className }: InteriorPa
           }
         >
           <PanoTransition
-            spaceId={requestedId}
-            onCurrentSpaceChange={setCurrentId}
-            onTransitionEnd={handleArrived}
+            spaceId={requestedSpaceId}
+            onCurrentSpaceChange={onCurrentSpaceChange}
+            {...(onSettled ? { onTransitionEnd: onSettled } : {})}
           />
           {/* Doors belong to the room you are standing in. Reading the
               request here would offer the next room's exits before its
               picture had arrived. */}
           {space ? (
-            <PanoHotspots spaceId={space.id} onNavigate={navigate} disabled={moving} />
+            <PanoHotspots spaceId={space.id} onNavigate={onRequest} disabled={moving} />
           ) : null}
         </InteriorPanoViewer>
       </ViewportErrorBoundary>

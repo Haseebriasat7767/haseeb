@@ -44,12 +44,13 @@ import { SpaceSummary } from './SpaceSummary';
 import { DeepLinkedSpace } from './DeepLinkedSpace';
 import { SpacePanel } from './SpacePanel';
 import { SpaceRail } from './SpaceRail';
+import { InteriorTourPanel, hasInteriorTour } from './InteriorTourPanel';
 import { TouchSticks } from '@/components/tower/TouchSticks';
 import { WalkPad } from '@/components/tower/WalkPad';
 
 const DEFAULT_SPACE = SPACES[0]!;
 
-export type ExplorerTab = 'overview' | 'explore' | 'plan' | 'gallery';
+export type ExplorerTab = 'overview' | 'explore' | 'interior' | 'plan' | 'gallery';
 
 /**
  * The residence, in one page — the same pattern `/tower` already set: a
@@ -60,12 +61,23 @@ export type ExplorerTab = 'overview' | 'explore' | 'plan' | 'gallery';
  * its own masthead; the other three now redirect here (`next.config.ts`)
  * so an old link keeps working, but a visitor only ever sees one page.
  */
-const TABS: ReadonlyArray<{ id: ExplorerTab; label: string }> = [
+const ALL_TABS: ReadonlyArray<{ id: ExplorerTab; label: string }> = [
   { id: 'overview', label: 'Overview' },
   { id: 'explore', label: 'Explore' },
+  { id: 'interior', label: 'Interior' },
   { id: 'plan', label: 'Floor plan' },
   { id: 'gallery', label: 'Gallery' },
 ];
+
+/**
+ * The tabs this build actually has something behind.
+ *
+ * Interior is offered only when rooms have been rendered. An empty tab is a
+ * promise the page cannot keep, and the panoramas land room by room over
+ * several render runs — so "some rooms, or none" is the ordinary state, not
+ * a transient one. Same null-means-hide rule `CLIENT` and `SITE` follow.
+ */
+const TABS = ALL_TABS.filter((entry) => entry.id !== 'interior' || hasInteriorTour());
 
 /**
  * The flyover. Reuses the site's own aerial framing for its position and
@@ -79,6 +91,7 @@ const FLYOVER_VIEW: CameraView = CAMERA_VIEWS.find((entry) => entry.id === 'aeri
 const TAB_COPY: Record<ExplorerTab, { eyebrow: string; title: string }> = {
   overview: { eyebrow: 'The Residence', title: PROPERTY.name },
   explore: { eyebrow: 'Explore', title: 'Every space in the residence' },
+  interior: { eyebrow: 'Interior', title: 'Inside the residence' },
   plan: { eyebrow: 'Architecture', title: 'Plans and levels' },
   gallery: { eyebrow: 'Gallery', title: 'Framings of the residence' },
 };
@@ -716,6 +729,18 @@ export function ResidenceExplorer({ initialTab = 'overview' }: { initialTab?: Ex
                   nothing at all unconfigured, so the demo is unchanged. */}
               <ClientIdentity className="border-alabaster/10 border-t pt-8" />
             </div>
+          </div>
+        ) : tab === 'interior' ? (
+          <div className="pt-10">
+            <p className="text-mist max-w-[64ch] pb-10 text-sm leading-relaxed">
+              Stand inside the residence. Each room is a pre-rendered panorama taken from the same
+              model the exterior is built from — drag to look around, and take a doorway to move
+              between rooms. Only rooms that have been rendered are offered.
+            </p>
+            {/* The tour carries its own error boundary, which falls back to
+                the static elevation on a lost WebGL context or a chunk that
+                never arrives. */}
+            <InteriorTourPanel className="aspect-[16/10] w-full" />
           </div>
         ) : tab === 'plan' ? (
           <div className="pt-10">
