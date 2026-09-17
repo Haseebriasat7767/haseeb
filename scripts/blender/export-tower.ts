@@ -42,6 +42,28 @@ function boxes(value: unknown, into: Box[] = []): Box[] {
   return into;
 }
 
+/**
+ * Model placements — the tower's furniture.
+ *
+ * Unlike the residence, whose rooms are furnished entirely with box specs
+ * and forms, the tower places 500-odd instances of a glTF library: sofas,
+ * dining chairs, beds, baths, kitchen runs. They are the reason a flat
+ * looks furnished, and an export without them renders a glazed empty plate.
+ */
+function models(value: unknown, into: unknown[] = []): unknown[] {
+  if (Array.isArray(value)) {
+    for (const entry of value) models(entry, into);
+  } else if (value && typeof value === 'object') {
+    const candidate = value as Record<string, unknown>;
+    if ('name' in candidate && 'position' in candidate && !('scale' in candidate)) {
+      into.push(candidate);
+    } else {
+      for (const entry of Object.values(candidate)) models(entry, into);
+    }
+  }
+  return into;
+}
+
 function forms(value: unknown, into: unknown[] = []): unknown[] {
   if (Array.isArray(value)) {
     for (const entry of value) forms(entry, into);
@@ -113,6 +135,7 @@ describe('tower scene export', () => {
   for (const [name, value] of Object.entries(apartments)) add(`apt.${name}`, value);
 
   const allForms = [...forms(amenity), ...forms(apartments)];
+  const allModels = [...models(amenity), ...models(core), ...models(apartments)];
 
   // Only the interior standpoints. A cubemap of the outdoors is what the
   // real-time scene already does better, live.
@@ -147,6 +170,15 @@ describe('tower scene export', () => {
     expect(allForms.length).toBeGreaterThan(50);
   });
 
+  it('carries the furniture, which is placed as glTF instances not boxes', () => {
+    // The tower furnishes its flats from a model library rather than with
+    // box specs. Miss these and every apartment renders as an empty plate.
+    expect(allModels.length).toBeGreaterThan(300);
+    const names = new Set(allModels.map((m) => (m as { name: string }).name));
+    expect(names.has('sofa-3seat')).toBe(true);
+    expect(names.has('dining-chair')).toBe(true);
+  });
+
   it('carries the shoreline, which is the whole reason for the framings', () => {
     const shore = Object.keys(groups).filter((name) => name.startsWith('t.shoreline.'));
     expect(shore.length).toBeGreaterThan(0);
@@ -157,11 +189,14 @@ describe('tower scene export', () => {
   });
 
   it('writes the scene', () => {
-    writeFileSync(OUT, JSON.stringify({ groups, forms: allForms, lights: [], spaces }));
+    writeFileSync(
+      OUT,
+      JSON.stringify({ groups, forms: allForms, models: allModels, lights: [], spaces }),
+    );
     console.log(
       `wrote ${OUT}: ${Object.keys(groups).length} groups, ` +
         `${Object.values(groups).reduce((n, g) => n + g.length, 0)} boxes, ` +
-        `${allForms.length} forms, ${spaces.length} framings`,
+        `${allForms.length} forms, ${allModels.length} models, ${spaces.length} framings`,
     );
   });
 });

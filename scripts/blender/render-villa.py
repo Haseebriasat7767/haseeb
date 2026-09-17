@@ -386,6 +386,92 @@ def build_fold(form):
 
 BUILDERS = {'soft': build_soft, 'turned': build_turned, 'fold': build_fold}
 
+MODEL_DIR = os.environ.get(
+    'PANO_MODEL_DIR',
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                 'public', 'assets', 'models'),
+)
+
+_model_cache = {}
+
+
+def load_model(name):
+    """Imports one glTF piece, once, and keeps it off-camera to copy from.
+
+    The tower furnishes its flats from a model library rather than with box
+    specs — sofas, dining chairs, beds, baths — and an export without them
+    renders a glazed empty plate. Blender's glTF importer handles the Draco
+    compression these ship with natively.
+    """
+    if name in _model_cache:
+        return _model_cache[name]
+
+    path = os.path.join(MODEL_DIR, f'{name}.glb')
+    if not os.path.exists(path):
+        _model_cache[name] = None
+        return None
+
+    before = {obj.name for obj in bpy.data.objects}
+    try:
+        bpy.ops.import_scene.gltf(filepath=path)
+    except Exception as error:  # noqa: BLE001 - report and carry on
+        print(f'  ! could not import {name}: {error}')
+        _model_cache[name] = None
+        return None
+
+    # Names, not references: joining below frees the objects it merges, and
+    # a held reference to a freed Object raises on next access.
+    imported = [obj.name for obj in bpy.data.objects if obj.name not in before]
+    meshes = [bpy.data.objects[n] for n in imported if bpy.data.objects[n].type == 'MESH']
+    if not meshes:
+        _model_cache[name] = None
+        return None
+
+    # One object per piece, parked at the origin and hidden. Each placement
+    # gets a linked copy, which shares mesh data the way the web scene's
+    # instancing does.
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in meshes:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = meshes[0]
+    if len(meshes) > 1:
+        bpy.ops.object.join()
+    master = bpy.context.view_layer.objects.active
+    keep = master.name
+    for obj_name in imported:
+        if obj_name != keep and obj_name in bpy.data.objects:
+            bpy.data.objects.remove(bpy.data.objects[obj_name], do_unlink=True)
+
+    master.hide_render = True
+    master.location = (0, 0, -10000)
+    _model_cache[name] = master
+    return master
+
+
+placed = 0
+missing = {}
+for spec in data.get('models', []):
+    master = load_model(spec['name'])
+    if master is None:
+        missing[spec['name']] = missing.get(spec['name'], 0) + 1
+        continue
+    copy = master.copy()          # linked: shares the mesh, not the transform
+    copy.hide_render = False
+    scn.collection.objects.link(copy)
+    px, py, pz = spec['position']
+    copy.location = (px, -pz, py)
+    copy.rotation_euler = (0, 0, -float(spec.get('rotationY', 0) or 0))
+    copy.scale = (1, 1, 1)
+    placed += 1
+
+if data.get('models'):
+    print(f'placed {placed} model instances from {len(_model_cache)} pieces')
+if missing:
+    raise SystemExit(
+        'ERROR: no glTF found for ' + ', '.join(f'{n} x{c}' for n, c in sorted(missing.items())) +
+        f'\n  looked in {MODEL_DIR}'
+    )
+
 made = 0
 for form in data.get('forms', []):
     builder = BUILDERS.get(form.get('kind'))
