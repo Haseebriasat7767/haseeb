@@ -102,6 +102,27 @@ MATS = {
 }
 DEFAULT = material('default', (0.6, 0.6, 0.6, 1), 0.7)
 
+# ── The finish floor sits on the slab, not in it ──────────────────────────
+#
+# The generator draws an interior floor plate with its top face on exactly
+# the same plane as the structural slab it covers, because in the real-time
+# scene that is free: the rasteriser resolves the tie with a depth test and
+# the hemisphere light casts no shadows, so nobody ever saw the two.
+#
+# A path tracer sees them. Every shadow ray leaving the visible face starts
+# on a second face in the same plane and is occluded by it immediately, so
+# the surface shadows itself completely — not dimly, exactly. The tower's
+# atrium rendered a floor of which not one pixel in 1,048,576 exceeded
+# 2/255, and it stayed at 2/255 under a 5 kW lamp a metre and a half above
+# it and under a sky fifty times its normal strength. A fresh plane five
+# centimetres higher, same material, same lamp, blew out to white.
+#
+# Three millimetres of separation is the whole fix, and it is the direction
+# a real floor build-up goes: the finish is laid *on* the slab. It is far
+# below anything a 1024px cube face can resolve.
+FLOOR_FINISH_LIFT = 0.003
+FINISH_FLOORS = {MATS['int.floorsStone'], MATS['int.floorsTimber']}
+
 # Some groups are not one material. `shell.openings` holds the glazing AND
 # the frames that carry it, and rendering the whole group as glass makes
 # every mullion, sill and jamb vanish — the building loses its dark window
@@ -278,6 +299,8 @@ for group, items in data['groups'].items():
         mat = material_for(group, box['key'])
         if mat is DEFAULT:
             DEFAULTED[group] = DEFAULTED.get(group, 0) + 1
+        if mat in FINISH_FLOORS:
+            obj.location.z += FLOOR_FINISH_LIFT
         obj.data.materials.append(mat)
         buckets.setdefault(mat.name, []).append(obj)
         total += 1
@@ -554,7 +577,20 @@ cam.rotation_euler = (Vector((tx, -tz, ty)) - cam.location).to_track_quat('-Z', 
 # problem, so it gets exactly that boost. Without it every interior comes
 # out underexposed in the same way the web tracer did before the boost
 # existed.
-EXPOSURE_BOOST = float(os.environ.get('PANO_EXPOSURE_BOOST', '2.6'))
+#
+# And only where there is something for it to compensate for. The boost
+# answers a rasteriser that fakes ambient with a hemisphere light; a scene
+# whose rooms are lit by practicals renders about a stop and a half darker
+# without it. The tower carries no practicals at all — its exporter writes
+# `lights: []`, and daylight through the curtain wall is the whole of its
+# lighting, which Cycles already renders at full strength. Applying the
+# residence's boost to it double-counts: measured on the atrium, 2.6x put
+# 83% of the floor face at 255 and 24% of the side faces, against 0% and
+# 4.7% at 1.0 — and the 4.7% is the sky through the glazing, which is what
+# AgX is there to roll off.
+EXPOSURE_BOOST = float(
+    os.environ.get('PANO_EXPOSURE_BOOST', '2.6' if data.get('lights') else '1.0')
+)
 scn.view_settings.exposure = math.log2(
     max(float(space.get('exposure', 1)), 0.01) * EXPOSURE_BOOST
 )
