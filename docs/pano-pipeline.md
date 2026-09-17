@@ -195,6 +195,39 @@ itself instead of trusting something else to.
 | **TBD-2** Sample count         | Open — default 128, unvalidated | 128-vs-320 A/B on one room, judged on quality                              |
 | **TBD-3** Setup vs convergence | Open                            | The same calibration run; the script isolates setup via a second page load |
 
+## Why the tower is still rasterised
+
+All twelve tower standpoints have been rendered with Cycles, and the set is
+**not published**. The renderer bugs it exposed are fixed — no interior face
+now has more than 0.1% black pixels, against a first attempt whose atrium
+floor was 100% black — but on a side-by-side against the rasterised faces
+production serves, Cycles loses on the things this building is sold on. Four
+gaps, in the order they matter:
+
+1. **No site.** `export-tower.ts` exports the building and nothing else, so
+   every window in an oceanfront tower looks onto the sky texture's bare
+   horizon. The rasterised `bedroom` face shows sea and lawn through the
+   glazing; the traced one shows a white void. This is the blocking one.
+2. **No procedural finishes.** The web materials carry marble veining the
+   Blender materials have no equivalent for — flat pale stone where the
+   raster has a figured floor.
+3. **No signage.** `DecalPlanes` puts "VERDANT", "FOOD HALL" and "W C" on
+   the podium; the traced atrium has bare walls where the raster reads as a
+   retail street.
+4. **Overexposure in the daylit podium.** Even with the boost off (see
+   `render-villa.py` on why a scene with no practicals gets none), `spa`
+   clips 48% of one face, `gym` 22.6%, `atrium` 18.8%. The residence, lit by
+   practicals, does not do this.
+
+Two of these are not renderer problems at all. `bedroom`'s forward face is a
+blank wall in _both_ renderers, because `TOWER_VIEWS` entries are composed
+framings authored to be looked at from one direction, not panoramic
+standpoints — the same camera that makes a good plate makes a bad cubemap.
+
+So the manifest keeps `quality: "raster"` for all twelve tower entries, and
+`"traced"` for the thirteen residence rooms, which is what the per-entry
+field is for. Closing gap 1 is the prerequisite for revisiting this.
+
 The render budget is a formula, not a number:
 
 ```
