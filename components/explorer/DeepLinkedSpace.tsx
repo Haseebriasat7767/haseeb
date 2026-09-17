@@ -2,9 +2,8 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
-import type { ExplorerTab } from './ResidenceExplorer';
-
-const TABS: readonly ExplorerTab[] = ['overview', 'explore', 'plan', 'gallery'];
+import { parseExplorerTab } from './explorer-tabs';
+import type { ExplorerTab } from './explorer-tabs';
 
 /**
  * Applies `?space=<id>` and `?tab=<id>` to the explorer.
@@ -38,7 +37,8 @@ export function DeepLinkedSpace({
   }, [space, onSpace]);
 
   useEffect(() => {
-    if (tab && (TABS as readonly string[]).includes(tab)) onTab(tab as ExplorerTab);
+    const resolved = parseExplorerTab(tab);
+    if (resolved) onTab(resolved);
   }, [tab, onTab]);
 
   return null;

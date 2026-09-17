@@ -401,9 +401,20 @@ export function TowerWalkthrough() {
         <nav
           aria-label="Walkthrough steps"
           hidden={walking || showInventory}
-          className="absolute top-1/2 right-6 z-10 hidden -translate-y-1/2 lg:block"
+          // Banded, not centred on the viewport. Eighteen steps at `gap-4`
+          // stand about 560px tall, so `top-1/2 -translate-y-1/2` put the
+          // top of the list above 204px — where the "Walk the building" and
+          // "Inventory" buttons sit in the same right-hand column — on any
+          // viewport shorter than ~970px, which is most laptops. Pinning the
+          // band below those buttons makes the collision impossible at any
+          // height rather than unlikely at most of them; it still centres,
+          // just within what is left.
+          className="absolute top-56 right-6 bottom-24 z-10 hidden flex-col justify-center overflow-y-auto lg:flex"
         >
-          <ol className="flex flex-col items-end gap-4">
+          {/* And the gap closes up when the band is short, so the list fits
+              without scrolling on a 768px screen instead of centring a
+              scrollbar. Above 900px nothing changes. */}
+          <ol className="flex flex-col items-end gap-2 [@media(min-height:900px)]:gap-4">
             {TOWER_VIEWS.map((entry, index) => {
               const current = index === step;
               return (

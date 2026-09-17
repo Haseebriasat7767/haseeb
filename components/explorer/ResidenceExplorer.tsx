@@ -26,6 +26,7 @@ import { PROPERTY } from '@/lib/constants/site';
 import { PALETTE } from '@/lib/experience/palette';
 import { cn } from '@/lib/utils/cn';
 import { GuidedTour, type TourPhase } from './GuidedTour';
+import type { ExplorerTab } from './explorer-tabs';
 import { GUIDED_TOUR_LENGTH, resolveTourStep } from '@/lib/experience/guided-tour';
 import { rememberLeadContext } from '@/lib/contact/lead-context';
 import {
@@ -50,7 +51,7 @@ import { WalkPad } from '@/components/tower/WalkPad';
 
 const DEFAULT_SPACE = SPACES[0]!;
 
-export type ExplorerTab = 'overview' | 'explore' | 'interior' | 'plan' | 'gallery';
+export type { ExplorerTab } from './explorer-tabs';
 
 /**
  * The residence, in one page — the same pattern `/tower` already set: a
