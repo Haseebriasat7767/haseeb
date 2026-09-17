@@ -197,7 +197,30 @@ LEAF_MATS = {
     'steps': MATS['shell.stairs'],
     'walls': FORM_MATS['plaster'],
     'soft': FORM_MATS['upholstery'],
+    # Curtain-wall joint blades — thin dark lines expressing the panel
+    # grid, not spandrel panels despite the group's name.
+    'spandrels': FORM_MATS['darkMetal'],
+    'seatWalls': MATS['shell.terrace'],
+    'portal': FRAME_MAT,
+    'soffits': MATS['int.ceilings'],
+    'skylight': MATS['shell.openings'],
+    'water': material('deck-water', (0.20, 0.40, 0.44, 1), 0.02, 0.0, 0.92),
+    'terrace': MATS['shell.terrace'],
+    # A sheer is mostly hole. Fallen through to the opaque grey default it
+    # became a solid wall across the apartment's glazing — the whole reason
+    # the tower's framings exist.
+    'sheer': FORM_MATS['sheer'],
+    'stone': FORM_MATS['stone'],
 }
+
+# Geometry that lands on DEFAULT is a bug, not a default.
+#
+# Every group the generator emits is named for its material, so an unmapped
+# one means the table has drifted from the generator — and the symptom is
+# never obviously wrong. It is a curtain that reads as a wall, or a pane of
+# glass that seals a room, in one direction of one room, discovered after
+# hours of rendering. Counted and reported rather than silently painted.
+DEFAULTED = {}
 
 
 def material_for(group, key):
@@ -253,6 +276,8 @@ for group, items in data['groups'].items():
         if box.get('rotationY'):
             obj.rotation_euler = (0, 0, -box['rotationY'])
         mat = material_for(group, box['key'])
+        if mat is DEFAULT:
+            DEFAULTED[group] = DEFAULTED.get(group, 0) + 1
         obj.data.materials.append(mat)
         buckets.setdefault(mat.name, []).append(obj)
         total += 1
@@ -277,7 +302,11 @@ def place(obj, form):
     px, py, pz = form['position']
     obj.location = (px, -pz, py)
     obj.rotation_euler = (float(form.get('tiltX', 0) or 0), 0, -float(form.get('rotationY', 0) or 0))
-    obj.data.materials.append(FORM_MATS.get(form.get('material'), DEFAULT))
+    mat = FORM_MATS.get(form.get('material'))
+    if mat is None:
+        mat = DEFAULT
+        DEFAULTED[f"form:{form.get('material')}"] = DEFAULTED.get(f"form:{form.get('material')}", 0) + 1
+    obj.data.materials.append(mat)
 
 
 def build_soft(form):
@@ -363,6 +392,15 @@ for form in data.get('forms', []):
     if builder and builder(form) is not None:
         made += 1
 print(f'built {made} forms of {len(data.get("forms", []))}')
+
+if DEFAULTED:
+    detail = ', '.join(f'{name} x{count}' for name, count in sorted(DEFAULTED.items()))
+    raise SystemExit(
+        f'ERROR: {sum(DEFAULTED.values())} pieces of geometry have no material '
+        f'mapping and would render as flat grey: {detail}.\n'
+        'Add them to LEAF_MATS or FORM_MATS. A silent grey fallback is how a '
+        'sheer curtain becomes a solid wall across a glazed facade.'
+    )
 
 # ── Daylight ──────────────────────────────────────────────────────────────
 # Golden hour, matching the web scene's presentation default: a low sun and
@@ -461,6 +499,39 @@ def aim(obj, direction, up):
         (0, 0, 0, 1),
     ))
 
+
+if os.environ.get('PANO_PROBE') == '1':
+    # What is actually in front of the camera on a given face.
+    #
+    # Diagnosing this from renders is slow and ambiguous — a wall, a slab
+    # and a ceiling all read as "a pale plane". A raycast names the object.
+    face_id = os.environ.get('PANO_PROBE_FACE', 'pz')
+    entry = next(f for f in CUBE_FACES if f[0] == face_id)
+    origin = to_blender(space['position'])
+    forward = to_blender(entry[1]).normalized()
+    upward = to_blender(entry[2]).normalized()
+    right = upward.cross(-forward).normalized()
+
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    print(f'probing face {face_id} from {tuple(round(v, 2) for v in origin)}')
+    for label, offset in (
+        ('centre', (0, 0)), ('left', (-0.7, 0)), ('right', (0.7, 0)),
+        ('up', (0, 0.7)), ('down', (0, -0.7)),
+        ('lower-left', (-0.7, -0.7)), ('upper-left', (-0.7, 0.7)),
+    ):
+        # tan(45) == 1, so the offsets are fractions of the half-frame.
+        ray = (forward + right * offset[0] + upward * offset[1]).normalized()
+        hit, loc, _, index, obj, _ = scn.ray_cast(depsgraph, origin, ray)
+        if not hit:
+            print(f'  {label:12s} (nothing — open sky)')
+            continue
+        # Objects are merged per material, so the name is meaningless; the
+        # polygon's material is what identifies the geometry.
+        mesh = obj.evaluated_get(depsgraph).data
+        slot = mesh.polygons[index].material_index if 0 <= index < len(mesh.polygons) else 0
+        mat = mesh.materials[slot].name if slot < len(mesh.materials) and mesh.materials[slot] else '?'
+        print(f'  {label:12s} {mat:24s} at {(loc - origin).length:6.2f} m')
+    raise SystemExit(0)
 
 if CUBE:
     import pathlib
