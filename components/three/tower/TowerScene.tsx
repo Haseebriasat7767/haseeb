@@ -234,7 +234,7 @@ export function TowerScene({
           name="ground"
           rotation={[-Math.PI / 2, 0, 0]}
           position={[layout.plan.podiumX[0] - 900, -0.08, 0]}
-          material={materials.grass}
+          material={materials.park}
           receiveShadow
         >
           <planeGeometry args={[3000, 3000]} />

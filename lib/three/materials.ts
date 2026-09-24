@@ -1794,6 +1794,62 @@ function createMaterials() {
       'grass',
     ),
     /**
+     * The tower's park — the same mown lawn the residence stands on, at the
+     * scale the tower needs.
+     *
+     * It cannot simply be `grass`: that material is shared with the villa's
+     * instanced blades, which are individual tufts a few centimetres across.
+     * Mow bands on a blade are meaningless and aerial perspective on one is
+     * shader cost for a surface that is never more than forty metres away.
+     *
+     * What the tower's ground was missing, against the residence's:
+     *
+     *  - **Tonal break-up.** `grass` carries `colorVariation: 0.05`, tuned
+     *    for tufts read at arm's length. Stretched across a 3000 m plane
+     *    that is one flat green — billiard felt, which is the note the
+     *    residence's own terrain comment was written about.
+     *  - **The mow.** The single cheapest cue that a lawn is maintained
+     *    rather than painted, and the residence has had it for a while.
+     *  - **Aerial perspective.** This matters most of all here and was
+     *    missing only here. The tower's ground runs to the horizon and its
+     *    cameras stand a hundred and thirty metres back, so it relied on
+     *    scene fog — one colour in every direction, against a sky that at
+     *    golden hour is warm on the sun's side and cool opposite. That is
+     *    exactly the seam `withAerialPerspective` exists to remove, and the
+     *    tower's park is the largest horizon in the project.
+     *
+     * The range tracks the tower's own air rather than the villa's: `Scene`
+     * multiplies fog by 3.2 and 4.4 for this building, which puts golden
+     * hour at roughly 340 m to 1400 m. Haze is complete at 1200 m, well
+     * inside the plane's reach in the direction the land runs; the other
+     * side is sea, and `Shoreline` owns that horizon.
+     */
+    park: withAerialPerspective(
+      withMownBands(
+        withMaps(
+          withVariation(standard({ color: '#8a9a63', roughness: 0.92, metalness: 0 }), {
+            scale: 0.05,
+            colorVariation: 0.36,
+            roughnessVariation: 0.1,
+            seed: 211,
+            // Gentler than the residence's 0.1: this plane is seen at a
+            // grazing angle over most of its area, and a normal map at a
+            // one-degree incidence is a field of aliasing.
+            normalStrength: 0.08,
+            normalScale: 0.4,
+          }),
+          'grass',
+          0.5,
+        ),
+        // Wider bands than the residence's 3.6 m. The mow reads from a
+        // hundred and thirty metres back rather than twenty, and bands
+        // sized for the closer view collapse into a single tone at this one.
+        { width: 6.5, strength: 0.05, angle: 0.28 },
+      ),
+      340,
+      1200,
+    ),
+    /**
      * The mown lawn's blades. Deliberately *not* the ornamental `grass`
      * above: that one is a warm dry olive chosen to contrast with planting,
      * and instancing it across the whole property read as scattered yellow
