@@ -4,6 +4,7 @@ import { DirectChannels } from '@/components/contact/DirectChannels';
 import { EnquiryForm } from '@/components/contact/EnquiryForm';
 import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Breadcrumbs } from '@/components/seo/StructuredData';
 
 const CANONICAL_PATH = '/contact';
 
@@ -31,6 +32,7 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <>
+      <Breadcrumbs trail={[{ name: 'Contact', path: '/contact' }]} />
       <PageHeader
         eyebrow="Contact"
         title="Arrange an introduction"

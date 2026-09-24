@@ -63,4 +63,38 @@ export function StructuredData({ breadcrumbs }: { breadcrumbs?: Breadcrumb[] }) 
   );
 }
 
+/**
+ * A page's position in the site, on its own.
+ *
+ * `StructuredData` has accepted `breadcrumbs` since it was written, and
+ * nothing ever passed any: it is mounted once, in the root layout, which is
+ * the one place in the App Router that cannot know which route it is
+ * wrapping. So the branch was unreachable and every page below the home page
+ * published no position at all.
+ *
+ * This emits the breadcrumb graph by itself so a page can add its trail
+ * without also restating the `WebSite` and `Brand` nodes the layout already
+ * publishes. Same `@context`, separate script tag — consumers merge the
+ * graphs, and a node repeated under one `@id` is the thing worth avoiding.
+ */
+export function Breadcrumbs({ trail }: { trail: Breadcrumb[] }) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [{ name: 'Home', path: '/' }, ...trail].map((crumb, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: crumb.name,
+            item: `${SITE.url}${crumb.path}`,
+          })),
+        }),
+      }}
+    />
+  );
+}
+
 export default StructuredData;

@@ -109,6 +109,32 @@
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    /* Inter v4 carries an `opsz` axis; now that the variable face is loaded
+       rather than three static cuts, this actually does something — caption
+       and eyebrow sizes get the more open, taller-x-height drawing, and the
+       display sizes get the tighter one. */
+    font-optical-sizing: auto;
+  }
+
+  /*
+   * Running text gets `pretty`, headings get `balance`.
+   *
+   * They are not the same setting and the site only had the second. `balance`
+   * evens the lines of a short block and is what a two-line headline wants;
+   * on a paragraph it is both expensive and capped at a handful of lines.
+   * `pretty` leaves the line breaking alone except at the end, where it
+   * prevents the last line being a single word — a widow, which this site
+   * produces regularly because its measures are set in `ch` and its copy is
+   * written to run close to them.
+   *
+   * Unsupported browsers ignore the declaration and break as they do now.
+   */
+  p,
+  li,
+  dd,
+  figcaption,
+  blockquote {
+    text-wrap: pretty;
   }
 
   h1,

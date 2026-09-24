@@ -11,16 +11,31 @@ import { StructuredData } from '@/components/seo/StructuredData';
 import { SITE } from '@/lib/constants/site';
 import './globals.css';
 
+/**
+ * Both families as their variable fonts — no `weight` array.
+ *
+ * Naming weights pins `next/font` to static instances, one file each: six
+ * cuts across the two families. It also means a weight nobody listed simply
+ * does not exist, and `font-synthesis-weight: none` in `globals.css`
+ * forbids the browser from faking it. `font-semibold` on body copy was
+ * therefore rendering at 500 — the nearest weight Inter had — silently, in
+ * the one place the site asks for a semibold sans.
+ *
+ * The variable faces cover 100–900 and 300–700 respectively, so every
+ * weight the site uses now resolves to the weight it names, and the axis is
+ * continuous if a future one lands between. Inter v4 also carries an `opsz`
+ * axis, which `font-optical-sizing: auto` picks up: the same family is drawn
+ * with slightly more open spacing and a taller x-height at caption sizes
+ * than at display sizes, which is what the eyebrow text is set at.
+ */
 const display = Space_Grotesk({
   subsets: ['latin'],
-  weight: ['500', '600', '700'],
   display: 'swap',
   variable: '--font-space-grotesk',
 });
 
 const sans = Inter({
   subsets: ['latin'],
-  weight: ['300', '400', '500'],
   display: 'swap',
   variable: '--font-inter',
 });

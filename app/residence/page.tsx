@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ResidenceExplorer } from '@/components/explorer/ResidenceExplorer';
 import { parseExplorerTab } from '@/components/explorer/explorer-tabs';
+import { Breadcrumbs } from '@/components/seo/StructuredData';
 
 const CANONICAL_PATH = '/residence';
 
@@ -50,5 +51,10 @@ export default async function ResidencePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { tab } = await searchParams;
-  return <ResidenceExplorer initialTab={parseExplorerTab(tab) ?? 'overview'} />;
+  return (
+    <>
+      <Breadcrumbs trail={[{ name: 'Residence', path: '/residence' }]} />
+      <ResidenceExplorer initialTab={parseExplorerTab(tab) ?? 'overview'} />
+    </>
+  );
 }

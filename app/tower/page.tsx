@@ -8,6 +8,7 @@ import { TowerWalkthrough } from '@/components/tower/TowerWalkthrough';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { Breadcrumbs } from '@/components/seo/StructuredData';
 
 const CANONICAL_PATH = '/tower';
 
@@ -36,6 +37,7 @@ export const metadata: Metadata = {
 export default function TowerPage() {
   return (
     <>
+      <Breadcrumbs trail={[{ name: 'Tower', path: '/tower' }]} />
       {/* The view first and full bleed, as the explorer does: the building
           is the argument, and a heading above it would push it off the
           first screen. */}

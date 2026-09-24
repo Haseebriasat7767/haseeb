@@ -54,6 +54,32 @@ export type PostGrade = ColorGrade & {
   bloomThreshold: number;
   /** Ambient-occlusion weight for the hour. */
   aoIntensity: number;
+  /**
+   * Film grain, as a fraction of middle grey at its strongest.
+   *
+   * The last thing a finish adds and the first thing whose absence reads as
+   * "rendered". Two jobs: a digital gradient across a large smooth area —
+   * this scene is mostly sky, stone and water — quantises into visible
+   * bands at 8 bits, and grain dithers them away; and a perfectly clean
+   * image has no capture in it, so the eye files it as synthetic before it
+   * has looked at anything.
+   *
+   * Higher at the dark hours on purpose. A photographer opens up and pushes
+   * ISO as the light goes, so grain and low light arrive together; matching
+   * that is free realism, and the dark hours are also where banding in a
+   * near-black sky is worst.
+   */
+  grain: number;
+  /**
+   * Lateral chromatic aberration at the frame edge, in pixels.
+   *
+   * A real lens does not focus every wavelength to the same point, and the
+   * error grows with distance from the axis — so this is applied radially
+   * and squared, zero in the centre. Kept under about a pixel: at the point
+   * it is noticeable as colour fringing it has stopped reading as a lens and
+   * started reading as an effect.
+   */
+  aberration: number;
 };
 
 /**
@@ -75,6 +101,8 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
     bloomStrength: 0.09,
     bloomThreshold: 1.9,
     aoIntensity: 0.85,
+    grain: 0.016,
+    aberration: 0.8,
   },
   /** Clean daylight. The most neutral of the five, by intent: midday is
    *  when a building should be judged on its own materials. */
@@ -96,6 +124,8 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
     bloomStrength: 0.07,
     bloomThreshold: 2.1,
     aoIntensity: 0.9,
+    grain: 0.013,
+    aberration: 0.7,
   },
   /**
    * Warm key, cool shadows. The separation is carried by the offset
@@ -124,6 +154,8 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
     bloomStrength: 0.16,
     bloomThreshold: 1.55,
     aoIntensity: 1.0,
+    grain: 0.022,
+    aberration: 1.1,
   },
   /** Cool ambient against warm practicals — the widest colour separation
    *  of the five, and the hour that most rewards interior/exterior contrast. */
@@ -143,6 +175,8 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
     bloomStrength: 0.34,
     bloomThreshold: 1.15,
     aoIntensity: 0.95,
+    grain: 0.032,
+    aberration: 1.3,
   },
   /**
    * Deep but readable. The offset is the important value here: without it
@@ -162,6 +196,8 @@ export const TIME_OF_DAY_GRADE: Record<TimeOfDay, PostGrade> = {
     bloomStrength: 0.46,
     bloomThreshold: 1.0,
     aoIntensity: 0.8,
+    grain: 0.042,
+    aberration: 1.4,
   },
 };
 

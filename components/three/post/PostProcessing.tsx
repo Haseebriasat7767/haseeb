@@ -163,6 +163,8 @@ export function PostProcessing({ profile, grade }: PostProcessingProps) {
     uniforms.uSaturation!.value = grade.saturation;
     uniforms.uContrast!.value = grade.contrast;
     uniforms.uVignette!.value = grade.vignette;
+    uniforms.uGrain!.value = grade.grain;
+    uniforms.uAberration!.value = grade.aberration;
     uniforms.uResolution!.value.set(size.width, size.height);
 
     if (bloom) {

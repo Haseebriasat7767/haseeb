@@ -7,6 +7,7 @@ import { Container } from '@/components/ui/Container';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { CLIENT } from '@/lib/constants/client';
+import { Breadcrumbs } from '@/components/seo/StructuredData';
 
 const CANONICAL_PATH = '/for-agencies';
 
@@ -152,6 +153,7 @@ const AFTER = [
 export default function ForAgenciesPage() {
   return (
     <>
+      <Breadcrumbs trail={[{ name: 'For Agencies', path: '/for-agencies' }]} />
       <PageHeader
         eyebrow="For agencies & developers"
         title="Sell the property before it exists."
