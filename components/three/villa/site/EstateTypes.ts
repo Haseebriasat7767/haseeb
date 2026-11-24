@@ -1,4 +1,5 @@
 import type { Form } from '../furniture/FormTypes';
+import type { ModelPlacement } from '../../models/InstancedModels';
 import type { BoxSpec, ColumnSpec, DetailTier, Range } from '../VillaTypes';
 
 /** A rectangle of ground, in plan. Used to keep the lawn off hard paving. */
@@ -57,6 +58,10 @@ export type EstateLayout = {
    * prisms, and furniture is not.
    */
   forms: Form[];
+  /** Phase 5: Blender-built pieces placed as models — the
+      terrace pergola and deck lanterns. Rendered instanced by
+      EstateExterior, like the tower's site props. */
+  models: ModelPlacement[];
   /** Large-format paving of the drive and the court. */
   paving: BoxSpec[];
   /** The upstand that stops the paving reading as a decal on the grass. */
