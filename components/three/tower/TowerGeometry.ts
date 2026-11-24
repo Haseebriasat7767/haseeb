@@ -90,7 +90,7 @@ export const TOWER_CONFIG: TowerConfig = {
   finDepth: 0.5,
 
   coreWidth: 5,
-  // Twelfth residential floor: high enough that the view is the point,
+  // Eleventh residential floor: high enough that the view is the point,
   // low enough that the beach below still reads as a beach.
   furnishedLevel: 11,
   // The banded towers on this coast are rounded rectangles in plan, and

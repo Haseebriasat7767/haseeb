@@ -12,7 +12,7 @@ const INTERIOR_EXPOSURE = 1.05;
 /**
  * The walkthrough, in the order a visitor would actually move through the
  * building: off the plaza, in under the colonnade, up through the retail
- * atrium, out onto the amenity deck, into an apartment on the twelfth
+ * atrium, out onto the amenity deck, into an apartment on the eleventh
  * residential floor, onto its balcony, and then two framings that step back
  * and look at the whole thing from the water.
  *
@@ -132,7 +132,7 @@ export const TOWER_VIEWS: readonly CameraView[] = [
   {
     id: 'lobby',
     label: 'Lift lobby',
-    // Inside the service blade on the twelfth residential floor, facing the
+    // Inside the service blade on the eleventh residential floor, facing the
     // lifts. The floor you arrive at, and until now the one part of the
     // journey the building did not have.
     position: [-27.3, 64.1, 2.6],
@@ -231,12 +231,12 @@ export const TOWER_VIEW_NOTES: Record<string, string> = {
   gym: 'The gym on the amenity floor at the base of the tower, its treadmills turned to the ocean glazing and a mirrored wall behind them.',
   spa: 'The spa on the same floor: three treatment bays off a tiled corridor, with a plunge pool and a cedar sauna at the far end against the core.',
   lobby:
-    'The lift lobby on the twelfth residential floor — two lifts, a glazed screen to the escape stair, and the apartment door. One arrangement, repeated on every level, because that is what a core is.',
+    'The lift lobby on the eleventh residential floor — two lifts, a glazed screen to the escape stair, and the apartment door. One arrangement, repeated on every level, because that is what a core is.',
   gallery:
     'Third retail level. Frameless glass at the balustrade with a bronze capping rail — the same detail the apartment balconies use, because it is the same condition.',
   deck: 'The amenity deck occupies the whole ocean half of the podium roof, twenty-five metres up, with the pool set back from the edge so a swimmer faces the water.',
   residence:
-    'Twelfth floor. A millwork wall of open shelving either side of a fluted media panel, a dropped soffit with a cove above the seating, and the ocean glazing running away to the right.',
+    'Eleventh floor. A millwork wall of open shelving either side of a fluted media panel, a dropped soffit with a cove above the seating, and the ocean glazing running away to the right.',
   bedroom:
     'The master, behind the lounge. A fluted headboard wall, and the northern glazing running down the right-hand side.',
   kitchen:
