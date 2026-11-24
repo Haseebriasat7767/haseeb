@@ -2,7 +2,7 @@
 
 import { useGLTF } from '@react-three/drei';
 import { useMemo } from 'react';
-import type { Group, Mesh, Object3D } from 'three';
+import { Color, MeshStandardMaterial, type Group, type Material, type Mesh, type Object3D } from 'three';
 
 /**
  * The loader for the Blender-authored furniture in `public/assets/models`.
@@ -43,6 +43,7 @@ export type ModelName =
   | 'lounge-chair'
   | 'chair-ph-arm'
   | 'chair-ph-dining'
+  | 'chair-ph-painted'
   | 'ottoman'
   | 'low-table'
   | 'table-ph-coffee'
@@ -109,6 +110,7 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'lounge-chair',
   'chair-ph-arm',
   'chair-ph-dining',
+  'chair-ph-painted',
   'ottoman',
   'low-table',
   'table-ph-coffee',
@@ -179,6 +181,51 @@ export function modelUrl(name: ModelName): string {
 }
 
 /**
+ * Concept-palette recolour for Poly Haven pieces whose authored fabric is
+ * dark.
+ *
+ * Measured, not assumed (albedo means, 2026-11-24): sofa_02 is charcoal
+ * (lum 21), the modern armchair's pillow is near-black (lum 18), the Gothic
+ * bed is mid-brown (lum 75). The approved concept images want warm-white
+ * upholstery with sage accents — a dark sofa would read as a different
+ * product. The override clones the source material, drops its dark colour
+ * map, keeps the normal/roughness maps (fabric relief survives), and tints
+ * it warm white. Geometry stays the real Poly Haven piece; only the colour
+ * is corrected to the V1VID reference. Fail-safe: a model or material name
+ * with no rule returns the source unchanged.
+ */
+export const MODEL_MATERIAL_OVERRIDES: Partial<
+  Record<ModelName, readonly { match?: string; color: number }[]>
+> = {
+  // Clean modern 2-seater; single dark material -> warm white.
+  'sofa-ph-02': [{ color: 0xf2ede3 }],
+  // Pillow (upholstered body) only; the wooden legs keep their own material.
+  'chair-ph-arm': [{ match: 'modern_arm_chair_01_pillow', color: 0xf2ede3 }],
+  // Single-material bed (frame + bedding in one texture) -> warm white.
+  // The tall-post silhouette is still Gothic; a clean modern bed is a
+  // follow-up fetch, not something a recolour can fix.
+  'bed-ph-gothic': [{ color: 0xf2ede3 }],
+};
+
+const overrideCache = new Map<string, Material>();
+
+export function overriddenMaterial(model: ModelName, source: Material): Material {
+  const rules = MODEL_MATERIAL_OVERRIDES[model];
+  if (!rules) return source;
+  const name = (source as { name?: string }).name ?? '';
+  const rule = rules.find((r) => r.match === undefined || r.match === name);
+  if (!rule) return source;
+  const key = `${model}:${name}`;
+  const hit = overrideCache.get(key);
+  if (hit) return hit;
+  const clone = source.clone() as MeshStandardMaterial;
+  clone.map = null;
+  clone.color.set(rule.color);
+  overrideCache.set(key, clone);
+  return clone;
+}
+
+/**
  * Attaches the Draco decoder to the shared GLTF loader.
  *
  * `useGLTF` takes an extension callback and runs it against the loader it
@@ -234,9 +281,16 @@ export function Model({
       if (!mesh.isMesh) return;
       mesh.castShadow = castShadow;
       mesh.receiveShadow = receiveShadow;
+      // Concept-palette recolour (see MODEL_MATERIAL_OVERRIDES): dark
+      // authored fabric becomes warm white. A mesh may carry several
+      // materials; only the matched ones are replaced.
+      const mat = mesh.material as Material | Material[];
+      mesh.material = Array.isArray(mat)
+        ? mat.map((m) => overriddenMaterial(name, m))
+        : overriddenMaterial(name, mat);
     });
     return copy;
-  }, [scene, castShadow, receiveShadow]);
+  }, [scene, castShadow, receiveShadow, name]);
 
   return (
     <primitive object={instance} position={position} rotation={[0, rotationY, 0]} scale={scale} />

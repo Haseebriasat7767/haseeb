@@ -14,7 +14,7 @@ import {
   type BufferGeometry,
   type Material,
 } from 'three';
-import { DRACO_PATH, modelUrl, type ModelName } from './ModelLibrary';
+import { DRACO_PATH, modelUrl, overriddenMaterial, type ModelName } from './ModelLibrary';
 
 /**
  * One placement of a piece, positioned by its floor contact point.
@@ -143,13 +143,18 @@ export function InstancedModels({
 
       // Collected first: `traverse` order is the model's own, and the
       // instanced meshes are built per primitive found in it.
-      const parts: { geometry: BufferGeometry; material: Material; matrix: Matrix4 }[] = [];
+      const parts: { geometry: BufferGeometry; material: Material | Material[]; matrix: Matrix4 }[] = [];
       scene.traverse((child: Object3D) => {
         const mesh = child as Mesh;
         if (!mesh.isMesh) return;
+        // Concept-palette recolour, as in `Model` above: the tower's
+        // instanced pieces get the same override as the residence's clones.
+        const srcMaterial = mesh.material as Material | Material[];
         parts.push({
           geometry: mesh.geometry,
-          material: mesh.material as Material,
+          material: Array.isArray(srcMaterial)
+            ? srcMaterial.map((m) => overriddenMaterial(batch.model, m))
+            : overriddenMaterial(batch.model, srcMaterial),
           matrix: mesh.matrixWorld.clone(),
         });
       });
