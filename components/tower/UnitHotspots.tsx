@@ -3,7 +3,7 @@
 import { Html } from '@react-three/drei';
 import { useMemo } from 'react';
 import { towerInventory, type Unit } from '@/lib/property/tower-inventory';
-import { createTowerLayout } from './TowerGeometry';
+import { createTowerLayout } from '../three/tower/TowerGeometry';
 import { SHOW_UNIT_FLOOR } from '@/lib/three/tower-units';
 import { cn } from '@/lib/utils/cn';
 

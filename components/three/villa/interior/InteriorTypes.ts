@@ -3,7 +3,7 @@ import type { Form } from '../furniture/FormTypes';
 import type { BoxSpec, DetailTier } from '../VillaTypes';
 import type { Parts } from './Furniture';
 import type { Room } from './InteriorPlan';
-import type { ModelName } from '../models/ModelLibrary';
+import type { ModelName } from '../../models/ModelLibrary';
 
 /**
  * A practical interior light, positioned by the architecture that implies

@@ -8,7 +8,7 @@ import { createFoliageCards } from '../landscape/FoliageGeometry';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../VillaPrimitives';
 import type { DetailTier } from '../VillaTypes';
 import type { InteriorLayout } from './InteriorTypes';
-import { Model } from '../models/ModelLibrary';
+import { Model } from '../../models/ModelLibrary';
 
 /** Shared empty list, so hiding a group allocates nothing. */
 const EMPTY: never[] = [];

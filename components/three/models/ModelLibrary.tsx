@@ -2,7 +2,7 @@
 
 import { useGLTF } from '@react-three/drei';
 import { useMemo } from 'react';
-import { Color, MeshStandardMaterial, type Group, type Material, type Mesh, type Object3D } from 'three';
+import { MeshStandardMaterial, type Group, type Material, type Mesh, type Object3D } from 'three';
 
 /**
  * The loader for the Blender-authored furniture in `public/assets/models`.
