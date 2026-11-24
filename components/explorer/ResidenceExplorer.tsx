@@ -166,9 +166,7 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
               label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
               hotspots={{ activeId: openId, onSelect: select }}
               overlay={
-                walking ? undefined : (
-                  <RoomDoorHotspots framedId={framedId} onSelect={select} />
-                )
+                walking ? undefined : <RoomDoorHotspots framedId={framedId} onSelect={select} />
               }
             >
               {/* Ground for the chrome. Bottom-weighted and shallow: the

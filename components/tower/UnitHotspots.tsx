@@ -50,7 +50,7 @@ export function UnitHotspots({ onSelectUnit }: UnitHotspotsProps) {
               aria-label={
                 show ? `Unit ${unit.id} — enter the show unit` : `Unit ${unit.id} — view this floor`
               }
-              className="group ease-luxe pointer-events-auto flex items-center gap-0 transition-opacity duration-500 opacity-80 hover:opacity-100 -m-2 p-2"
+              className="group ease-luxe pointer-events-auto -m-2 flex items-center gap-0 p-2 opacity-80 transition-opacity duration-500 hover:opacity-100"
             >
               <span
                 aria-hidden="true"

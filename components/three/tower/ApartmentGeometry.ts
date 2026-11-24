@@ -320,13 +320,28 @@ export function createApartment(
   // ── Partitions ────────────────────────────────────────────────────────
   const loungeDoorZ: Range = [-8.6, -7.4];
   const doorHeadY = floorY + 2.1;
-  seg(k('wall-lounge-a'), [loungeBackX, loungeBackX + 0.26], [floorY, ceilingY], [z[0], loungeDoorZ[0]]);
+  seg(
+    k('wall-lounge-a'),
+    [loungeBackX, loungeBackX + 0.26],
+    [floorY, ceilingY],
+    [z[0], loungeDoorZ[0]],
+  );
   seg(k('wall-lounge-head'), [loungeBackX, loungeBackX + 0.26], [doorHeadY, ceilingY], loungeDoorZ);
-  seg(k('wall-lounge-b'), [loungeBackX, loungeBackX + 0.26], [floorY, ceilingY], [loungeDoorZ[1], z[1]]);
+  seg(
+    k('wall-lounge-b'),
+    [loungeBackX, loungeBackX + 0.26],
+    [floorY, ceilingY],
+    [loungeDoorZ[1], z[1]],
+  );
   const bedDoorX: Range = [-13.6, -12.4];
   seg(k('wall-bed-a'), [westX, bedDoorX[0]], [floorY, ceilingY], [bedroomZ[1], bedroomZ[1] + 0.24]);
   seg(k('wall-bed-head'), bedDoorX, [doorHeadY, ceilingY], [bedroomZ[1], bedroomZ[1] + 0.24]);
-  seg(k('wall-bed-b'), [bedDoorX[1], loungeBackX], [floorY, ceilingY], [bedroomZ[1], bedroomZ[1] + 0.24]);
+  seg(
+    k('wall-bed-b'),
+    [bedDoorX[1], loungeBackX],
+    [floorY, ceilingY],
+    [bedroomZ[1], bedroomZ[1] + 0.24],
+  );
 
   // ── Lounge: the millwork and media wall ───────────────────────────────
   // Reading left to right off the sofa: open shelving, then the fluted
@@ -723,7 +738,7 @@ export function createApartment(
       -12.6 + side * 0.86,
       z,
       floorY,
-      side < 0 ? (hero ? 'west' : 'east') : (hero ? 'east' : 'west'),
+      side < 0 ? (hero ? 'west' : 'east') : hero ? 'east' : 'west',
     );
   }
 
@@ -743,7 +758,12 @@ export function createApartment(
   const bathDoorZ: Range = [4.6, 5.8];
   seg(k('wall-kitchen-a'), [partX, partX + 0.2], [floorY, ceilingY], [-1.4, kitchenDoorZ[0]]);
   seg(k('wall-kitchen-head-a'), [partX, partX + 0.2], [doorHeadY, ceilingY], kitchenDoorZ);
-  seg(k('wall-kitchen-b'), [partX, partX + 0.2], [floorY, ceilingY], [kitchenDoorZ[1], bathDoorZ[0]]);
+  seg(
+    k('wall-kitchen-b'),
+    [partX, partX + 0.2],
+    [floorY, ceilingY],
+    [kitchenDoorZ[1], bathDoorZ[0]],
+  );
   seg(k('wall-kitchen-head-b'), [partX, partX + 0.2], [doorHeadY, ceilingY], bathDoorZ);
   seg(k('wall-kitchen-c'), [partX, partX + 0.2], [floorY, ceilingY], [bathDoorZ[1], serviceZ]);
   walls.push(box(k('wall-bath'), [partX + 0.2, -9.4], [floorY, ceilingY], [bathZ, bathZ + 0.2]));

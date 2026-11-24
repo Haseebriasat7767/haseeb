@@ -38,13 +38,13 @@ export function TowerRoomHotspots({ currentRoom, onSelectRoom }: TowerRoomHotspo
               type="button"
               onClick={() => onSelectRoom(otherId)}
               aria-label={`Go to the ${other.label.toLowerCase()}`}
-              className="group ease-luxe pointer-events-auto flex items-center gap-0 transition-opacity duration-500 opacity-80 hover:opacity-100 -m-2.5 p-2.5"
+              className="group ease-luxe pointer-events-auto -m-2.5 flex items-center gap-0 p-2.5 opacity-80 transition-opacity duration-500 hover:opacity-100"
             >
               <span
                 aria-hidden="true"
-                className="ease-luxe relative flex h-6 w-6 shrink-0 items-center justify-center rounded-pill border border-gold bg-obsidian/40 backdrop-blur-[2px] transition-all duration-500 group-hover:bg-gold/25"
+                className="ease-luxe rounded-pill border-gold bg-obsidian/40 group-hover:bg-gold/25 relative flex h-6 w-6 shrink-0 items-center justify-center border backdrop-blur-[2px] transition-all duration-500"
               >
-                <span className="rounded-pill ease-luxe block bg-gold h-1.5 w-1.5" />
+                <span className="rounded-pill ease-luxe bg-gold block h-1.5 w-1.5" />
               </span>
 
               <span

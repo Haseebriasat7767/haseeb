@@ -90,7 +90,11 @@ export function TowerWalkthrough() {
       ? requested - 1
       : -1;
   const initial =
-    byId >= 0 ? byId : byIndex >= 0 ? byIndex : TOWER_VIEWS.findIndex((entry) => entry.id === 'aerial');
+    byId >= 0
+      ? byId
+      : byIndex >= 0
+        ? byIndex
+        : TOWER_VIEWS.findIndex((entry) => entry.id === 'aerial');
 
   const [step, setStep] = useState(initial);
   const [hour, setHour] = useState<TimeOfDay>(OPENING_HOUR);
@@ -213,10 +217,7 @@ export function TowerWalkthrough() {
       }, 1400);
       return () => window.clearTimeout(done);
     }
-    const next = window.setTimeout(
-      () => setFly({ room: fly.room, at: fly.at + 1 }),
-      1400,
-    );
+    const next = window.setTimeout(() => setFly({ room: fly.room, at: fly.at + 1 }), 1400);
     return () => window.clearTimeout(next);
   }, [fly]);
 
@@ -244,11 +245,7 @@ export function TowerWalkthrough() {
     setStep(TOWER_ROOMS[target].stepIndex);
   }, [params]);
 
-  const captionLabel = fly
-    ? 'Entering the show unit'
-    : room
-      ? TOWER_ROOMS[room].label
-      : view.label;
+  const captionLabel = fly ? 'Entering the show unit' : room ? TOWER_ROOMS[room].label : view.label;
   const captionNote = fly
     ? 'Flying in from the aerial — the show unit, live, not a video.'
     : room
@@ -288,11 +285,11 @@ export function TowerWalkthrough() {
                   : `Three-dimensional view of the oceanfront tower — ${view.label}`
         }
         overlay={
-          walking || fly
-            ? undefined
-            : room
-              ? <TowerRoomHotspots currentRoom={room} onSelectRoom={selectRoom} />
-              : <UnitHotspots onSelectUnit={handleUnitSelect} />
+          walking || fly ? undefined : room ? (
+            <TowerRoomHotspots currentRoom={room} onSelectRoom={selectRoom} />
+          ) : (
+            <UnitHotspots onSelectUnit={handleUnitSelect} />
+          )
         }
       >
         {/* Readability ground for the caption and the controls. Dropped in
@@ -533,8 +530,8 @@ export function TowerWalkthrough() {
                     aria-current={room === id ? 'step' : undefined}
                     className={
                       room === id
-                        ? "text-eyebrow text-obsidian bg-alabaster hover:bg-bone focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
-                        : "text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                        ? 'text-eyebrow text-obsidian bg-alabaster hover:bg-bone focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2'
+                        : 'text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2'
                     }
                   >
                     {TOWER_ROOMS[id].label}

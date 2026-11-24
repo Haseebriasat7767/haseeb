@@ -461,20 +461,46 @@ export function createInteriorPlan(plan: VillaPlan, levels: VillaLevels) {
   // version of the tower's click-to-enter flow: a marker in either room
   // frames the other side.
   const doors: InteriorDoor[] = [
-    { from: 'foyer', to: 'stair', position: [(plan.entranceX[0] + plan.entranceX[1]) / 2, groundY + 1.5, plan.rearBarFrontZ] },
+    {
+      from: 'foyer',
+      to: 'stair',
+      position: [(plan.entranceX[0] + plan.entranceX[1]) / 2, groundY + 1.5, plan.rearBarFrontZ],
+    },
     { from: 'kitchen', to: 'stair', position: [plan.entranceX[1], groundY + 1.5, barMidZ - 1.1] },
     { from: 'kitchen', to: 'dining', position: [-2.0, groundY + 1.5, plan.rearBarFrontZ] },
-    { from: 'dining', to: 'living', position: [2.5, groundY + 1.5, (plan.rearBarFrontZ + plan.livingGlassZ) / 2] },
-    { from: 'living', to: 'terrace', position: [(2.5 + plan.eastWingWestX) / 2, groundY + 1.5, plan.livingGlassZ] },
+    {
+      from: 'dining',
+      to: 'living',
+      position: [2.5, groundY + 1.5, (plan.rearBarFrontZ + plan.livingGlassZ) / 2],
+    },
+    {
+      from: 'living',
+      to: 'terrace',
+      position: [(2.5 + plan.eastWingWestX) / 2, groundY + 1.5, plan.livingGlassZ],
+    },
     { from: 'study', to: 'foyer', position: [plan.westWingEastX, groundY + 1.5, 1] },
     { from: 'study', to: 'guest', position: [-12.9, groundY + 1.5, plan.rearBarFrontZ] },
     { from: 'master', to: 'dressing', position: [-10, upperFloorY + 1.5, masterBackZ] },
     { from: 'master', to: 'masterBath', position: [-13, upperFloorY + 1.5, masterBackZ] },
     { from: 'bedroom2', to: 'upperLounge', position: [-1, upperFloorY + 1.5, bedroomFrontZ] },
-    { from: 'upperLounge', to: 'library', position: [plan.cantileverAxisX[0], upperFloorY + 1.5, -0.4] },
+    {
+      from: 'upperLounge',
+      to: 'library',
+      position: [plan.cantileverAxisX[0], upperFloorY + 1.5, -0.4],
+    },
   ];
 
-  return { rooms, partitions, shellGaps, stairwellZ, barZ, barMidZ, hallFrontZ, bedroomFrontZ, doors };
+  return {
+    rooms,
+    partitions,
+    shellGaps,
+    stairwellZ,
+    barZ,
+    barMidZ,
+    hallFrontZ,
+    bedroomFrontZ,
+    doors,
+  };
 }
 
 export type InteriorPlanResult = ReturnType<typeof createInteriorPlan>;
