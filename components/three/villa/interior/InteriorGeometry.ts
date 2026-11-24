@@ -856,9 +856,12 @@ export function createInteriorLayout(
   const guestBedCz = mid(guest.z) - 0.6;
   // Blender-built platform bed, scaled to the old 1.60 x 2.05 slot.
   // Faces east (head at the west end): rotation pi/2 per the YAW table.
-  model('bed-platform-oak', [guest.x[0] + 1.15, guest.floorY, guestBedCz], Math.PI / 2, [
-    0.889, 1, 0.976,
-  ]);
+  model(
+    'bed-platform-oak',
+    [guest.x[0] + 1.15, guest.floorY, guestBedCz],
+    Math.PI / 2,
+    [0.889, 1, 0.976],
+  );
   createNightstand(
     parts,
     'guest-night-a',
