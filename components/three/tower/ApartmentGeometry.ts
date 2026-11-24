@@ -694,8 +694,9 @@ export function createApartment(
   // The bed model carries its own headboard and pillows.
   // Headboard to the west wall (the fluted panel and the nightstands
   // flank that end). The model's headboard is at -Z, so west is the
-  // 'west' key — Phase 1 had it backwards.
-  put(k('bed'), 'bed-ph-gothic', bedX + 1.9, bedCentreZ, floorY, 'west');
+  // 'west' key — Phase 1 had it backwards. Phase 3 swaps the Gothic
+  // bed for the Blender-built clean platform bed; same slot, same key.
+  put(k('bed'), 'bed-platform-oak', bedX + 1.9, bedCentreZ, floorY, 'west');
   put(k('night-a'), 'nightstand', bedX + 0.85, bedCentreZ - 1.5, floorY, 'east');
   put(k('night-b'), 'nightstand', bedX + 0.85, bedCentreZ + 1.5, floorY, 'east');
   if (dressed) {
