@@ -3,6 +3,7 @@ import type { Form } from '../furniture/FormTypes';
 import type { BoxSpec, DetailTier } from '../VillaTypes';
 import type { Parts } from './Furniture';
 import type { Room } from './InteriorPlan';
+import type { ModelName } from '../models/ModelLibrary';
 
 /**
  * A practical interior light, positioned by the architecture that implies
@@ -77,6 +78,18 @@ export type InteriorConfig = {
  * like the villa's own layout, are sorted by material so each becomes a
  * single merged mesh.
  */
+/**
+ * One real piece of furniture, positioned by its floor contact point.
+ * Rotations follow Pieces.ts's YAW table (Poly Haven models face +Z),
+ * not ApartmentGeometry's FACE table.
+ */
+export type InteriorModelPlacement = {
+  name: ModelName;
+  position: [number, number, number];
+  rotationY: number;
+  scale?: number | [number, number, number];
+};
+
 export type InteriorLayout = {
   rooms: readonly Room[];
   /**
@@ -101,6 +114,12 @@ export type InteriorLayout = {
   furniture: Parts;
   /** Every practical the plan implies, ranked; the hour decides how many run. */
   lights: InteriorLight[];
+  /**
+   * Real (glTF) furniture, placed by the room builders — the Phase 2
+   * replacements for the procedural builders. Rendered by
+   * InteriorFurnishings as <Model> placements.
+   */
+  models: InteriorModelPlacement[];
 };
 
 export type { DetailTier };
