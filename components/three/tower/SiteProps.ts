@@ -67,6 +67,9 @@ export function createSiteProps(plan: TowerPlan, parkBackX: number): PropPlaceme
   put('deck-cabana-a', 'cabana', 10.5, deckY, 14.5, 0);
   put('deck-cabana-b', 'cabana', 10.5, deckY, 4.0, 0);
   put('deck-osofa', 'outdoor-sofa', 8.5, deckY, -9.0, Math.PI / 2);
+  // Blender-built timber pergola + string lights over the deck
+  // sofa (long axis Z, matching the sofa's pi/2 yaw).
+  put('deck-pergola', 'pergola-lights', 8.5, deckY, -9.0, 0);
   put('deck-parasol-a', 'parasol', 17.5, deckY, -1.5, 0);
   put('deck-parasol-b', 'parasol', 17.5, deckY, 15.5, 0);
   put('deck-swimmer', 'person-seated', 18.6, deckY, 5.4, -Math.PI / 2);

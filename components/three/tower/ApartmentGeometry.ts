@@ -777,10 +777,18 @@ export function createApartment(
   // Kitchen: a run against the wall, an island parallel to it.
   put(k('kitchen-run'), 'kitchen-run', kitchenBackX + 0.33, inset(5.0, 1.6), floorY, 'east');
   put(k('kitchen-island'), 'kitchen-island', kitchenBackX + 3.3, inset(5.0, 1.6), floorY, 'east');
+  // Blender-built gooseneck tap on the island (top floorY+0.9).
+  put(k('tap-kitchen'), 'tap-kitchen', kitchenBackX + 3.3 - 0.35, inset(5.0, 1.6), floorY + 0.9, 'west');
 
   // Bathroom: vanity on the party wall, bath freestanding in the light.
   put(k('vanity'), 'vanity', partX + 0.46, inset(7.2, 1.2), floorY, 'east');
+  // Blender-built deck tap on the vanity (top floorY+0.9).
+  put(k('tap-bath-vanity'), 'tap-bath', partX + 0.46 - 0.18, inset(7.2, 1.2), floorY + 0.9, 'west');
   put(k('bath'), 'bath', -12.4, inset(7.6, 1.2), floorY, 'north');
+  // Blender-built deck tap on the bath rim (top floorY+0.56).
+  // Rim centre is -12.4+0.555 (the rim band is ~0.09 wide);
+  // +0.51 would leave half the deck plate over the void.
+  put(k('tap-bath-bath'), 'tap-bath', -12.4 + 0.555, inset(7.6, 1.2), floorY + 0.56, 'east');
   put(k('wc'), 'wc', -15.2, bathZ + 0.5, floorY, 'south');
   put(k('shower'), 'shower-screen', -10.6, inset(5.2, 1.2), floorY, 'north');
 
