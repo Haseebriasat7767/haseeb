@@ -32,6 +32,8 @@ type ExperienceViewportProps = {
   drift?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
+  /** Extra in-scene markers, rendered inside the canvas alongside the space hotspots. */
+  overlay?: ReactNode;
   /** Fires once the scene is mounted and the loading state has cleared. */
   onReady?: () => void;
   /** Path-traces this framing instead of rasterizing it. Stills only. */
@@ -72,6 +74,7 @@ export function ExperienceViewport({
   parallax,
   drift,
   hotspots,
+  overlay,
   onReady,
   cinematic,
   cinematicMaxSamples,
@@ -128,6 +131,7 @@ export function ExperienceViewport({
             parallax={parallax}
             drift={drift}
             hotspots={hotspots}
+            overlay={overlay}
             cinematic={cinematic}
             cinematicMaxSamples={cinematicMaxSamples}
             onCinematicProgress={onCinematicProgress}

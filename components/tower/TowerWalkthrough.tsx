@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
 import { HourDial } from '@/components/experience/HourDial';
 import { useWebGLSupport } from '@/hooks/useWebGLSupport';
@@ -17,6 +17,16 @@ import { cn } from '@/lib/utils/cn';
 import type { CameraView, TimeOfDay } from '@/types';
 import { InventoryPanel } from './InventoryPanel';
 import { unitFloorView, type Unit } from '@/lib/property/tower-inventory';
+import {
+  ROOM_ORDER,
+  SHOW_UNIT_FLOOR,
+  SHOW_UNIT_FLYTHROUGH,
+  SHOW_UNIT_ID,
+  TOWER_ROOMS,
+  type TowerRoomId,
+} from '@/lib/three/tower-units';
+import { TowerRoomHotspots } from './TowerRoomHotspots';
+import { UnitHotspots } from './UnitHotspots';
 
 /**
  * Golden hour, not the site-wide default's reasoning but the same
@@ -79,7 +89,8 @@ export function TowerWalkthrough() {
     Number.isFinite(requested) && requested >= 1 && requested <= TOWER_VIEWS.length
       ? requested - 1
       : -1;
-  const initial = byId >= 0 ? byId : byIndex >= 0 ? byIndex : 0;
+  const initial =
+    byId >= 0 ? byId : byIndex >= 0 ? byIndex : TOWER_VIEWS.findIndex((entry) => entry.id === 'aerial');
 
   const [step, setStep] = useState(initial);
   const [hour, setHour] = useState<TimeOfDay>(OPENING_HOUR);
@@ -104,6 +115,8 @@ export function TowerWalkthrough() {
     if (walking) {
       setShowInventory(false);
       setSelectedUnit(null);
+      setRoom(null);
+      setFly(null);
     }
   }, [walking]);
   // Open with a mouse, closed under a thumb. Starts closed so the server's
@@ -123,6 +136,14 @@ export function TowerWalkthrough() {
   // the building, which is why the picker appears a moment after the toggle.
   const floors = useSyncExternalStore(subscribeWalkFloors, getWalkFloors, serverFloors);
   const [floorId, setFloorId] = useState<string | null>(null);
+  // Click-to-enter (Phase 2): the room currently open inside the show
+  // unit, if any. Null means the tour — the aerial, a step, or a unit
+  // framed from outside — is what the camera is showing.
+  const [room, setRoom] = useState<TowerRoomId | null>(null);
+  /** The fly-through chain: which room it lands in, and which waypoint it is on. */
+  const [fly, setFly] = useState<{ room: TowerRoomId; at: number } | null>(null);
+  /** A lift trip requested from inside the show unit ("Walk freely"). */
+  const [pendingFloor, setPendingFloor] = useState<string | null>(null);
   const webgl = useWebGLSupport();
 
   const view = TOWER_VIEWS[step] ?? DEFAULT_TOWER_VIEW;
@@ -136,11 +157,103 @@ export function TowerWalkthrough() {
   // gives a step change), and otherwise the step itself.
   const activeView = flying
     ? FLYOVER_VIEW
-    : selectedUnit
-      ? unitFloorView(selectedUnit.floor)
-      : view;
+    : fly
+      ? SHOW_UNIT_FLYTHROUGH[fly.at]!
+      : room
+        ? TOWER_ROOMS[room].view
+        : selectedUnit
+          ? unitFloorView(selectedUnit.floor)
+          : view;
 
   const go = useCallback((next: number) => setStep(Math.min(last, Math.max(0, next))), [last]);
+
+  // Enters the show unit through the fly-through: aerial -> facade ->
+  // balcony glass line -> the room. The camera eases through each
+  // waypoint because CameraController's damped transition is still
+  // travelling when the target moves.
+  const enterShowUnit = useCallback((target: TowerRoomId) => {
+    setWalking(false);
+    setShowInventory(false);
+    setSelectedUnit(null);
+    setRoom(null);
+    setFly({ room: target, at: 0 });
+  }, []);
+
+  const selectRoom = useCallback((target: TowerRoomId) => {
+    setRoom(target);
+    setStep(TOWER_ROOMS[target].stepIndex);
+  }, []);
+
+  const exitToOverview = useCallback(() => {
+    setRoom(null);
+    setFly(null);
+    setSelectedUnit(null);
+    go(TOWER_VIEWS.findIndex((entry) => entry.id === 'aerial'));
+  }, [go]);
+
+  // A facade marker or an inventory row: the show unit opens, every
+  // other floor frames from outside as before.
+  const handleUnitSelect = useCallback(
+    (unit: Unit) => {
+      if (unit.floor === SHOW_UNIT_FLOOR) enterShowUnit('living');
+      else setSelectedUnit(unit);
+    },
+    [enterShowUnit],
+  );
+
+  // Advances the fly-through one waypoint at a time; on the last one
+  // it lands in the room.
+  useEffect(() => {
+    if (!fly) return;
+    if (fly.at >= SHOW_UNIT_FLYTHROUGH.length - 1) {
+      const done = window.setTimeout(() => {
+        setRoom(fly.room);
+        setStep(TOWER_ROOMS[fly.room].stepIndex);
+        setFly(null);
+      }, 1400);
+      return () => window.clearTimeout(done);
+    }
+    const next = window.setTimeout(
+      () => setFly({ room: fly.room, at: fly.at + 1 }),
+      1400,
+    );
+    return () => window.clearTimeout(next);
+  }, [fly]);
+
+  // "Walk freely" from inside the show unit: enter walk mode, then
+  // take the lift to the show floor once the scene has published it.
+  useEffect(() => {
+    if (!walking || !pendingFloor || floors.length === 0) return;
+    const floor = floors.find((entry) => entry.id === pendingFloor);
+    if (!floor) return;
+    setFloorId(floor.id);
+    travelTo(floor);
+    setPendingFloor(null);
+  }, [walking, pendingFloor, floors]);
+
+  // `?unit=11A&room=bedroom` opens the show unit on that room.
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (deepLinked.current) return;
+    deepLinked.current = true;
+    if (params.get('unit') !== SHOW_UNIT_ID) return;
+    const wanted = params.get('room');
+    const target: TowerRoomId =
+      wanted && (wanted as TowerRoomId) in TOWER_ROOMS ? (wanted as TowerRoomId) : 'living';
+    setRoom(target);
+    setStep(TOWER_ROOMS[target].stepIndex);
+  }, [params]);
+
+  const captionLabel = fly
+    ? 'Entering the show unit'
+    : room
+      ? TOWER_ROOMS[room].label
+      : view.label;
+  const captionNote = fly
+    ? 'Flying in from the aerial — the show unit, live, not a video.'
+    : room
+      ? TOWER_ROOMS[room].note
+      : note;
 
   const scrim = useMemo(
     () => ({
@@ -166,9 +279,20 @@ export function TowerWalkthrough() {
         label={
           flying
             ? 'Three-dimensional aerial view, circling the oceanfront tower'
-            : selectedUnit
-              ? `Three-dimensional view of the oceanfront tower — Unit ${selectedUnit.id}`
-              : `Three-dimensional view of the oceanfront tower — ${view.label}`
+            : fly
+              ? 'Flying into the show unit of the oceanfront tower'
+              : room
+                ? `Three-dimensional view of the oceanfront tower — ${TOWER_ROOMS[room].label}`
+                : selectedUnit
+                  ? `Three-dimensional view of the oceanfront tower — Unit ${selectedUnit.id}`
+                  : `Three-dimensional view of the oceanfront tower — ${view.label}`
+        }
+        overlay={
+          walking || fly
+            ? undefined
+            : room
+              ? <TowerRoomHotspots currentRoom={room} onSelectRoom={selectRoom} />
+              : <UnitHotspots onSelectUnit={handleUnitSelect} />
         }
       >
         {/* Readability ground for the caption and the controls. Dropped in
@@ -190,7 +314,14 @@ export function TowerWalkthrough() {
           // unclickable across its whole width — the header ate the pointer.
           <button
             type="button"
-            onClick={() => setWalking((on) => !on)}
+            onClick={() => {
+              if (walking) {
+                setWalking(false);
+                return;
+              }
+              if (room !== null) setPendingFloor(`tower-${SHOW_UNIT_FLOOR}`);
+              setWalking(true);
+            }}
             className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-24 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
           >
             {walking ? 'Guided tour' : 'Walk the building'}
@@ -320,7 +451,7 @@ export function TowerWalkthrough() {
             list is not also stepping through the composed sequence. */}
         <nav
           aria-label="Walkthrough steps"
-          hidden={walking || showInventory}
+          hidden={walking || showInventory || room !== null}
           className="absolute top-1/2 right-6 z-10 hidden -translate-y-1/2 lg:block"
         >
           <ol className="flex flex-col items-end gap-4">
@@ -368,7 +499,7 @@ export function TowerWalkthrough() {
             {showInventory ? (
               <InventoryPanel
                 activeFloor={selectedUnit?.floor ?? null}
-                onSelect={(unit) => setSelectedUnit(unit)}
+                onSelect={handleUnitSelect}
                 className="max-w-[56ch]"
               />
             ) : (
@@ -378,12 +509,12 @@ export function TowerWalkthrough() {
                     {String(step + 1).padStart(2, '0')}
                   </span>
                   <span aria-hidden="true" className="bg-gold-dim h-px w-8" />
-                  {view.label}
+                  {captionLabel}
                 </p>
                 {/* aria-live so a screen-reader user hears the new caption
                     when the step changes — the canvas itself cannot say it. */}
                 <p className="text-lede text-mist mt-3" aria-live="polite">
-                  {note}
+                  {captionNote}
                 </p>
               </div>
             )}
@@ -392,7 +523,53 @@ export function TowerWalkthrough() {
                 foot along with the rest of the tour chrome. */}
             <BuildingSwitch className="self-start" />
 
-            {showInventory ? null : (
+            {showInventory ? null : room ? (
+              <div className="flex flex-wrap items-center gap-3">
+                {ROOM_ORDER.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => selectRoom(id)}
+                    aria-current={room === id ? 'step' : undefined}
+                    className={
+                      room === id
+                        ? "text-eyebrow text-obsidian bg-alabaster hover:bg-bone focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                        : "text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                    }
+                  >
+                    {TOWER_ROOMS[id].label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={exitToOverview}
+                  className="text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  Back to overview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingFloor(`tower-${SHOW_UNIT_FLOOR}`);
+                    setWalking(true);
+                  }}
+                  className="text-eyebrow text-obsidian bg-alabaster hover:bg-bone focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  Walk freely
+                </button>
+              </div>
+            ) : fly ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-eyebrow text-stone uppercase">Entering the show unit…</span>
+                <button
+                  type="button"
+                  onClick={() => setFly(null)}
+                  className="text-eyebrow text-alabaster border-alabaster/30 hover:border-alabaster focus-visible:outline-gold ease-luxe inline-flex min-h-11 items-center rounded-full border px-5 py-2 uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"

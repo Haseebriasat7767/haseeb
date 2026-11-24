@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { LoadingScreen } from '@/components/three/LoadingScreen';
 import { Scene } from '@/components/three/Scene';
 import { SceneErrorBoundary } from '@/components/three/SceneErrorBoundary';
@@ -23,6 +23,8 @@ type ExperienceCanvasProps = {
   drift?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
+  /** Extra in-scene contents rendered inside the canvas alongside the space hotspots. */
+  overlay?: ReactNode;
   /** Alternative text for the rendered frame. */
   label?: string;
   /** Fires once the scene graph has mounted and the loading state clears. */
@@ -47,6 +49,7 @@ export function ExperienceCanvas({
   drift,
   label,
   hotspots,
+  overlay,
   onReady,
   cinematic,
   cinematicMaxSamples,
@@ -73,13 +76,16 @@ export function ExperienceCanvas({
         drift={drift}
         label={label}
         overlay={
-          hotspots ? (
-            <SpaceHotspots
-              detail={quality.tier}
-              activeId={hotspots.activeId}
-              onSelect={hotspots.onSelect}
-            />
-          ) : null
+          <>
+            {hotspots ? (
+              <SpaceHotspots
+                detail={quality.tier}
+                activeId={hotspots.activeId}
+                onSelect={hotspots.onSelect}
+              />
+            ) : null}
+            {overlay ?? null}
+          </>
         }
         cinematic={cinematic}
         cinematicMaxSamples={cinematicMaxSamples}
