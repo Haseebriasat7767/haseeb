@@ -27,6 +27,8 @@ type ExperienceCanvasProps = {
   overlay?: ReactNode;
   /** Alternative text for the rendered frame. */
   label?: string;
+  /** Path-traced still of the opening framing (see `LoadingScreen`). */
+  poster?: string;
   /** Fires once the scene graph has mounted and the loading state clears. */
   onReady?: () => void;
   /** Path-traces this framing instead of rasterizing it. Stills only. */
@@ -48,6 +50,7 @@ export function ExperienceCanvas({
   parallax,
   drift,
   label,
+  poster,
   hotspots,
   overlay,
   onReady,
@@ -94,7 +97,7 @@ export function ExperienceCanvas({
         diagnosticsEnabled={diagnosticsEnabled}
         onMetrics={diagnosticsEnabled ? setMetrics : undefined}
       />
-      <LoadingScreen visible={!ready} />
+      <LoadingScreen visible={!ready} poster={poster} />
       {diagnosticsEnabled ? <PerformanceOverlay snapshot={metrics} /> : null}
     </SceneErrorBoundary>
   );

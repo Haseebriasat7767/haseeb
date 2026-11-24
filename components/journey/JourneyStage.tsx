@@ -54,6 +54,11 @@ export function JourneyStage() {
       <div className="sticky top-0 -mb-[100svh] h-[100svh] w-full overflow-hidden">
         <ExperienceViewport
           className="absolute inset-0 h-full w-full"
+          // Poster frame: the path-traced arrival still — the
+          // residence from the approach, the opening framing —
+          // behind the loading screen while the live scene loads.
+          // It is a still, not the live scene.
+          poster="/assets/brochure/arrival.jpg"
           view={active.view}
           mode="journey"
           timeOfDay={hour}
