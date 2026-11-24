@@ -10,6 +10,7 @@ import type { PerformanceSnapshot } from '@/components/three/dev/performance-typ
 import { SpaceHotspots } from '@/components/three/hotspots/SpaceHotspots';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { useQualityTier } from '@/hooks/useQualityTier';
+import { unlockDeferredModels } from '@/components/three/models/ModelLibrary';
 import type { HotspotConfig } from '@/lib/experience/spaces';
 import type { CameraMode, CameraView, SceneContent, TimeOfDay } from '@/types';
 
@@ -61,6 +62,8 @@ export function ExperienceCanvas({
   const [ready, setReady] = useState(false);
   const handleReady = useCallback(() => {
     setReady(true);
+    // First paint is done: the deferred dressing may stream in now.
+    unlockDeferredModels();
     onReady?.();
   }, [onReady]);
   const quality = useQualityTier();

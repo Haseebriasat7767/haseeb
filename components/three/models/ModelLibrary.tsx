@@ -1,7 +1,7 @@
 'use client';
 
 import { useGLTF } from '@react-three/drei';
-import { useMemo } from 'react';
+import { Suspense, useMemo, useSyncExternalStore } from 'react';
 import { MeshStandardMaterial, type Group, type Material, type Mesh, type Object3D } from 'three';
 
 /**
@@ -185,6 +185,81 @@ export function modelUrl(name: ModelName): string {
 }
 
 /**
+ * The heavy dressing that does not block first paint.
+ *
+ * The Poly Haven pieces carry their textures embedded (chair-ph-arm is
+ * 2.5 MB, table-ph-dining 2.3 MB — Draco already applied, the bytes are
+ * JPEGs), and none of them is visible in an opening framing: the
+ * residence hero is the exterior, the tower arrival is the site. So they
+ * render nothing and load nothing until the scene reports ready, and then
+ * they stream in inside their own Suspense boundary (see `Model`), which
+ * is what stops a late load from re-suspending the scene and blanking the
+ * canvas. Everything not listed here stays eager — the Phase 3 heroes
+ * (bed-platform-oak, sofa-sectional-white), the show-unit sofa, and the
+ * exterior/site models — so a future piece defaults to visible, never to
+ * silently deferred.
+ */
+const DEFERRED_MODELS: ReadonlySet<ModelName> = new Set([
+  'chair-ph-arm',
+  'table-ph-dining',
+  'table-ph-coffee',
+  'plant-ph-01',
+  'chair-ph-painted',
+  'chair-ph-dining',
+  'table-ph-side',
+  'nightstand-ph-classic',
+  'sofa-ph-03',
+  'bed-ph-gothic',
+]);
+
+export function isDeferredModel(name: ModelName): boolean {
+  return DEFERRED_MODELS.has(name);
+}
+
+/**
+ * The deferred-model gate: closed until the first scene reports ready.
+ *
+ * A module-level store (not React state) because the gate is read by
+ * `Model` and `InstancedModels` in different subtrees, and because the
+ * opener — `ExperienceCanvas`'s ready handler — sits outside both.
+ */
+let deferredUnlocked = false;
+const deferredListeners = new Set<() => void>();
+
+function subscribeDeferred(listener: () => void): () => void {
+  deferredListeners.add(listener);
+  return () => {
+    deferredListeners.delete(listener);
+  };
+}
+
+function getDeferredSnapshot(): boolean {
+  return deferredUnlocked;
+}
+
+/**
+ * Opens the gate. Called once the first scene reports ready; idempotent,
+ * so every viewport calling it is harmless.
+ */
+export function unlockDeferredModels(): void {
+  if (deferredUnlocked) return;
+  deferredUnlocked = true;
+  for (const listener of deferredListeners) listener();
+}
+
+// Dead-man switch: if no scene ever reports ready (a viewport that never
+// mounts, a ready signal that never fires), the dressing still arrives —
+// 60 s after this module first loads, long after first paint on any real
+// device, so it cannot defeat the deferral it guards.
+if (typeof window !== 'undefined') {
+  window.setTimeout(() => unlockDeferredModels(), 60_000);
+}
+
+export function useDeferredModelsUnlocked(): boolean {
+  return useSyncExternalStore(subscribeDeferred, getDeferredSnapshot, getDeferredSnapshot);
+}
+
+/**
  * Concept-palette recolour for Poly Haven pieces whose authored fabric is
  * dark.
  *
@@ -249,21 +324,10 @@ export function preloadModel(name: ModelName): void {
 }
 
 /**
- * One instance of a piece, positioned by its floor contact point.
- *
- * The models are authored with their origin on the floor and centred in
- * plan, so `position` is simply where the piece stands — no per-asset
- * offset to remember — and `rotationY` turns it about its own centre rather
- * than about some corner of a bounding box.
+ * The props one placed piece takes — shared by `Model` and
+ * `ModelInner` below, so the gate and the loader cannot drift apart.
  */
-export function Model({
-  name,
-  position,
-  rotationY = 0,
-  scale = 1,
-  castShadow = true,
-  receiveShadow = true,
-}: {
+type ModelProps = {
   name: ModelName;
   position: [number, number, number];
   /** Turn about the vertical, in radians. */
@@ -272,7 +336,43 @@ export function Model({
   scale?: number | [number, number, number];
   castShadow?: boolean;
   receiveShadow?: boolean;
-}) {
+};
+
+/**
+ * One instance of a piece, positioned by its floor contact point.
+ *
+ * The models are authored with their origin on the floor and centred in
+ * plan, so `position` is simply where the piece stands — no per-asset
+ * offset to remember — and `rotationY` turns it about its own centre rather
+ * than about some corner of a bounding box.
+ *
+ * Dressing pieces (see `DEFERRED_MODELS`) do not block first paint:
+ * until the scene reports ready they render nothing and load nothing,
+ * and after the gate opens they load inside their own Suspense
+ * boundary, so a streaming model can never re-suspend the scene and
+ * blank the canvas.
+ */
+export function Model(props: ModelProps) {
+  const unlocked = useDeferredModelsUnlocked();
+  if (isDeferredModel(props.name) && !unlocked) return null;
+  if (isDeferredModel(props.name)) {
+    return (
+      <Suspense fallback={null}>
+        <ModelInner {...props} />
+      </Suspense>
+    );
+  }
+  return <ModelInner {...props} />;
+}
+
+function ModelInner({
+  name,
+  position,
+  rotationY = 0,
+  scale = 1,
+  castShadow = true,
+  receiveShadow = true,
+}: ModelProps) {
   const { scene } = useGLTF(url(name), DRACO_PATH);
 
   // A cloned graph per instance: three cannot draw one Object3D in two

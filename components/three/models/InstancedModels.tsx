@@ -1,7 +1,7 @@
 'use client';
 
 import { useGLTF } from '@react-three/drei';
-import { useEffect, useMemo } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
 import {
   Euler,
   Group,
@@ -14,7 +14,13 @@ import {
   type BufferGeometry,
   type Material,
 } from 'three';
-import { DRACO_PATH, modelUrl, type ModelName } from './ModelLibrary';
+import {
+  DRACO_PATH,
+  isDeferredModel,
+  modelUrl,
+  useDeferredModelsUnlocked,
+  type ModelName,
+} from './ModelLibrary';
 
 /**
  * One placement of a piece, positioned by its floor contact point.
@@ -98,6 +104,55 @@ export type ModelPlacement = {
  * load.
  */
 export function InstancedModels({
+  name,
+  placements,
+  castShadow = true,
+  receiveShadow = true,
+}: {
+  name: string;
+  placements: readonly ModelPlacement[];
+  castShadow?: boolean;
+  receiveShadow?: boolean;
+}) {
+  // Dressing pieces (see `DEFERRED_MODELS` in ModelLibrary) stream in
+  // after the scene reports ready, inside their own Suspense boundary
+  // — the same gate `Model` uses, so a flat's dressing can never block
+  // first paint or re-suspend the scene. Eager pieces load here, as
+  // before.
+  const unlocked = useDeferredModelsUnlocked();
+  const eager = useMemo(
+    () => placements.filter((placement) => !isDeferredModel(placement.name)),
+    [placements],
+  );
+  const deferred = useMemo(
+    () => placements.filter((placement) => isDeferredModel(placement.name)),
+    [placements],
+  );
+  return (
+    <>
+      {eager.length > 0 ? (
+        <InstancedModelsInner
+          name={name}
+          placements={eager}
+          castShadow={castShadow}
+          receiveShadow={receiveShadow}
+        />
+      ) : null}
+      {unlocked && deferred.length > 0 ? (
+        <Suspense fallback={null}>
+          <InstancedModelsInner
+            name={`${name}-deferred`}
+            placements={deferred}
+            castShadow={castShadow}
+            receiveShadow={receiveShadow}
+          />
+        </Suspense>
+      ) : null}
+    </>
+  );
+}
+
+function InstancedModelsInner({
   name,
   placements,
   castShadow = true,
