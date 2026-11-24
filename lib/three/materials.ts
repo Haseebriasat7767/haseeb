@@ -359,6 +359,22 @@ function withAerialPerspective<T extends MeshStandardMaterial>(
         );
     }
 
+    // The fragment code below reads vAureliaWorldPos, but only
+    // `withVariation` declares it in the fragment shader (it is the first
+    // line of NOISE_GLSL). Materials wrapped in both (terrain) already
+    // have it; materials with aerial perspective alone (skyline) compiled
+    // with an undeclared identifier, their whole program failed, and the
+    // distant city never rendered. Declare it here when no earlier pass
+    // did, guarded so it is never declared twice. Invariant: keep
+    // `withVariation` INSIDE `withAerialPerspective` (as in terrain),
+    // never outside it, or this varying would be declared twice.
+    if (!shader.fragmentShader.includes('vAureliaWorldPos')) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        `#include <common>\nvarying vec3 vAureliaWorldPos;`,
+      );
+    }
+
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
