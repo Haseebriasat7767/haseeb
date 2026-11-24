@@ -27,13 +27,7 @@ import {
   createWC,
   emptyParts,
 } from './Furniture';
-import {
-  createArtwork,
-  createBooks,
-  createPlant,
-  createTray,
-  createVessel,
-} from './InteriorDecor';
+import { createArtwork, createBooks, createPlant, createTray, createVessel } from './InteriorDecor';
 import type { Form } from '../furniture/FormTypes';
 import {
   createBowl,
@@ -1102,7 +1096,11 @@ export function createInteriorLayout(
   model('tap-bath', [masterBath.x[0] + 1.1, masterBath.floorY + 0.9, masterBath.z[0] + 0.12], 0);
   // Same tap on the tub's east rim (top floorY+0.56), spout
   // turned west (-pi/2) over the tub.
-  model('tap-bath', [masterBath.x[0] + 2.26, masterBath.floorY + 0.56, masterBath.z[1] - 1.02], -Math.PI / 2);
+  model(
+    'tap-bath',
+    [masterBath.x[0] + 2.26, masterBath.floorY + 0.56, masterBath.z[1] - 1.02],
+    -Math.PI / 2,
+  );
 
   if (tier.decor) {
     const vanityTop = masterBath.floorY + 0.9;

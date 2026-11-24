@@ -778,7 +778,14 @@ export function createApartment(
   put(k('kitchen-run'), 'kitchen-run', kitchenBackX + 0.33, inset(5.0, 1.6), floorY, 'east');
   put(k('kitchen-island'), 'kitchen-island', kitchenBackX + 3.3, inset(5.0, 1.6), floorY, 'east');
   // Blender-built gooseneck tap on the island (top floorY+0.9).
-  put(k('tap-kitchen'), 'tap-kitchen', kitchenBackX + 3.3 - 0.35, inset(5.0, 1.6), floorY + 0.9, 'west');
+  put(
+    k('tap-kitchen'),
+    'tap-kitchen',
+    kitchenBackX + 3.3 - 0.35,
+    inset(5.0, 1.6),
+    floorY + 0.9,
+    'west',
+  );
 
   // Bathroom: vanity on the party wall, bath freestanding in the light.
   put(k('vanity'), 'vanity', partX + 0.46, inset(7.2, 1.2), floorY, 'east');
