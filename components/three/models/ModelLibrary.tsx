@@ -39,14 +39,19 @@ const MODEL_PATH = '/assets/models/';
 export type ModelName =
   | 'sofa-3seat'
   | 'sofa-ph-03'
+  | 'sofa-ph-02'
   | 'lounge-chair'
   | 'chair-ph-arm'
+  | 'chair-ph-dining'
   | 'ottoman'
   | 'low-table'
+  | 'table-ph-coffee'
   | 'side-drum'
+  | 'table-ph-side'
   | 'bed'
   | 'bed-ph-gothic'
   | 'nightstand'
+  | 'nightstand-ph-classic'
   | 'table-lamp'
   | 'floor-lamp'
   | 'vessel-tall'
@@ -73,6 +78,7 @@ export type ModelName =
   | 'car-suv'
   | 'boat-tender'
   | 'dining-table'
+  | 'table-ph-dining'
   | 'dining-chair'
   | 'parasol'
   | 'outdoor-sofa'
@@ -91,6 +97,7 @@ export type ModelName =
   | 'pendant'
   | 'wall-light'
   | 'planter-trough'
+  | 'plant-ph-01'
   | 'treadmill'
   | 'treatment-table'
   | 'locker-bank';
@@ -98,14 +105,19 @@ export type ModelName =
 export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
   'sofa-ph-03',
+  'sofa-ph-02',
   'lounge-chair',
   'chair-ph-arm',
+  'chair-ph-dining',
   'ottoman',
   'low-table',
+  'table-ph-coffee',
   'side-drum',
+  'table-ph-side',
   'bed',
   'bed-ph-gothic',
   'nightstand',
+  'nightstand-ph-classic',
   'table-lamp',
   'floor-lamp',
   'vessel-tall',
@@ -132,6 +144,7 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'car-suv',
   'boat-tender',
   'dining-table',
+  'table-ph-dining',
   'dining-chair',
   'parasol',
   'outdoor-sofa',
@@ -150,6 +163,7 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'pendant',
   'wall-light',
   'planter-trough',
+  'plant-ph-01',
   'treadmill',
   'treatment-table',
   'locker-bank',
@@ -202,7 +216,8 @@ export function Model({
   position: [number, number, number];
   /** Turn about the vertical, in radians. */
   rotationY?: number;
-  scale?: number;
+  /** Uniform, or per-axis — the dining table needs a Y squash (see ApartmentGeometry). */
+  scale?: number | [number, number, number];
   castShadow?: boolean;
   receiveShadow?: boolean;
 }) {
