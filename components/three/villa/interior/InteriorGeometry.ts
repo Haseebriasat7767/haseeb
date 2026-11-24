@@ -4,7 +4,6 @@ import {
   createArmchair,
   createBalustrade,
   createBathtub,
-  createBed,
   createBuiltIn,
   createCoffeeTable,
   createConsole,
@@ -30,10 +29,8 @@ import {
 } from './Furniture';
 import {
   createArtwork,
-  createBedding,
   createBooks,
   createCurtains,
-  createHeadboard,
   createPlant,
   createTowels,
   createTray,
@@ -41,11 +38,9 @@ import {
 } from './InteriorDecor';
 import type { Form } from '../furniture/FormTypes';
 import {
-  createBed as buildBed,
   createBowl,
   createFloorVessel,
   createHungConsole,
-  createHeadboard as buildHeadboard,
   createOttoman,
   createPedestalTable,
   createSofa as buildSofa,
@@ -387,11 +382,14 @@ export function createInteriorLayout(
   // acceptable description of a sofa.
   const livingCx = mid(living.x);
   // Faces south, seat toward the room. Style lock (V1VID concept):
-  // the plush sofa-ph-03 is out — the cleaner sofa-ph-02 takes its
-  // place, recoloured warm white by MODEL_MATERIAL_OVERRIDES. It is
-  // 1.81 m against the procedural 3.0 m, so it reads as a loveseat
-  // against the rug; the crescent sofa and the chairs fill the group.
-  model('sofa-ph-02', [livingCx, living.floorY, living.z[0] + 1.75], 0);
+  // the plush sofa-ph-03 is out, and the cleaner sofa-ph-02 (1.81 m)
+  // read as a loveseat in the 3.0 m slot — so the slot now takes
+  // the Blender-built white sectional (2.90 m, channel-tufted,
+  // sage cushions as separate meshes), authored for this room from
+  // the approved living-room concept image. The chaise is on the
+  // east end: the crescent sofa closes the west side, the east
+  // flank is clear.
+  model('sofa-sectional-white', [livingCx, living.floorY, living.z[0] + 1.75], 0);
   // Long axis X (the real table is 1.20 m long on Z); 0.39 m high
   // against the procedural 0.38 m, so the tray and books on it stay put.
   model('table-ph-coffee', [livingCx, living.floorY, mid(living.z) + 0.9], Math.PI / 2);
@@ -856,7 +854,11 @@ export function createInteriorLayout(
   // ── Ground floor: guest suite ─────────────────────────────────────────
   const guest = rooms.guestBedroom;
   const guestBedCz = mid(guest.z) - 0.6;
-  createBed(parts, 'guest-bed', guest.x[0] + 1.15, guestBedCz, guest.floorY, 1.6, 2.05, 'east');
+  // Blender-built platform bed, scaled to the old 1.60 x 2.05 slot.
+  // Faces east (head at the west end): rotation pi/2 per the YAW table.
+  model('bed-platform-oak', [guest.x[0] + 1.15, guest.floorY, guestBedCz], Math.PI / 2, [
+    0.889, 1, 0.976,
+  ]);
   createNightstand(
     parts,
     'guest-night-a',
@@ -950,23 +952,11 @@ export function createInteriorLayout(
   const masterCx = mid(master.x);
   const masterBedCz = master.z[0] + clear + 1.35;
 
-  buildHeadboard(
-    forms,
-    'master-headboard',
-    {
-      at: [masterCx, master.z[0] + clear + 0.16],
-      floorY: master.floorY,
-      facing: 'south',
-      seed: 61,
-    },
-    { width: 2.5, height: 1.2 },
-  );
-  buildBed(
-    forms,
-    'master-bed',
-    { at: [masterCx, masterBedCz], floorY: master.floorY, facing: 'south', seed: 62 },
-    { width: 1.98, length: 2.14 },
-  );
+  // Blender-built platform bed (1.80 x 2.10 m, oak + white linen +
+  // sage throw, own headboard and pillows) — replaces the procedural
+  // headboard + bed. The timber lining behind it stays: it is wall
+  // panelling, not part of the bed. Scaled to the old 1.98 x 2.14 slot.
+  model('bed-platform-oak', [masterCx, master.floorY, masterBedCz], 0, [1.1, 1, 1.019]);
 
   for (const side of [-1, 1] as const) {
     const nx = masterCx + side * 1.62;
@@ -1159,18 +1149,10 @@ export function createInteriorLayout(
   bedrooms.forEach(({ room, key }) => {
     const cx = mid(room.x);
     const cz = room.z[0] + clear + 1.05;
-    // The same dressed bed the master gets, at a different width and with a
-    // different seed, so the three bedrooms are not one bed repeated.
-    const bedX: Range = [cx - 0.85, cx + 0.85];
-    const bedZ: Range = [cz - 1.025, cz + 1.025];
-    createHeadboard(parts, `${key}-headboard`, bedX, bedZ[0], -1, room.floorY, 1.05);
-    createBedding(parts, `${key}-bed`, {
-      x: bedX,
-      z: bedZ,
-      floorY: room.floorY,
-      headAt: 'north',
-      seed: key === 'bed2' ? 83 : 97,
-    });
+    // The Blender-built platform bed, scaled to the old 1.70 x 2.05
+    // slot — the same bed the master gets, so the three bedrooms
+    // share one real bed instead of three procedural ones.
+    model('bed-platform-oak', [cx, room.floorY, cz], 0, [0.944, 1, 0.976]);
     createNightstand(parts, `${key}-night-a`, cx - 1.25, room.z[0] + 0.45, room.floorY, true);
     createNightstand(parts, `${key}-night-b`, cx + 1.25, room.z[0] + 0.45, room.floorY, true);
     createRug(parts, `${key}-rug`, cx, cz + 0.35, room.floorY, 3.2, 2.9);
