@@ -1921,7 +1921,7 @@ function createMaterials() {
     ),
     /** Accent upholstery — occasional chairs, stools, bed throws. */
     upholsteryDark: withMaps(
-      withVariation(standard({ color: '#4a463f', roughness: 0.96, metalness: 0 }), {
+      withVariation(standard({ color: '#6e5b4a', roughness: 0.96, metalness: 0 }), {
         scale: 6,
         colorVariation: 0.06,
         roughnessVariation: 0.04,
