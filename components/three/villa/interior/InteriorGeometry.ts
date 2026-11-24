@@ -30,9 +30,7 @@ import {
 import {
   createArtwork,
   createBooks,
-  createCurtains,
   createPlant,
-  createTowels,
   createTray,
   createVessel,
 } from './InteriorDecor';
@@ -600,7 +598,10 @@ export function createInteriorLayout(
     // Additional biophilic — tall fiddle leaf fig in the corner
     // The real plant is 1.35 m against the procedural 1.85 m; the
     // foliage cards for this corner go with it.
-    model('plant-ph-01', [livingWest + 0.7, living.floorY, living.z[1] - 0.9], 0);
+    // Blender-built potted olive (real 3D leaves) in place of
+    // the second decimated plant-ph-01 — two different plants,
+    // not one repeated.
+    model('plant-olive', [livingWest + 0.7, living.floorY, living.z[1] - 0.9], 0);
 
     // Second artwork — layered art, curated gallery wall
     createArtwork(
@@ -637,6 +638,13 @@ export function createInteriorLayout(
     );
 
     model('plant-ph-01', [living.x[1] - 0.9, living.floorY, living.z[1] - 1.6], Math.PI / 2);
+
+    // Blender-built glazed door leaf, ajar 35 deg OUTWARD onto
+    // the terrace (hinge at the east end of the glass wall).
+    // Outward so it never crosses the dressed sheer at
+    // living.z[1]-0.26; +0.12 is the terrace step (terraceY
+    // 1.02 over groundY 0.9). Origin is the hinge post.
+    model('door-balcony-open', [living.x[1] - 1.05, living.floorY + 0.12, living.z[1] + 0.06], 0);
 
     // The coffee table, styled. A tray, a low stack of books beside it, and
     // one vessel — the composition every interior photograph uses, because
@@ -721,11 +729,9 @@ export function createInteriorLayout(
         height: 0.075,
       },
     );
-    createCurtains(parts, 'dining-curtain', {
-      across: inset(dining.x, 0.3),
-      at: [dining.z[1] - 0.34, dining.z[1] - 0.16],
-      y: [dining.floorY, dining.ceilingY - 0.06],
-    });
+    // Blender-built pleated sheer panel (3.0 m) in place of the
+    // procedural curtain slab, same wall.
+    model('curtain-sheer', [mid(dining.x), dining.floorY, dining.z[1] - 0.24], 0);
   }
   // Held east of the kitchen opening so it backs onto solid wall rather
   // than standing in the doorway between the two rooms.
@@ -786,9 +792,16 @@ export function createInteriorLayout(
       upperFrom: kitchen.floorY + 1.55,
     },
   );
+  // Blender-built board + citrus bowl on the run counter
+  // (top floorY+0.92, back band z[0]..z[0]+0.64).
+  model('kitchen-board-set', [kitchen.x[1] - 0.9, kitchen.floorY + 0.92, kitchen.z[0] + 0.32], 0);
   const islandX: Range = [mid(kitchen.x) - 2.0, mid(kitchen.x) + 2.0];
   const islandZ: Range = [mid(kitchen.z) - 0.55, mid(kitchen.z) + 0.55];
   createIsland(parts, 'kitchen-island', islandX, islandZ, kitchen.floorY, tier.accessories ? 3 : 2);
+  // Blender-built gooseneck tap on the island sink (the run has
+  // no sink; the island's recess is at islandX[0]+0.5..1.4).
+  // Base on the island top (floorY+0.94), spout over the sink.
+  model('tap-kitchen', [islandX[0] + 0.95, kitchen.floorY + 0.94, mid(islandZ) - 0.32], 0);
   if (tier.decor) {
     // A luxury kitchen in a brochure is nearly bare. Three objects at three
     // heights, grouped at one end of the island so the run of stone reads.
@@ -1020,6 +1033,7 @@ export function createInteriorLayout(
     });
 
     model('plant-ph-01', [master.x[0] + 0.85, master.floorY, master.z[1] - 1.4], 0);
+    model('plant-olive', [master.x[1] - 0.85, master.floorY, master.z[1] - 1.4], 0);
 
     // One object on each nightstand, and deliberately not the same object.
     createStyling(
@@ -1081,27 +1095,23 @@ export function createInteriorLayout(
     masterBath.floorY,
     'west',
   );
+  // Blender-built bath tap on the vanity (vanity top
+  // floorY+0.90; the old stick column in createVanity is
+  // removed in Furniture.ts — it would poke through the tap).
+  // Spout faces +Z, over the basin.
+  model('tap-bath', [masterBath.x[0] + 1.1, masterBath.floorY + 0.9, masterBath.z[0] + 0.12], 0);
+  // Same tap on the tub's east rim (top floorY+0.56), spout
+  // turned west (-pi/2) over the tub.
+  model('tap-bath', [masterBath.x[0] + 2.26, masterBath.floorY + 0.56, masterBath.z[1] - 1.02], -Math.PI / 2);
 
   if (tier.decor) {
     const vanityTop = masterBath.floorY + 0.9;
-    createTowels(
-      parts,
-      'master-bath-towels',
-      masterBath.x[0] + 0.55,
-      mid(masterBath.z) - 0.9,
-      vanityTop,
-      2,
-    );
-    createVessel(
-      parts,
-      'master-bath-bottle',
-      masterBath.x[0] + 1.5,
-      mid(masterBath.z) - 1.0,
-      vanityTop,
-      0.19,
-      0.045,
-      'ceramic',
-    );
+    // Blender-built folded towels (real folds + a rolled towel)
+    // in place of the procedural stack, same spot.
+    model('towels-folded', [masterBath.x[0] + 0.55, vanityTop, mid(masterBath.z) - 0.9], 0);
+    // Blender-built bottle tray + soap in place of the single
+    // procedural vessel, same spot on the vanity.
+    model('bath-bottles', [masterBath.x[0] + 1.5, vanityTop, mid(masterBath.z) - 1.0], 0);
     createPlant(
       parts,
       'master-bath-plant',
@@ -1167,12 +1177,9 @@ export function createInteriorLayout(
       createDesk(parts, `${key}-desk`, room.x[0] + 1.2, room.z[1] - 1.6, room.floorY, 'east', 1.4);
     }
     if (tier.secondaryDecor) {
-      createCurtains(parts, `${key}-curtain`, {
-        across: inset(room.x, 0.4),
-        at: [room.z[1] - 0.32, room.z[1] - 0.16],
-        y: [room.floorY, room.ceilingY - 0.06],
-        density: 7,
-      });
+      // Blender-built pleated sheer panel in place of the
+      // procedural curtain slab, same wall.
+      model('curtain-sheer', [cx, room.floorY, room.z[1] - 0.24], 0);
       createVessel(
         parts,
         `${key}-night-vase`,
@@ -1187,7 +1194,7 @@ export function createInteriorLayout(
 
   const bath2 = rooms.bath2;
   if (tier.secondaryDecor) {
-    createTowels(parts, 'bath2-towels', bath2.x[0] + 0.75, bath2.z[0] + 0.4, bath2.floorY + 0.9, 2);
+    model('towels-folded', [bath2.x[0] + 0.75, bath2.floorY + 0.9, bath2.z[0] + 0.4], 0);
   }
   createVanity(
     parts,
@@ -1206,6 +1213,9 @@ export function createInteriorLayout(
     2.2,
   );
   createWC(parts, 'bath2-wc', bath2.x[1] - 0.32, mid(bath2.z) - 0.2, bath2.floorY, 'west');
+  // Blender-built bath tap on the bath-2 vanity (top
+  // floorY+0.90), spout over the basin.
+  model('tap-bath', [mid(bath2.x), bath2.floorY + 0.9, bath2.z[0] + 0.12], 0);
 
   // ── Upper floor: hall, lounge, library ────────────────────────────────
   const upperHall = rooms.upperHall;

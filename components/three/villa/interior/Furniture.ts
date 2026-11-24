@@ -781,7 +781,9 @@ export function createVanity(
       [z[0] + 0.12, z[1] - 0.08],
     ),
   );
-  parts.posts.push(column(`${key}-tap`, mid(x), z[0] + 0.12, [floorY + 0.9, floorY + 1.18], 0.018));
+  // No stick tap here: the Blender-built tap-bath model is placed
+  // on each vanity by InteriorGeometry (a post would poke
+  // through its spout).
   parts.glow.push(
     box(
       `${key}-underlight`,
