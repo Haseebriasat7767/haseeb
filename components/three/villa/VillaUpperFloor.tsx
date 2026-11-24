@@ -23,7 +23,7 @@ export function VillaUpperFloor({ layout }: { layout: VillaLayout }) {
         <MergedBoxes
           name="up-enclosure"
           specs={layout.upperFloor.mass}
-          material={materials.concrete}
+          material={materials.facadeWhite}
         />
       </group>
 
@@ -31,7 +31,7 @@ export function VillaUpperFloor({ layout }: { layout: VillaLayout }) {
         <MergedBoxes
           name="up-cantilever-enclosure"
           specs={layout.upperFloor.cantilever}
-          material={materials.concrete}
+          material={materials.facadeWhite}
         />
       </group>
 

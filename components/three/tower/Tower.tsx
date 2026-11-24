@@ -23,7 +23,7 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
   return (
     <group name="Tower">
       {/* ── Doors ─────────────────────────────────────────────────────── */}
-      <MergedBoxes name="doors" specs={layout.doors} material={materials.darkMetal} />
+      <MergedBoxes name="doors" specs={layout.doors} material={materials.frameMetal} />
 
       {/* ── Common Area Furniture ─────────────────────────────────────── */}
       <MergedBoxes
@@ -45,7 +45,7 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
       {/* The retail floor plates. Polished stone, because the atrium floor
           is the surface every one of those lit coves is reflecting in. */}
       <MergedBoxes name="podium-floors" specs={podium.floors} material={materials.marble} />
-      <MergedBoxes name="podium-bands" specs={podium.bands} material={materials.concrete} />
+      <MergedBoxes name="podium-bands" specs={podium.bands} material={materials.facadeWhite} />
       {/* Shopfronts do not cast: a lit opening that throws a shadow reads as
           a solid panel, which is the opposite of what glass is doing here. */}
       <MergedBoxes
@@ -54,7 +54,7 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
         material={materials.shopfront}
         castShadow={false}
       />
-      <MergedBoxes name="podium-mullions" specs={podium.mullions} material={materials.darkMetal} />
+      <MergedBoxes name="podium-mullions" specs={podium.mullions} material={materials.frameMetal} />
       <MergedBoxes name="podium-soffit" specs={podium.soffits} material={materials.concrete} />
       {/* The lit reveal under each retail band. */}
       <MergedBoxes
@@ -117,7 +117,7 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
         chamfer={0.006}
         chamferSegments={2}
       />
-      <MergedBoxes name="tower-slabs" specs={tower.slabs} material={materials.concrete} />
+      <MergedBoxes name="tower-slabs" specs={tower.slabs} material={materials.facadeWhite} />
       {/* The apartment floors. Stone rather than concrete: this is the one
           surface of the tower a resident stands on. */}
       <MergedBoxes name="tower-plates" specs={tower.plates} material={materials.marble} />
@@ -140,13 +140,17 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
         chamfer={0.012}
         chamferSegments={2}
       />
-      <MergedBoxes name="tower-spandrels" specs={tower.spandrels} material={materials.concrete} />
+      <MergedBoxes
+        name="tower-spandrels"
+        specs={tower.spandrels}
+        material={materials.facadeWhite}
+      />
 
       {/* ── Balconies ─────────────────────────────────────────────────── */}
       <MergedBoxes
         name="balcony-slabs"
         specs={balconies.slabs}
-        material={materials.concrete}
+        material={materials.facadeWhite}
         chamfer={0.008}
         chamferSegments={2}
       />
@@ -165,7 +169,7 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
       />
 
       {/* ── Crown ─────────────────────────────────────────────────────── */}
-      <MergedBoxes name="crown-parapet" specs={crown.parapets} material={materials.concrete} />
+      <MergedBoxes name="crown-parapet" specs={crown.parapets} material={materials.facadeWhite} />
       <MergedBoxes
         name="crown-glow"
         specs={crown.glow}

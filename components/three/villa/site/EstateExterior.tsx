@@ -45,8 +45,8 @@ export function EstateExterior({ layout }: { layout: EstateLayout }) {
         chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes name="estate-stone" specs={layout.stone} material={materials.stone} />
-      <MergedBoxes name="estate-metal" specs={layout.metal} material={materials.darkMetal} />
-      <MergedSupports name="estate-posts" specs={layout.posts} material={materials.darkMetal} />
+      <MergedBoxes name="estate-metal" specs={layout.metal} material={materials.frameMetal} />
+      <MergedSupports name="estate-posts" specs={layout.posts} material={materials.frameMetal} />
       {/* Lit lantern faces: emissive surfaces, not light sources. The hour
           decides their brightness through `applyLightingToMaterials`. */}
       <MergedBoxes

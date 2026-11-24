@@ -1405,12 +1405,13 @@ function createMaterials() {
       0.85,
     ),
     /** Legacy Phase 1 diagnostic massing only — kept simple deliberately. */
+    // Phase 5: lightened to the facade concept's bright glass.
     glass: standard({
-      color: '#0d1418',
+      color: '#22303a',
       roughness: 0.08,
-      metalness: 0.9,
+      metalness: 0.35,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.6,
     }),
     /**
      * Architectural bronze hardware accents. Now that the scene carries a
@@ -1452,11 +1453,12 @@ function createMaterials() {
       normalScale: 2.0,
     }),
     /**
-     * Window frames, mullions, railings, and columns. Kept a little rougher
-     * and less mirror-like than the bronze so slim members read as solid
-     * profiles against the glazing rather than dissolving into it.
+     * Window frames, mullions, railings, and columns — dark bronze, per
+     * the approved facade concept. Kept a little rougher and less
+     * mirror-like than the bronze so slim members read as solid profiles
+     * against the glazing rather than dissolving into it.
      */
-    frameMetal: withVariation(standard({ color: '#463f36', roughness: 0.34, metalness: 0.82 }), {
+    frameMetal: withVariation(standard({ color: '#4b3a28', roughness: 0.3, metalness: 0.88 }), {
       scale: 2,
       colorVariation: 0.018,
       roughnessVariation: 0.04,
@@ -1490,10 +1492,14 @@ function createMaterials() {
      * the render-target cost transmission adds on mobile GPUs. Double-sided
      * so interiors are not hollow from behind. Kept free of the procedural
      * noise pass — glass should read flawless and machined, not organic.
+     * Phase 5: tint lightened and the per-hour opacities in lighting.ts
+     * lowered, so the panes read bright and reflective like the approved
+     * facade concept instead of dark grey panels; envMapIntensity raised
+     * so the sky shows in the glass.
      */
     glazing: withGlassFresnel(
       new MeshPhysicalMaterial({
-        color: '#1b2b36',
+        color: '#2b3e47',
         // Raised from 0.035, which was a mirror.
         //
         // Specular response from a point light goes up sharply as a surface
@@ -1504,12 +1510,12 @@ function createMaterials() {
         // lounge at dusk there were two of them sitting over the sea.
         //
         // Real coated architectural glass is not a perfect mirror anyway:
-        // it has a measurable haze, and 0.075 is inside that range. It
+        // it has a measurable haze, and 0.06 is inside that range. It
         // costs almost nothing in the environment reflection that makes the
         // facade read as glass from outside — at this roughness the sky is
         // still sharp — and it spreads each point-light highlight over
         // enough pixels that it stops being a blown disc.
-        roughness: 0.075,
+        roughness: 0.06,
         metalness: 0.05,
         reflectivity: 1,
         // The environment map is doing the work here: the sky reflected off
@@ -1518,9 +1524,9 @@ function createMaterials() {
         // environment gained a ground below its horizon — until then the
         // lower half of every reflection was one flat colour, and no amount
         // of intensity could turn that into an image.
-        envMapIntensity: 3.2,
+        envMapIntensity: 4.0,
         transparent: true,
-        opacity: 0.58,
+        opacity: 0.5,
         side: DoubleSide,
       }),
     ),
@@ -1530,11 +1536,11 @@ function createMaterials() {
      * over the wall rather than as a window.
      */
     glazingSurface: new MeshPhysicalMaterial({
-      color: '#16242e',
+      color: '#24353d',
       roughness: 0.05,
       metalness: 0.05,
       reflectivity: 1,
-      envMapIntensity: 2.8,
+      envMapIntensity: 3.4,
     }),
     /**
      * Pool water — see `withWaterSurface` for the swell, the Fresnel ramp
@@ -1686,13 +1692,14 @@ function createMaterials() {
      * emissive comes up after dark with the rest of the practicals.
      */
     shopfront: standard({
-      color: '#1b2229',
+      color: '#26313a',
       roughness: 0.09,
       metalness: 0.05,
+      envMapIntensity: 1.8,
       emissive: '#ffdcae',
       emissiveIntensity: 0,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.82,
     }),
     /** Tree trunks and major branches — vertical grain, like the entrance wood. */
     bark: withVariation(standard({ color: '#453a2f', roughness: 0.9, metalness: 0 }), {
@@ -1846,6 +1853,27 @@ function createMaterials() {
       }),
       'plaster',
       1.0,
+    ),
+    /**
+     * Exterior facade white — the crisp white panels of the approved
+     * facade concept (Phase 5). Warm white, not blue-white, so it stays
+     * in the warm-luxury palette under the golden-hour sun. Deliberately
+     * unmapped: the plaster scan would pull it back toward beige, and a
+     * facade panel reads as a flat premium surface, not as trowelled
+     * wall. Used for the tower's slab edges, spandrels and crown
+     * parapet, the podium bands, and the residence's exterior shell
+     * and roof — never inside a room.
+     */
+    facadeWhite: withVariation(
+      standard({ color: '#f1ede5', roughness: 0.85, metalness: 0, envMapIntensity: 0.5 }),
+      {
+        scale: 0.8,
+        colorVariation: 0.015,
+        roughnessVariation: 0.03,
+        seed: 41,
+        normalStrength: 0.004,
+        normalScale: 2.0,
+      },
     ),
     /**
      * Honed pale limestone flooring for the principal rooms. Larger, softer

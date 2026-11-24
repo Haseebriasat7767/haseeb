@@ -17,12 +17,12 @@ export function WindowSystem({ openings }: { openings: OpeningsGeometry }) {
 
   return (
     <group name="Windows">
-      <MergedBoxes name="facade-skin" specs={openings.skin} material={materials.concrete} />
+      <MergedBoxes name="facade-skin" specs={openings.skin} material={materials.facadeWhite} />
       <MergedBoxes name="facade-skin-stone" specs={openings.skinStone} material={materials.stone} />
       <MergedBoxes
         name="facade-skin-reveals"
         specs={openings.skinReveals}
-        material={materials.darkMetal}
+        material={materials.frameMetal}
         castShadow={false}
       />
       <MergedBoxes
