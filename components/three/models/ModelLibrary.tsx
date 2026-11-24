@@ -40,6 +40,7 @@ export type ModelName =
   | 'sofa-3seat'
   | 'sofa-ph-03'
   | 'sofa-ph-02'
+  | 'sofa-sectional-white'
   | 'lounge-chair'
   | 'chair-ph-arm'
   | 'chair-ph-dining'
@@ -51,6 +52,7 @@ export type ModelName =
   | 'table-ph-side'
   | 'bed'
   | 'bed-ph-gothic'
+  | 'bed-platform-oak'
   | 'nightstand'
   | 'nightstand-ph-classic'
   | 'table-lamp'
@@ -107,6 +109,7 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
   'sofa-ph-03',
   'sofa-ph-02',
+  'sofa-sectional-white',
   'lounge-chair',
   'chair-ph-arm',
   'chair-ph-dining',
@@ -118,6 +121,7 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'table-ph-side',
   'bed',
   'bed-ph-gothic',
+  'bed-platform-oak',
   'nightstand',
   'nightstand-ph-classic',
   'table-lamp',
@@ -202,8 +206,9 @@ export const MODEL_MATERIAL_OVERRIDES: Partial<
   // Pillow (upholstered body) only; the wooden legs keep their own material.
   'chair-ph-arm': [{ match: 'modern_arm_chair_01_pillow', color: 0xf2ede3 }],
   // Single-material bed (frame + bedding in one texture) -> warm white.
-  // The tall-post silhouette is still Gothic; a clean modern bed is a
-  // follow-up fetch, not something a recolour can fix.
+  // The tall-post silhouette is still Gothic. The clean modern bed is
+  // now 'bed-platform-oak' (Blender-built from the concept image);
+  // this entry stays so the Gothic file remains loadable if ever used.
   'bed-ph-gothic': [{ color: 0xf2ede3 }],
 };
 
