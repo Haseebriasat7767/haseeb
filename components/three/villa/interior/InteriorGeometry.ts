@@ -24,6 +24,7 @@ import {
   createShower,
   createSofa,
   createVanity,
+  createVanityMirror,
   createWC,
   emptyParts,
 } from './Furniture';
@@ -146,7 +147,7 @@ export function createInteriorLayout(
 ): InteriorLayout {
   const tier = DETAIL[detail];
   const schedule = createInteriorPlan(plan, levels);
-  const { rooms, stairwellZ } = schedule;
+  const { rooms, stairwellZ, doorUnits } = schedule;
   const clear = config.wallClearance;
 
   const parts = emptyParts();
@@ -175,6 +176,13 @@ export function createInteriorLayout(
   const panelling: BoxSpec[] = [];
 
   const roomList = Object.values(rooms) as Room[];
+
+  // Blender-built oak-and-glass interior doors in every
+  // partition and shell doorway. Positions and swing come from
+  // the plan's doorUnits schedule — nothing is restated here.
+  for (const door of doorUnits) {
+    model('door-interior', door.position, door.rotationY);
+  }
 
   // ── Finishes ──────────────────────────────────────────────────────────
   // The stair hall's ceiling is the void the stair rises through, and the
@@ -1065,7 +1073,12 @@ export function createInteriorLayout(
     [masterBath.z[1] - 1.5, masterBath.z[1] - 0.55],
     masterBath.floorY,
   );
-  createVanity(
+  // Blender-built oak vanity with a marble top (the procedural
+  // cabinet + stone top + basin are out; the lit mirror stays,
+  // via createVanityMirror in Furniture.ts). Same slot, same
+  // 0.90 top, so the tap, towels and bottles sit on it
+  // unchanged.
+  createVanityMirror(
     parts,
     'master-vanity',
     [masterBath.x[0] + 0.3, masterBath.x[0] + 1.9],
@@ -1073,6 +1086,7 @@ export function createInteriorLayout(
     masterBath.floorY,
     masterBath.ceilingY,
   );
+  model('vanity-oak', [masterBath.x[0] + 1.1, masterBath.floorY, masterBath.z[0] + 0.275], 0);
   createShower(
     parts,
     'master-shower',
@@ -1106,10 +1120,15 @@ export function createInteriorLayout(
     const vanityTop = masterBath.floorY + 0.9;
     // Blender-built folded towels (real folds + a rolled towel)
     // in place of the procedural stack, same spot.
-    model('towels-folded', [masterBath.x[0] + 0.55, vanityTop, mid(masterBath.z) - 0.9], 0);
+    // The towels used to float at mid-bath height (a pre-existing
+    // misplacement — bath-2's were correctly on its vanity); they
+    // sit on the new vanity top now, west of the basin.
+    model('towels-folded', [masterBath.x[0] + 0.55, vanityTop, masterBath.z[0] + 0.28], 0);
     // Blender-built bottle tray + soap in place of the single
     // procedural vessel, same spot on the vanity.
-    model('bath-bottles', [masterBath.x[0] + 1.5, vanityTop, mid(masterBath.z) - 1.0], 0);
+    // Same fix as the towels: the tray floated mid-bath; it sits
+    // on the new vanity top now, east of the basin.
+    model('bath-bottles', [masterBath.x[0] + 1.68, vanityTop, masterBath.z[0] + 0.28], 0);
     createPlant(
       parts,
       'master-bath-plant',

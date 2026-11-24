@@ -793,6 +793,24 @@ export function createVanity(
     ),
   );
 
+  createVanityMirror(parts, key, x, z, floorY, ceilingY);
+}
+
+/**
+ * The lit mirror behind a vanity, split out of createVanity so
+ * a Blender-built vanity (the master bath's vanity-oak) can
+ * keep the mirror without the procedural cabinet, top and
+ * basin underneath it. Guest and bath-2 vanities still call
+ * createVanity, which calls this — their mirrors are unchanged.
+ */
+export function createVanityMirror(
+  parts: Parts,
+  key: string,
+  x: Range,
+  z: Range,
+  floorY: number,
+  ceilingY: number,
+): void {
   const mirrorTop = Math.min(ceilingY - 0.5, floorY + 2.2);
   parts.glass.push(
     box(
