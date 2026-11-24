@@ -35,14 +35,17 @@ import type { Group, Mesh, Object3D } from 'three';
 export const DRACO_PATH = '/assets/draco/';
 const MODEL_PATH = '/assets/models/';
 
-/** Every piece `tools/blender/models.py` exports. */
+/** Every piece the library knows: Blender-authored pieces plus CC0 Poly Haven imports (names ending in `-ph-*`). */
 export type ModelName =
   | 'sofa-3seat'
+  | 'sofa-ph-03'
   | 'lounge-chair'
+  | 'chair-ph-arm'
   | 'ottoman'
   | 'low-table'
   | 'side-drum'
   | 'bed'
+  | 'bed-ph-gothic'
   | 'nightstand'
   | 'table-lamp'
   | 'floor-lamp'
@@ -94,11 +97,14 @@ export type ModelName =
 
 export const MODEL_NAMES: readonly ModelName[] = [
   'sofa-3seat',
+  'sofa-ph-03',
   'lounge-chair',
+  'chair-ph-arm',
   'ottoman',
   'low-table',
   'side-drum',
   'bed',
+  'bed-ph-gothic',
   'nightstand',
   'table-lamp',
   'floor-lamp',

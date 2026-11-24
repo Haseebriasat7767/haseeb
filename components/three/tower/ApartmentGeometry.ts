@@ -459,10 +459,10 @@ export function createApartment(
   );
 
   // Sofa against the glass end, facing the media wall.
-  put(k('sofa'), 'sofa-3seat', across(0.76), hz(0.2), floorY, 'west');
+  put(k('sofa'), 'sofa-ph-03', across(0.76), hz(0.2), floorY, 'west');
   // Two chairs turned back toward it, closing the group.
-  put(k('chair-a'), 'lounge-chair', across(0.335), hz(-3.3), floorY, 'east');
-  put(k('chair-b'), 'lounge-chair', across(0.351), hz(3.4), floorY, 'east');
+  put(k('chair-a'), 'chair-ph-arm', across(0.335), hz(-3.3), floorY, 'east');
+  put(k('chair-b'), 'chair-ph-arm', across(0.351), hz(3.4), floorY, 'east');
   put(k('ottoman'), 'ottoman', across(0.567), hz(3.7), floorY, hf('north'));
 
   // A cluster of kidney tables at three heights, overlapping in plan —
@@ -646,7 +646,7 @@ export function createApartment(
   );
 
   // The bed model carries its own headboard and pillows.
-  put(k('bed'), 'bed', bedX + 1.9, bedCentreZ, floorY, 'east');
+  put(k('bed'), 'bed-ph-gothic', bedX + 1.9, bedCentreZ, floorY, 'east');
   put(k('night-a'), 'nightstand', bedX + 0.85, bedCentreZ - 1.5, floorY, 'east');
   put(k('night-b'), 'nightstand', bedX + 0.85, bedCentreZ + 1.5, floorY, 'east');
   if (dressed) {
