@@ -1,4 +1,5 @@
 import type { BoxSpec, Range } from '../villa/VillaTypes';
+import type { ModelPlacement } from '../models/InstancedModels';
 import type { PalmSpec } from './TowerTypes';
 
 /**
@@ -47,11 +48,12 @@ export type ParkLayout = {
   /** Beds of low planting either side of the path. */
   beds: BoxSpec[];
   palms: PalmSpec[];
-  /** Broadleaf trees, as trunk plus canopy clusters for the card renderer. */
-  trees: {
-    trunks: BoxSpec[];
-    canopy: { key: string; position: [number, number, number]; radius: number; seed: number }[];
-  };
+  /** Broadleaf trees, as real 3D models (Phase 5: the flat
+      canopy cards are gone — TowerScene no longer renders them).
+      Scale varies the one tree piece. */
+  modelTrees: ModelPlacement[];
+  /** Hero palms flanking the path, larger than the grove palms. */
+  heroPalms: ModelPlacement[];
   /** Benches along the path. */
   benches: BoxSpec[];
 };
@@ -86,8 +88,8 @@ export function createParkLayout(
   const beds: BoxSpec[] = [];
   const palms: PalmSpec[] = [];
   const benches: BoxSpec[] = [];
-  const trunks: BoxSpec[] = [];
-  const canopy: ParkLayout['trees']['canopy'] = [];
+  const modelTrees: ModelPlacement[] = [];
+  const heroPalms: ModelPlacement[] = [];
 
   const zRange: Range = [-spanZ / 2, spanZ / 2];
   const parkX: Range = [backX - 46, backX + 34];
@@ -142,33 +144,38 @@ export function createParkLayout(
   }
 
   // A few broadleaf trees for the flowering colour in the reference — the
-  // yellow poinciana. Trunk as geometry, crown as clusters the card
-  // renderer draws.
+  // yellow poinciana. Phase 5: real 3D trees (tree-broadleaf),
+  // not trunks plus flat canopy cards — the card renderer is
+  // gone from TowerScene, which is the code path Phase 4 left
+  // owed. Same positions as the old trunks.
   for (let i = 0; i < 11; i += 1) {
     const r1 = rand(900 + i * 19);
     const r2 = rand(1100 + i * 31);
     const z = zRange[0] + 12 + r1 * (span(zRange) - 24);
     const x = pathX(z, backX) + (r2 > 0.5 ? 1 : -1) * (7 + r2 * 16);
     if (x < parkX[0] + 3 || x > parkX[1] - 3) continue;
-    const h = 6.5 + r2 * 4.5;
-    trunks.push({
-      key: `park-trunk-${i}`,
-      position: [x, h / 2, z],
-      scale: [0.42 + r1 * 0.2, h, 0.42 + r1 * 0.2],
+    modelTrees.push({
+      key: `park-tree-${i}`,
+      name: 'tree-broadleaf',
+      position: [x, 0.05, z],
+      rotationY: r1 * Math.PI * 2,
+      scale: 1.05 + r2 * 0.45,
     });
-    for (let c = 0; c < 4; c += 1) {
-      const rc = rand(1300 + i * 13 + c * 5);
-      canopy.push({
-        key: `park-canopy-${i}-${c}`,
-        position: [
-          x + (rc - 0.5) * 4.4,
-          h + 0.6 + (rand(1500 + i + c) - 0.5) * 2.2,
-          z + (rand(1700 + i + c) - 0.5) * 4.4,
-        ],
-        radius: 2.4 + rc * 1.5,
-        seed: 1900 + i * 7 + c,
-      });
-    }
+  }
+
+  // Two hero palms where the path runs nearest the plaza end
+  // of the park, flanking it rather than standing in it.
+  for (const [dz, side] of [
+    [-20, 1],
+    [30, -1],
+  ] as const) {
+    heroPalms.push({
+      key: `park-hero-palm-${dz}`,
+      name: 'palm-hero',
+      position: [pathX(dz, backX) + side * 4.5, 0.05, dz],
+      rotationY: side * 0.6,
+      scale: 1.7,
+    });
   }
 
   // Beds of low planting, held off the path so it never reads as a trench.
@@ -190,5 +197,5 @@ export function createParkLayout(
     );
   }
 
-  return { lawn, path, edging, beds, palms, trees: { trunks, canopy }, benches };
+  return { lawn, path, edging, beds, palms, modelTrees, heroPalms, benches };
 }

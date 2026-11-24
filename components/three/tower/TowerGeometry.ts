@@ -1335,13 +1335,8 @@ export function createTowerLayout(config: TowerConfig = TOWER_CONFIG): TowerLayo
     );
   }
 
-  for (let i = 0; i < 8; i += 1) {
-    const z = poolZ[0] + 1.4 + (i % 4) * ((poolLength - 2.8) / 3);
-    const x = i < 4 ? poolX[0] - 2.9 : poolX[1] + 1.1;
-    furniture.push(
-      box(`deck-lounger-${i}`, [x, x + 1.8], [deckTop, deckTop + 0.42], [z - 0.38, z + 0.38]),
-    );
-  }
+  // No box loungers here any more: Phase 5 places real
+  // lounger-white models at the same spots from SiteProps.
 
   // ── Planting ──────────────────────────────────────────────────────────
 
