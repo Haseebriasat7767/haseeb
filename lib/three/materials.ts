@@ -1545,7 +1545,10 @@ function createMaterials() {
      */
     poolWater: withWaterSurface(
       new MeshPhysicalMaterial({
-        color: '#1d5a67',
+        // Turquoise, per the approved pool-terrace concept image: the
+        // old dark teal read as a pond. The reflected dome still does
+        // most of the work; this lifts the body colour to match it.
+        color: '#2fa39a',
         // Water is very nearly a mirror, and with a sky to reflect it can
         // finally behave like one — the reflected dome is what gives the
         // pool its colour, not the albedo underneath.
@@ -1554,8 +1557,8 @@ function createMaterials() {
         // After dark the submerged lighting is carried by the water body
         // itself rather than by the basin walls, so the pool reads as a
         // soft luminous plane instead of a glowing outline.
-        emissive: '#22403f',
-        emissiveIntensity: 0,
+        emissive: '#20665f',
+        emissiveIntensity: 0.3,
         metalness: 0.02,
         reflectivity: 1,
         transparent: true,
@@ -1582,7 +1585,9 @@ function createMaterials() {
      */
     poolInterior: withVariation(
       standard({
-        color: '#63807e',
+        // Pale aqua plaster: the basin light coming back up is what
+        // makes shallow pool water read turquoise, not blue-green.
+        color: '#82b8b1',
         roughness: 0.62,
         metalness: 0,
         emissive: '#9fc4c6',

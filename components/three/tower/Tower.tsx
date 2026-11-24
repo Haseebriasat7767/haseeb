@@ -175,7 +175,10 @@ export function Tower({ layout, detail = 'high' }: { layout: TowerLayout; detail
       />
 
       {/* ── Amenity deck ──────────────────────────────────────────────── */}
-      <MergedBoxes name="deck-paving" specs={deck.paving} material={materials.paving} />
+      {/* Wooden deck, per the pool-terrace concept: the stone paving read
+          as a grey slab from the aerial. Teak is the warm timber the deck
+          furniture already uses. */}
+      <MergedBoxes name="deck-paving" specs={deck.paving} material={materials.teak} />
       <MergedBoxes name="deck-upstand" specs={deck.parapet} material={materials.stone} />
       <MergedBoxes
         name="deck-balustrade"
