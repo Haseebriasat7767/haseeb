@@ -45,6 +45,11 @@ export type ModelName =
   // door leaf, sheer curtain, board set, bath bottles). The
   // door leaf is the one exception to the centred-in-plan
   // contract: its origin is the hinge post, not the plan centre.
+  // Phase 5 adds the interior door unit (oak leaf + frosted
+  // sidelight, ajar 35 deg toward its front) and the oak
+  // master-bath vanity. The door unit is centred on its FRAME
+  // in plan; the swung leaf breaks the bbox centre, like the
+  // balcony leaf's hinge origin.
   | 'sofa-3seat'
   | 'sofa-ph-03'
   | 'sofa-ph-02'
@@ -118,6 +123,8 @@ export type ModelName =
   | 'curtain-sheer'
   | 'kitchen-board-set'
   | 'bath-bottles'
+  | 'door-interior'
+  | 'vanity-oak'
   | 'lounger-white'
   | 'palm-hero'
   | 'tree-broadleaf'
@@ -201,6 +208,8 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'curtain-sheer',
   'kitchen-board-set',
   'bath-bottles',
+  'door-interior',
+  'vanity-oak',
   'lounger-white',
   'palm-hero',
   'tree-broadleaf',
