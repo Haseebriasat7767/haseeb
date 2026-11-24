@@ -37,6 +37,10 @@ const MODEL_PATH = '/assets/models/';
 
 /** Every piece the library knows: Blender-authored pieces plus CC0 Poly Haven imports (names ending in `-ph-*`). */
 export type ModelName =
+  // Phase 4 Blender-built pieces (taps, towels, olive, pergola,
+  // door leaf, sheer curtain, board set, bath bottles). The
+  // door leaf is the one exception to the centred-in-plan
+  // contract: its origin is the hinge post, not the plan centre.
   | 'sofa-3seat'
   | 'sofa-ph-03'
   | 'sofa-ph-02'
@@ -101,6 +105,15 @@ export type ModelName =
   | 'wall-light'
   | 'planter-trough'
   | 'plant-ph-01'
+  | 'tap-kitchen'
+  | 'tap-bath'
+  | 'towels-folded'
+  | 'plant-olive'
+  | 'pergola-lights'
+  | 'door-balcony-open'
+  | 'curtain-sheer'
+  | 'kitchen-board-set'
+  | 'bath-bottles'
   | 'treadmill'
   | 'treatment-table'
   | 'locker-bank';
@@ -170,6 +183,15 @@ export const MODEL_NAMES: readonly ModelName[] = [
   'wall-light',
   'planter-trough',
   'plant-ph-01',
+  'tap-kitchen',
+  'tap-bath',
+  'towels-folded',
+  'plant-olive',
+  'pergola-lights',
+  'door-balcony-open',
+  'curtain-sheer',
+  'kitchen-board-set',
+  'bath-bottles',
   'treadmill',
   'treatment-table',
   'locker-bank',
