@@ -1254,6 +1254,24 @@ function createMaterials() {
       0.16,
     ),
     /**
+     * Distant city, seen across half a kilometre of haze. A flat silhouette
+     * on purpose: at that distance a tower is a shape against the sky, and
+     * the procedural concrete's stone maps, ashlar joints and rain streaks
+     * are detail nobody can resolve — they only tint the boxes. The
+     * hemisphere fill's olive ground colours are what turned the masses
+     * green, so this material takes almost no environment light and lets
+     * the aerial-perspective haze — which samples the sky along the view
+     * ray — do the warming. Haze starts at 300 m (just inside the nearest
+     * city block) and reaches full sky at 950 m (just past the farthest).
+     * NEEDS VISUAL CONFIRMATION on a real GPU at golden hour and day —
+     * the green was observed under SwiftShader only.
+     */
+    skyline: withAerialPerspective(
+      standard({ color: '#93a0b0', roughness: 0.92, metalness: 0.0, envMapIntensity: 0.25 }),
+      300,
+      950,
+    ),
+    /**
      * Honed limestone / travertine — warm off-white, restrained natural
      * irregularity. Coarser noise cells than concrete so it reads as large
      * quarried slabs, not aggregate.

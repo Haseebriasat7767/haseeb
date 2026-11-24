@@ -255,7 +255,7 @@ export function TowerScene({
           <MergedBoxes
             name="city-masses"
             specs={skyline.masses}
-            material={materials.concrete}
+            material={materials.skyline}
             castShadow={false}
             receiveShadow={false}
           />

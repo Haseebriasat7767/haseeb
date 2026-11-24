@@ -206,9 +206,9 @@ const POST_PROFILES: Record<QualityTier, PostProfile> = {
     ambientOcclusion: true,
     aoSamples: 8,
     aoRadius: 0.6,
-    aoResolutionScale: 0.5,
+    aoResolutionScale: 0.75,
     bloom: true,
-    samples: 0,
+    samples: 2,
   },
   high: {
     enabled: true,

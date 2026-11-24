@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getQualityProfile } from '@/lib/three/scene-config';
-import type { QualityProfile } from '@/types';
+import type { QualityProfile, QualityTier } from '@/types';
 
 /**
  * Resolves a rendering tier from device signals rather than user-agent
@@ -24,11 +24,61 @@ function resolveTier(): QualityProfile {
   return getQualityProfile('high');
 }
 
+/** Average frame time (ms) above which the probe demotes a tier. */
+const DEMOTE_MS: Record<QualityTier, number> = { low: Infinity, medium: 40, high: 28 };
+const PROBE_DELAY_MS = 3000;
+const PROBE_FRAMES = 90;
+const PROBE_WARMUP_FRAMES = 30;
+
+function demote(tier: QualityTier): QualityTier {
+  if (tier === 'high') return 'medium';
+  if (tier === 'medium') return 'low';
+  return 'low';
+}
+
 export function useQualityTier(): QualityProfile {
   const [profile, setProfile] = useState<QualityProfile>(() => getQualityProfile('medium'));
 
   useEffect(() => {
-    setProfile(resolveTier());
+    const base = resolveTier();
+    setProfile(base);
+
+    // One-shot frame-time probe: the static tier is a guess from cores and
+    // pointer type; the probe replaces it with a measurement. It only ever
+    // demotes (never promotes above the static tier) and it runs once, so it
+    // cannot oscillate. It starts late and skips its first frames so
+    // first-paint load does not read as a slow device. Changing the tier
+    // rebuilds the composer once (PostProcessing already rebuilds when the
+    // profile changes).
+    let cancelled = false;
+    let raf = 0;
+    const timer = window.setTimeout(() => {
+      let frames = 0;
+      let total = 0;
+      let last = 0;
+      const tick = (t: number) => {
+        if (cancelled) return;
+        if (last > 0) {
+          frames += 1;
+          if (frames > PROBE_WARMUP_FRAMES) total += t - last;
+        }
+        last = t;
+        if (frames < PROBE_WARMUP_FRAMES + PROBE_FRAMES) {
+          raf = requestAnimationFrame(tick);
+          return;
+        }
+        const avg = total / PROBE_FRAMES;
+        if (avg > DEMOTE_MS[base.tier]) {
+          setProfile(getQualityProfile(demote(base.tier)));
+        }
+      };
+      raf = requestAnimationFrame(tick);
+    }, PROBE_DELAY_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   return profile;
