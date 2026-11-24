@@ -14,7 +14,7 @@ import {
   type BufferGeometry,
   type Material,
 } from 'three';
-import { DRACO_PATH, modelUrl, overriddenMaterial, type ModelName } from './ModelLibrary';
+import { DRACO_PATH, modelUrl, type ModelName } from './ModelLibrary';
 
 /**
  * One placement of a piece, positioned by its floor contact point.
@@ -27,6 +27,12 @@ export type ModelPlacement = {
   name: ModelName;
   position: [number, number, number];
   rotationY: number;
+  /**
+   * Per-placement scale; a number is uniform, a tuple is per-axis.
+   * The dining table is Y-squashed to dining height (see
+   * ApartmentGeometry).
+   */
+  scale?: number | [number, number, number];
   /**
    * Which spatial batch this placement belongs to — a retail level, a room.
    *
@@ -130,6 +136,7 @@ export function InstancedModels({
     const quaternion = new Quaternion();
     const euler = new Euler();
     const one = new Vector3(1, 1, 1);
+    const scaleVec = new Vector3(1, 1, 1);
     const combined = new Matrix4();
 
     groups.forEach(([batchId, batch], index) => {
@@ -143,18 +150,13 @@ export function InstancedModels({
 
       // Collected first: `traverse` order is the model's own, and the
       // instanced meshes are built per primitive found in it.
-      const parts: { geometry: BufferGeometry; material: Material | Material[]; matrix: Matrix4 }[] = [];
+      const parts: { geometry: BufferGeometry; material: Material; matrix: Matrix4 }[] = [];
       scene.traverse((child: Object3D) => {
         const mesh = child as Mesh;
         if (!mesh.isMesh) return;
-        // Concept-palette recolour, as in `Model` above: the tower's
-        // instanced pieces get the same override as the residence's clones.
-        const srcMaterial = mesh.material as Material | Material[];
         parts.push({
           geometry: mesh.geometry,
-          material: Array.isArray(srcMaterial)
-            ? srcMaterial.map((m) => overriddenMaterial(batch.model, m))
-            : overriddenMaterial(batch.model, srcMaterial),
+          material: mesh.material as Material,
           matrix: mesh.matrixWorld.clone(),
         });
       });
@@ -169,7 +171,11 @@ export function InstancedModels({
           position.set(...placement.position);
           euler.set(0, placement.rotationY, 0);
           quaternion.setFromEuler(euler);
-          placementMatrix.compose(position, quaternion, one);
+          const s = placement.scale;
+          if (typeof s === 'number') scaleVec.set(s, s, s);
+          else if (Array.isArray(s)) scaleVec.set(s[0], s[1], s[2]);
+          else scaleVec.copy(one);
+          placementMatrix.compose(position, quaternion, scaleVec);
           combined.multiplyMatrices(placementMatrix, part.matrix);
           instanced.setMatrixAt(i, combined);
         });

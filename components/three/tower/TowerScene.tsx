@@ -149,6 +149,7 @@ export function TowerScene({
               // come out of every flat but the one the tour actually stands
               // in. See `ApartmentOptions.dressed` for the measurements.
               dressed: detail !== 'low' || plate.level === TOWER_CONFIG.furnishedLevel,
+              hero: plate.level === TOWER_CONFIG.furnishedLevel,
             }),
           ),
       ),

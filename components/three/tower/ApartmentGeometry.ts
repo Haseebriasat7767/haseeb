@@ -81,6 +81,11 @@ export type ModelPlacement = {
   name: ModelName;
   position: [number, number, number];
   rotationY: number;
+  /**
+   * Per-placement scale; a number is uniform, a tuple is per-axis.
+   * The dining table is Y-squashed to dining height (see below).
+   */
+  scale?: number | [number, number, number];
 };
 
 /**
@@ -201,6 +206,12 @@ export type ApartmentOptions = {
    * metres is not.
    */
   dressed?: boolean;
+  /**
+   * The show unit (the furnished floor): the only flat whose dining
+   * chairs are the real Poly Haven ones — six of them at ~8k tris
+   * each would cost ~670k triangles across fourteen flats.
+   */
+  hero?: boolean;
 };
 
 export function createApartment(
@@ -209,7 +220,7 @@ export function createApartment(
   z: Range,
   floorY: number,
   ceilingY: number,
-  { variant = 0, prefix = 'apt', dressed = true }: ApartmentOptions = {},
+  { variant = 0, prefix = 'apt', dressed = true, hero = false }: ApartmentOptions = {},
 ): ApartmentLayout {
   const parts = emptyParts();
   const forms: Form[] = [];
@@ -240,10 +251,20 @@ export function createApartment(
     z: number,
     y: number,
     facing: keyof typeof FACE,
+    scale?: number | [number, number, number],
   ) => {
-    models.push({ key, name, position: [x, y, z], rotationY: FACE[facing] });
+    models.push({ key, name, position: [x, y, z], rotationY: FACE[facing], scale });
   };
   const walls: BoxSpec[] = [];
+  /**
+   * Pushes a wall box only when it has real volume — door cuts on the
+   * narrowed top plates can otherwise leave zero-width segments.
+   */
+  const seg = (key: string, x: Range, y: Range, z: Range) => {
+    if (x[1] - x[0] > 0.01 && y[1] - y[0] > 0.01 && z[1] - z[0] > 0.01) {
+      walls.push(box(key, x, y, z));
+    }
+  };
   const soffit: BoxSpec[] = [];
 
   const glassX = x[1];
@@ -297,10 +318,15 @@ export function createApartment(
   walls.push(box(k('ceiling'), x, [ceilingY, ceilingY + 0.12], z));
 
   // ── Partitions ────────────────────────────────────────────────────────
-  walls.push(box(k('wall-lounge'), [loungeBackX, loungeBackX + 0.26], [floorY, ceilingY], z));
-  walls.push(
-    box(k('wall-bed'), [westX, loungeBackX], [floorY, ceilingY], [bedroomZ[1], bedroomZ[1] + 0.24]),
-  );
+  const loungeDoorZ: Range = [-8.6, -7.4];
+  const doorHeadY = floorY + 2.1;
+  seg(k('wall-lounge-a'), [loungeBackX, loungeBackX + 0.26], [floorY, ceilingY], [z[0], loungeDoorZ[0]]);
+  seg(k('wall-lounge-head'), [loungeBackX, loungeBackX + 0.26], [doorHeadY, ceilingY], loungeDoorZ);
+  seg(k('wall-lounge-b'), [loungeBackX, loungeBackX + 0.26], [floorY, ceilingY], [loungeDoorZ[1], z[1]]);
+  const bedDoorX: Range = [-13.6, -12.4];
+  seg(k('wall-bed-a'), [westX, bedDoorX[0]], [floorY, ceilingY], [bedroomZ[1], bedroomZ[1] + 0.24]);
+  seg(k('wall-bed-head'), bedDoorX, [doorHeadY, ceilingY], [bedroomZ[1], bedroomZ[1] + 0.24]);
+  seg(k('wall-bed-b'), [bedDoorX[1], loungeBackX], [floorY, ceilingY], [bedroomZ[1], bedroomZ[1] + 0.24]);
 
   // ── Lounge: the millwork and media wall ───────────────────────────────
   // Reading left to right off the sofa: open shelving, then the fluted
@@ -459,10 +485,15 @@ export function createApartment(
   );
 
   // Sofa against the glass end, facing the media wall.
-  put(k('sofa'), 'sofa-ph-03', across(0.76), hz(0.2), floorY, 'west');
+  // Faces the media wall (west). Poly Haven faces +Z, so west is the 'east' key.
+  // Style lock (V1VID concept): the plush sofa-ph-03 is the wrong side of
+  // the style — the cleaner sofa-ph-02 takes its place, recoloured warm
+  // white by MODEL_MATERIAL_OVERRIDES (its authored fabric is charcoal).
+  put(k('sofa'), 'sofa-ph-02', across(0.76), hz(0.2), floorY, 'east');
   // Two chairs turned back toward it, closing the group.
-  put(k('chair-a'), 'chair-ph-arm', across(0.335), hz(-3.3), floorY, 'east');
-  put(k('chair-b'), 'chair-ph-arm', across(0.351), hz(3.4), floorY, 'east');
+  // Face the sofa (east). Same +Z convention as the sofa above.
+  put(k('chair-a'), 'chair-ph-arm', across(0.335), hz(-3.3), floorY, 'west');
+  put(k('chair-b'), 'chair-ph-arm', across(0.351), hz(3.4), floorY, 'west');
   put(k('ottoman'), 'ottoman', across(0.567), hz(3.7), floorY, hf('north'));
 
   // A cluster of kidney tables at three heights, overlapping in plan —
@@ -646,7 +677,10 @@ export function createApartment(
   );
 
   // The bed model carries its own headboard and pillows.
-  put(k('bed'), 'bed-ph-gothic', bedX + 1.9, bedCentreZ, floorY, 'east');
+  // Headboard to the west wall (the fluted panel and the nightstands
+  // flank that end). The model's headboard is at -Z, so west is the
+  // 'west' key — Phase 1 had it backwards.
+  put(k('bed'), 'bed-ph-gothic', bedX + 1.9, bedCentreZ, floorY, 'west');
   put(k('night-a'), 'nightstand', bedX + 0.85, bedCentreZ - 1.5, floorY, 'east');
   put(k('night-b'), 'nightstand', bedX + 0.85, bedCentreZ + 1.5, floorY, 'east');
   if (dressed) {
@@ -670,17 +704,26 @@ export function createApartment(
 
   // Dining, between the kitchen and the lounge glazing.
   const diningZ = inset(-6.0, 1.4);
-  put(k('dining'), 'dining-table', -12.6, diningZ, floorY, 'north');
+  // The real Poly Haven table: 2.26 m long (the repo's is 2.40 m) but
+  // 0.877 m high — 12 cm over a dining table — so it is Y-squashed
+  // to 0.75 m at placement. Its long axis is X, so it turns a quarter
+  // against the repo table's Z. The chairs are the pale painted-wood
+  // chair (seat 0.44 m, lum 174) — the dark dining_chair_02 fights the
+  // V1VID palette — only in the show unit (see ApartmentOptions.hero);
+  // elsewhere the light procedural chair stays. Poly Haven chairs
+  // face +Z, opposite to the repo's -Z convention, so their facings
+  // are swapped from the procedural chair's.
+  put(k('dining'), 'table-ph-dining', -12.6, diningZ, floorY, 'east', [1, 0.855, 1]);
   for (let i = 0; i < 6; i += 1) {
     const side = i < 3 ? -1 : 1;
     const z = diningZ + ((i % 3) - 1) * 0.78;
     put(
       k(`dchair-${i}`),
-      'dining-chair',
+      hero ? 'chair-ph-painted' : 'dining-chair',
       -12.6 + side * 0.86,
       z,
       floorY,
-      side < 0 ? 'east' : 'west',
+      side < 0 ? (hero ? 'west' : 'east') : (hero ? 'east' : 'west'),
     );
   }
 
@@ -696,7 +739,13 @@ export function createApartment(
   /** The wet rooms run to the flank glazing, wherever that is on this floor. */
   const serviceZ = inset(10.8, 0.3);
 
-  walls.push(box(k('wall-kitchen'), [partX, partX + 0.2], [floorY, ceilingY], [-1.4, serviceZ]));
+  const kitchenDoorZ: Range = [-1.0, 0.2];
+  const bathDoorZ: Range = [4.6, 5.8];
+  seg(k('wall-kitchen-a'), [partX, partX + 0.2], [floorY, ceilingY], [-1.4, kitchenDoorZ[0]]);
+  seg(k('wall-kitchen-head-a'), [partX, partX + 0.2], [doorHeadY, ceilingY], kitchenDoorZ);
+  seg(k('wall-kitchen-b'), [partX, partX + 0.2], [floorY, ceilingY], [kitchenDoorZ[1], bathDoorZ[0]]);
+  seg(k('wall-kitchen-head-b'), [partX, partX + 0.2], [doorHeadY, ceilingY], bathDoorZ);
+  seg(k('wall-kitchen-c'), [partX, partX + 0.2], [floorY, ceilingY], [bathDoorZ[1], serviceZ]);
   walls.push(box(k('wall-bath'), [partX + 0.2, -9.4], [floorY, ceilingY], [bathZ, bathZ + 0.2]));
 
   // Honed stone underfoot in the wet rooms, as it would be.
