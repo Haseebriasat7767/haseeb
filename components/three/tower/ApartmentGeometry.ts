@@ -769,6 +769,18 @@ export function createApartment(
   seg(k('wall-kitchen-c'), [partX, partX + 0.2], [floorY, ceilingY], [bathDoorZ[1], serviceZ]);
   walls.push(box(k('wall-bath'), [partX + 0.2, -9.4], [floorY, ceilingY], [bathZ, bathZ + 0.2]));
 
+  // Blender-built oak-and-glass interior doors in the four
+  // partition voids (all 1.2 m, head floorY+2.1). The leaf
+  // swings toward the model's front (+Z at rotation 0); the
+  // FACE keys below are the rotations that turn it into the
+  // room each door opens into — 'east' is -pi/2 (front -X,
+  // leaf into the room west of the wall) and 'south' is pi
+  // (front -Z, leaf into the bedroom north of its wall).
+  put(k('door-lounge'), 'door-interior', loungeBackX + 0.13, mid(loungeDoorZ), floorY, 'east');
+  put(k('door-bed'), 'door-interior', mid(bedDoorX), bedroomZ[1] + 0.12, floorY, 'south');
+  put(k('door-kitchen'), 'door-interior', partX + 0.1, mid(kitchenDoorZ), floorY, 'east');
+  put(k('door-bath'), 'door-interior', partX + 0.1, mid(bathDoorZ), floorY, 'east');
+
   // Honed stone underfoot in the wet rooms, as it would be.
   parts.stone.push(
     box(k('bath-floor'), [partX + 0.2, -9.4], [floorY, floorY + 0.015], [bathZ + 0.2, serviceZ]),
