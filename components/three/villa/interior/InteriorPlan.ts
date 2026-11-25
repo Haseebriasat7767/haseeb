@@ -73,6 +73,34 @@ function portal(across: Range, floorY: number, height = PORTAL_HEIGHT): WallGap 
 }
 
 /**
+ * A walkable doorway between two framed spaces, for the in-scene room
+ * markers. Positions come from the same plan lines the partitions and
+ * shell gaps already use — not one coordinate is authored independently
+ * of the building. `from`/`to` are SPACES ids; a marker renders in
+ * either room and leads to the other side.
+ */
+export type InteriorDoor = {
+  from: string;
+  to: string;
+  position: [number, number, number];
+};
+
+/**
+ * A real door in a doorway: the 1.2 m voids the partitions and shell
+ * already punch, filled with the Blender-built door-interior unit.
+ * The leaf swings toward the model's front (+Z): rotationY 0 swings
+ * it +Z, pi -Z, +pi/2 +X, -pi/2 -X, so each unit turns its front
+ * toward the room the door opens into.
+ */
+export type InteriorDoorUnit = {
+  key: string;
+  /** Floor contact point: the centre of the 1.2 m void. */
+  position: [number, number, number];
+  /** Turn about the vertical, in radians. */
+  rotationY: number;
+};
+
+/**
  * A partition wall centred on a plan line, punched with its own doors. The
  * villa's structural `punchedWall` is not reused here because partitions are
  * thin, non-structural, and always full storey height — a single dedicated
@@ -442,7 +470,109 @@ export function createInteriorPlan(plan: VillaPlan, levels: VillaLevels) {
   // arrival edge. Sized from the flights below, not chosen by eye.
   const stairwellZ: Range = [-8.5, -5.2];
 
-  return { rooms, partitions, shellGaps, stairwellZ, barZ, barMidZ, hallFrontZ, bedroomFrontZ };
+  // ── Interior door units ──────────────────────────────────────────
+  // The same voids the partitions and shell gaps above punch, filled
+  // with the door-interior unit. The swing side was picked against
+  // the furniture on both sides of each doorway (see the workstream
+  // report): the master-bath leaf opens into the bath (the master
+  // side has the nightstands + boarded wall in its path), the
+  // guest-bath leaf opens into the bedroom (the bath side has the
+  // vanity hard against the door), the rest open into the room they
+  // serve. Two tight spots remain: the dressing leaf crosses the
+  // boarded master wall (the boards cover the door voids), and the
+  // study/guest leaf tip clips the study shelving — both walls carry
+  // full-height joinery flush on the door, so no swing avoids it.
+  const doorUnits: InteriorDoorUnit[] = [
+    // Ground floor — the rear service band.
+    {
+      key: 'door-guest-bath',
+      position: [guestBathX, groundY, barMidZ - 2.5],
+      rotationY: -Math.PI / 2,
+    },
+    {
+      key: 'door-stair-kitchen',
+      position: [plan.entranceX[1], groundY, barMidZ - 1.1],
+      rotationY: Math.PI / 2,
+    },
+    {
+      key: 'door-kitchen-pantry',
+      position: [kitchenEastX, groundY, barMidZ - 0.3],
+      rotationY: Math.PI / 2,
+    },
+    {
+      key: 'door-pantry-utility',
+      position: [pantryEastX, groundY, barMidZ - 0.3],
+      rotationY: Math.PI / 2,
+    },
+    // Ground floor — shell doors (the same voids VillaGeometry punches).
+    { key: 'door-study-guest', position: [-12.9, groundY, plan.rearBarFrontZ], rotationY: 0 },
+    {
+      key: 'door-study-foyer',
+      position: [plan.westWingEastX - 0.15, groundY, 1],
+      rotationY: -Math.PI / 2,
+    },
+    // Upper floor — master suite.
+    { key: 'door-master-bath', position: [-13, upperFloorY, masterBackZ], rotationY: Math.PI },
+    { key: 'door-master-dressing', position: [-10, upperFloorY, masterBackZ], rotationY: 0 },
+    // Upper floor — secondary bedrooms.
+    { key: 'door-bedroom2', position: [-1, upperFloorY, bedroomFrontZ], rotationY: Math.PI },
+    { key: 'door-bath2', position: [4.9, upperFloorY, bedroomFrontZ], rotationY: Math.PI },
+    { key: 'door-bedroom3', position: [10.2, upperFloorY, bedroomFrontZ], rotationY: Math.PI },
+    // Upper floor — master to landing (shell door).
+    {
+      key: 'door-master-landing',
+      position: [plan.entranceX[0], upperFloorY, -5.9],
+      rotationY: -Math.PI / 2,
+    },
+  ];
+
+  // ── Room-to-room doors ──────────────────────────────────────────────
+  // The same openings the partitions and shell gaps already punch (or,
+  // for the open-plan boundaries, the shared room edge). The residence's
+  // version of the tower's click-to-enter flow: a marker in either room
+  // frames the other side.
+  const doors: InteriorDoor[] = [
+    {
+      from: 'foyer',
+      to: 'stair',
+      position: [(plan.entranceX[0] + plan.entranceX[1]) / 2, groundY + 1.5, plan.rearBarFrontZ],
+    },
+    { from: 'kitchen', to: 'stair', position: [plan.entranceX[1], groundY + 1.5, barMidZ - 1.1] },
+    { from: 'kitchen', to: 'dining', position: [-2.0, groundY + 1.5, plan.rearBarFrontZ] },
+    {
+      from: 'dining',
+      to: 'living',
+      position: [2.5, groundY + 1.5, (plan.rearBarFrontZ + plan.livingGlassZ) / 2],
+    },
+    {
+      from: 'living',
+      to: 'terrace',
+      position: [(2.5 + plan.eastWingWestX) / 2, groundY + 1.5, plan.livingGlassZ],
+    },
+    { from: 'study', to: 'foyer', position: [plan.westWingEastX, groundY + 1.5, 1] },
+    { from: 'study', to: 'guest', position: [-12.9, groundY + 1.5, plan.rearBarFrontZ] },
+    { from: 'master', to: 'dressing', position: [-10, upperFloorY + 1.5, masterBackZ] },
+    { from: 'master', to: 'masterBath', position: [-13, upperFloorY + 1.5, masterBackZ] },
+    { from: 'bedroom2', to: 'upperLounge', position: [-1, upperFloorY + 1.5, bedroomFrontZ] },
+    {
+      from: 'upperLounge',
+      to: 'library',
+      position: [plan.cantileverAxisX[0], upperFloorY + 1.5, -0.4],
+    },
+  ];
+
+  return {
+    rooms,
+    partitions,
+    shellGaps,
+    stairwellZ,
+    barZ,
+    barMidZ,
+    hallFrontZ,
+    bedroomFrontZ,
+    doors,
+    doorUnits,
+  };
 }
 
 export type InteriorPlanResult = ReturnType<typeof createInteriorPlan>;

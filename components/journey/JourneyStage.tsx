@@ -54,6 +54,11 @@ export function JourneyStage() {
       <div className="sticky top-0 -mb-[100svh] h-[100svh] w-full overflow-hidden">
         <ExperienceViewport
           className="absolute inset-0 h-full w-full"
+          // Poster frame: the path-traced arrival still — the
+          // residence from the approach, the opening framing —
+          // behind the loading screen while the live scene loads.
+          // It is a still, not the live scene.
+          poster="/assets/brochure/arrival.jpg"
           view={active.view}
           mode="journey"
           timeOfDay={hour}
@@ -186,7 +191,7 @@ export function JourneyStage() {
             key={chapter.id}
             id={`chapter-${chapter.id}`}
             aria-labelledby={`chapter-${chapter.id}-title`}
-            // The lower padding clears the compact dial on a phone; the
+            // The 112px bottom padding clears the compact dial on a phone — the dial is ~66px tall at bottom-5 (20px), so its top edge is ~86px from the viewport bottom; the
             // left indent clears the vertical one on a wide screen, so the
             // control never sits over a word of the copy at any width.
             // `pointer-events-none`, with the copy block opting back in.
@@ -196,7 +201,7 @@ export function JourneyStage() {
             // was unreachable with a mouse, and the hour dial would have
             // been too. Scrolling, selection inside the copy and the
             // section's own intersection tracking are all unaffected.
-            className="pointer-events-none relative flex h-[100svh] flex-col justify-end pb-16 sm:pb-20 lg:pb-12"
+            className="pointer-events-none relative flex h-[100svh] flex-col justify-end pb-28 sm:pb-28 lg:pb-12"
           >
             <Container>
               <div

@@ -16,8 +16,8 @@ export function VillaRoof({ layout }: { layout: VillaLayout }) {
 
   return (
     <group name="Roof">
-      <Massing specs={layout.roof.slabs} material={materials.concrete} />
-      <Massing specs={layout.roof.parapets} material={materials.concrete} />
+      <Massing specs={layout.roof.slabs} material={materials.facadeWhite} />
+      <Massing specs={layout.roof.parapets} material={materials.facadeWhite} />
       {/* The drip grooves under every oversailing edge. Dark, because what
           is being drawn is the shadow inside a twenty-millimetre groove and
           not the groove's own surface — nothing at this size is lit. */}

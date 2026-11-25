@@ -22,7 +22,7 @@ export function VillaLowerFloor({ layout }: { layout: VillaLayout }) {
         <MergedBoxes
           name="gf-enclosure"
           specs={layout.groundFloor.mass}
-          material={materials.concrete}
+          material={materials.facadeWhite}
         />
       </group>
 
@@ -31,7 +31,7 @@ export function VillaLowerFloor({ layout }: { layout: VillaLayout }) {
       </group>
 
       <group name="Entrance">
-        <Massing specs={layout.groundFloor.entrance} material={materials.concrete} />
+        <Massing specs={layout.groundFloor.entrance} material={materials.facadeWhite} />
       </group>
     </group>
   );

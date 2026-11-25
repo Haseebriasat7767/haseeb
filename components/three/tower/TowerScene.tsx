@@ -6,8 +6,6 @@ import { disposeSurfaceMaps } from '../textures/SurfaceMaps';
 import { ARCHITECTURAL_CHAMFER, ChamferProvider, MergedBoxes } from '../villa/VillaPrimitives';
 import { disposeVillaGeometries } from '../villa/VillaPrimitiveCache';
 import type { BoxSpec, DetailTier } from '../villa/VillaTypes';
-import { FoliageCards } from '../villa/landscape/FoliageCards';
-import { createFoliageCards } from '../villa/landscape/FoliageGeometry';
 import { DecalPlanes } from '../DecalPlanes';
 import {
   IDENTITY_SHEET,
@@ -105,25 +103,6 @@ export function TowerScene({
   const wayfinding = useMemo(() => createWayfindingDecals(layout.plan), [layout.plan]);
   const identity = useMemo(() => createIdentityDecals(layout), [layout]);
 
-  // Broadleaf crowns reuse the villa's card technique — a tree's outline is
-  // decided by a texture with leaves and gaps in it, not by geometry.
-  const parkCanopy = useMemo(
-    () =>
-      createFoliageCards(
-        park.trees.canopy.map((c) => ({
-          key: c.key,
-          position: c.position,
-          radius: c.radius,
-          scale: [1, 0.82, 1] as [number, number, number],
-          seed: c.seed,
-          deform: 0.3,
-          detail: 1 as const,
-        })),
-        detail,
-      ),
-    [park.trees.canopy, detail],
-  );
-
   // Every residential floor, fitted out.
   //
   // It used to be one — the level the walkthrough's interior framings stand
@@ -149,6 +128,7 @@ export function TowerScene({
               // come out of every flat but the one the tour actually stands
               // in. See `ApartmentOptions.dressed` for the measurements.
               dressed: detail !== 'low' || plate.level === TOWER_CONFIG.furnishedLevel,
+              hero: plate.level === TOWER_CONFIG.furnishedLevel,
             }),
           ),
       ),
@@ -255,7 +235,7 @@ export function TowerScene({
           <MergedBoxes
             name="city-masses"
             specs={skyline.masses}
-            material={materials.concrete}
+            material={materials.skyline}
             castShadow={false}
             receiveShadow={false}
           />
@@ -275,15 +255,19 @@ export function TowerScene({
         <group name="Park">
           <MergedBoxes name="park-beds" specs={park.beds} material={materials.foliageMid} />
           <MergedBoxes name="park-edging" specs={park.edging} material={materials.stone} />
+          {/* Phase 5: pale stone, per the landscaping concept —
+              the warm-grey paving read as a road. */}
           <MergedBoxes
             name="park-path"
             specs={park.path}
-            material={materials.paving}
+            material={materials.stone}
             castShadow={false}
           />
           <MergedBoxes name="park-benches" specs={park.benches} material={materials.teak} />
-          <MergedBoxes name="park-trunks" specs={park.trees.trunks} material={materials.bark} />
-          <FoliageCards name="park-canopy" cards={parkCanopy} castShadow={detail === 'high'} />
+          {/* Phase 5: real 3D broadleaf trees + hero palms — the
+              flat canopy cards and their box trunks are gone. */}
+          <InstancedModels name="park-trees" placements={park.modelTrees} />
+          <InstancedModels name="park-hero-palms" placements={park.heroPalms} />
           <Palms specs={park.palms} detail={detail} name="park-palms" />
         </group>
 

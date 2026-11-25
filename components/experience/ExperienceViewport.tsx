@@ -32,6 +32,8 @@ type ExperienceViewportProps = {
   drift?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
+  /** Extra in-scene markers, rendered inside the canvas alongside the space hotspots. */
+  overlay?: ReactNode;
   /** Fires once the scene is mounted and the loading state has cleared. */
   onReady?: () => void;
   /** Path-traces this framing instead of rasterizing it. Stills only. */
@@ -44,6 +46,15 @@ type ExperienceViewportProps = {
   className?: string;
   /** Accessible description of what the canvas depicts. */
   label?: string;
+  /**
+   * Path-traced still of the opening framing, shown behind the
+   * loading screen while the live scene loads (see `LoadingScreen`).
+   * The image is also rendered here, in the server-rendered HTML,
+   * so the browser starts fetching it with the first paint instead
+   * of waiting for the three.js chunk. Viewports without a still
+   * for their framing omit it.
+   */
+  poster?: string;
 };
 
 /**
@@ -72,6 +83,7 @@ export function ExperienceViewport({
   parallax,
   drift,
   hotspots,
+  overlay,
   onReady,
   cinematic,
   cinematicMaxSamples,
@@ -79,6 +91,7 @@ export function ExperienceViewport({
   children,
   className,
   label = 'Interactive three-dimensional view of the residence',
+  poster,
 }: ExperienceViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
@@ -107,6 +120,21 @@ export function ExperienceViewport({
       ref={containerRef}
       className={cn('bg-obsidian relative isolate overflow-hidden', className)}
     >
+      {/* Poster warm-up: the still itself is painted by
+          `LoadingScreen` once the canvas chunk loads; this copy is
+          only here so the browser starts the download with the first
+          paint. It sits behind the canvas wrapper and is covered the
+          moment anything renders. */}
+      {poster ? (
+        <img
+          src={poster}
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : null}
       {/* The label goes onto the `<canvas>` element itself, inside
           `ExperienceCanvas`. It used to sit on a wrapper — but that wrapper
           also holds the walk toggle, the hour dial, the step navigation and
@@ -128,16 +156,18 @@ export function ExperienceViewport({
             parallax={parallax}
             drift={drift}
             hotspots={hotspots}
+            overlay={overlay}
             cinematic={cinematic}
             cinematicMaxSamples={cinematicMaxSamples}
             onCinematicProgress={onCinematicProgress}
             onReady={onReady}
+            poster={poster}
           />
         ) : (
           // Still deciding whether WebGL exists, or the viewport has not been
           // scrolled to yet. Both used to render null, which is the same black
           // rectangle by another route.
-          <ViewportPlaceholder />
+          <ViewportPlaceholder poster={poster} />
         )}
       </div>
       {children}

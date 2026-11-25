@@ -24,7 +24,14 @@ import { cn } from '@/lib/utils/cn';
  * bundle, it renders on the first paint, and it holds the frame until the
  * real loading screen can take over.
  */
-export function ViewportPlaceholder({ className }: { className?: string }) {
+export function ViewportPlaceholder({
+  className,
+  poster,
+}: {
+  className?: string;
+  /** Path-traced still of the opening framing (see `LoadingScreen`). */
+  poster?: string;
+}) {
   return (
     <div
       role="status"
@@ -34,7 +41,21 @@ export function ViewportPlaceholder({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="flex flex-col items-center gap-4 text-center">
+      {/* Poster frame (see `LoadingScreen`): the still behind the
+          wordmark while the three.js chunk is still downloading. */}
+      {poster ? (
+        <>
+          <img
+            src={poster}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div aria-hidden="true" className="bg-obsidian/55 absolute inset-0" />
+        </>
+      ) : null}
+      <div className="relative flex flex-col items-center gap-4 text-center">
         <span className="font-display text-alabaster text-3xl tracking-[0.5em] sm:text-4xl">
           {SITE.name}
         </span>

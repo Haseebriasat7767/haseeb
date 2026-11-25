@@ -8,6 +8,10 @@
  *
  *   npm run build && node scripts/brochure-stills.mjs
  *
+ * Status (Phase 4 walkthrough): the plates on disk are September 2026
+ * renders, stale since the Phase 1–3 revamp. Re-running this is still
+ * the fix; the brochure captions carry the render date until then.
+ *
  * ## Why this is a script and not part of the build
  *
  * The obvious thing is to render these during `next build` so they can

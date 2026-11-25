@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ExperienceViewport } from '@/components/experience/ExperienceViewport';
+import { RoomDoorHotspots } from '@/components/three/hotspots/RoomDoorHotspots';
 import { Container } from '@/components/ui/Container';
 import { useCoarsePointer } from '@/hooks/useCoarsePointer';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -164,6 +165,9 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
               parallax={walking ? 0 : reducedMotion || coarsePointer ? 0 : 4.0}
               label={`Interactive residence, currently framing the ${framed.name.toLowerCase()}`}
               hotspots={{ activeId: openId, onSelect: select }}
+              overlay={
+                walking ? undefined : <RoomDoorHotspots framedId={framedId} onSelect={select} />
+              }
             >
               {/* Ground for the chrome. Bottom-weighted and shallow: the
               caption, the figures and the prev/next all sit in the lower
@@ -185,6 +189,20 @@ export function ResidenceExplorer({ tab = 'explore' }: { tab?: ExplorerTab }) {
                 aria-hidden="true"
                 className="from-obsidian/70 pointer-events-none absolute inset-y-0 left-0 hidden w-72 bg-gradient-to-r to-transparent lg:block"
               />
+
+              {/* Back to the opening framing, from any room the door markers led into. */}
+              {framedId === DEFAULT_SPACE.id || walking ? null : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    frame(DEFAULT_SPACE);
+                    close();
+                  }}
+                  className="text-eyebrow ease-luxe border-alabaster/30 text-alabaster hover:border-gold hover:text-gold bg-obsidian/40 absolute top-40 right-6 z-20 inline-flex min-h-11 items-center border px-4 py-2.5 uppercase backdrop-blur-sm transition-colors duration-300"
+                >
+                  Back to overview
+                </button>
+              )}
 
               {/* Walk toggle button */}
               {webgl === false ? null : (

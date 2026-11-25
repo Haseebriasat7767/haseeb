@@ -151,6 +151,7 @@ function lantern(out: EstateLayout, key: string, cx: number, cz: number, y: numb
 function emptyLayout(): EstateLayout {
   return {
     forms: [],
+    models: [],
     paving: [],
     kerbs: [],
     timber: [],
@@ -254,6 +255,18 @@ export function createEstateLayout(
     if (tier.details) {
       createStyling(out.forms, 'terrace-styling', [lx, lz + 0.4], outdoor.terraceY + 0.34, 205);
     }
+
+    // Phase 5: the pergola from the ocean-terrace concept
+    // over the lounge grouping (long axis Z, covering sofa +
+    // chairs), so the terrace reads as the shaded deck in
+    // the concept rather than bare paving. Same piece as the
+    // tower deck, not a second one.
+    out.models.push({
+      key: 'terrace-pergola',
+      name: 'pergola-lights',
+      position: [lx, outdoor.terraceY, lz],
+      rotationY: 0,
+    });
   }
 
   // ── Terrace dining, off the living glass ──────────────────────────────
@@ -353,6 +366,23 @@ export function createEstateLayout(
       plan.livingAxisX[1] - 0.6,
       plan.terraceFrontZ - 0.7,
       outdoor.terraceY,
+    );
+    // Phase 5: deck lanterns flanking the terrace sofa, under
+    // the pergola — the dusk dressing from the river-view
+    // concept.
+    out.models.push(
+      {
+        key: 'terrace-deck-lantern-w',
+        name: 'lantern-deck',
+        position: [lx - 1.9, outdoor.terraceY, lz - 2.2],
+        rotationY: 0,
+      },
+      {
+        key: 'terrace-deck-lantern-e',
+        name: 'lantern-deck',
+        position: [lx + 1.9, outdoor.terraceY, lz - 2.2],
+        rotationY: 0,
+      },
     );
   }
 

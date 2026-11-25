@@ -8,6 +8,7 @@ import { createFoliageCards } from '../landscape/FoliageGeometry';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../VillaPrimitives';
 import type { DetailTier } from '../VillaTypes';
 import type { InteriorLayout } from './InteriorTypes';
+import { Model } from '../../models/ModelLibrary';
 
 /** Shared empty list, so hiding a group allocates nothing. */
 const EMPTY: never[] = [];
@@ -75,6 +76,19 @@ export function InteriorFurnishings({
           below, so replacing prisms with rounded geometry did not cost a
           single extra draw call. */}
       <FormRenderer name="furniture-forms" forms={forms} />
+      {/* Real furniture — Poly Haven models placed by the room
+          builders. One <Model> per piece: the count is small (a
+          house, not a tower), and each shares geometry and materials
+          with its siblings. */}
+      {layout.models.map((placement, index) => (
+        <Model
+          key={`${placement.name}-${index}`}
+          name={placement.name}
+          position={placement.position}
+          rotationY={placement.rotationY}
+          scale={placement.scale}
+        />
+      ))}
       <MergedBoxes name="furniture-joinery" specs={parts.joinery} material={materials.joinery} />
       {/* Seats, backs, arms and mattresses take a far softer edge than the
           building does — a cushion breaks over a couple of centimetres. */}

@@ -24,6 +24,13 @@ type LoadingScreenProps = {
   /** Hide once the scene reports ready — never on a timer. */
   visible: boolean;
   className?: string;
+  /**
+   * Path-traced still of this framing, shown behind the progress bar
+   * while the live scene loads. It is a photograph of the model, not
+   * the live scene: it is never labelled as live 3D, and the live
+   * canvas replaces it the moment the scene reports ready.
+   */
+  poster?: string;
 };
 
 /**
@@ -35,7 +42,7 @@ type LoadingScreenProps = {
  * timer, and the screen dismisses when the scene reports ready rather than
  * when a countdown ends.
  */
-export function LoadingScreen({ visible, className }: LoadingScreenProps) {
+export function LoadingScreen({ visible, className, poster }: LoadingScreenProps) {
   const { progress, item } = useProgress();
   const reducedMotion = useReducedMotion();
   const percent = Math.min(100, Math.round(progress));
@@ -62,7 +69,26 @@ export function LoadingScreen({ visible, className }: LoadingScreenProps) {
         className,
       )}
     >
-      <div className="flex flex-col items-center gap-5 text-center">
+      {/* Poster frame: a path-traced still of this framing behind the
+          progress bar, so the first thing a visitor sees is the
+          building, not a black rectangle. It is the same model from
+          the same framing, rendered by the brochure-stills job — and
+          it is only ever a placeholder: the bar underneath stays
+          real, and the live canvas replaces the still the moment the
+          scene reports ready. */}
+      {poster ? (
+        <>
+          <img
+            src={poster}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div aria-hidden="true" className="bg-obsidian/55 absolute inset-0" />
+        </>
+      ) : null}
+      <div className="relative flex flex-col items-center gap-5 text-center">
         <span className="font-display text-alabaster text-3xl tracking-[0.5em] sm:text-4xl">
           {SITE.name}
         </span>
@@ -77,7 +103,7 @@ export function LoadingScreen({ visible, className }: LoadingScreenProps) {
         </span>
       </div>
 
-      <div className="flex flex-col items-center gap-3">
+      <div className="relative flex flex-col items-center gap-3">
         {/* Cross-faded rather than swapped: text that pops between strings
             reads as a glitch, and this screen is the first thing a visitor
             sees. Both lines are stacked so the block never changes height. */}

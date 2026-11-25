@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { LoadingScreen } from '@/components/three/LoadingScreen';
 import { Scene } from '@/components/three/Scene';
 import { SceneErrorBoundary } from '@/components/three/SceneErrorBoundary';
@@ -10,6 +10,7 @@ import type { PerformanceSnapshot } from '@/components/three/dev/performance-typ
 import { SpaceHotspots } from '@/components/three/hotspots/SpaceHotspots';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { useQualityTier } from '@/hooks/useQualityTier';
+import { unlockDeferredModels } from '@/components/three/models/ModelLibrary';
 import type { HotspotConfig } from '@/lib/experience/spaces';
 import type { CameraMode, CameraView, SceneContent, TimeOfDay } from '@/types';
 
@@ -23,8 +24,12 @@ type ExperienceCanvasProps = {
   drift?: number;
   /** Mounts the architectural markers on the model when supplied. */
   hotspots?: HotspotConfig;
+  /** Extra in-scene contents rendered inside the canvas alongside the space hotspots. */
+  overlay?: ReactNode;
   /** Alternative text for the rendered frame. */
   label?: string;
+  /** Path-traced still of the opening framing (see `LoadingScreen`). */
+  poster?: string;
   /** Fires once the scene graph has mounted and the loading state clears. */
   onReady?: () => void;
   /** Path-traces this framing instead of rasterizing it. Stills only. */
@@ -46,7 +51,9 @@ export function ExperienceCanvas({
   parallax,
   drift,
   label,
+  poster,
   hotspots,
+  overlay,
   onReady,
   cinematic,
   cinematicMaxSamples,
@@ -55,6 +62,8 @@ export function ExperienceCanvas({
   const [ready, setReady] = useState(false);
   const handleReady = useCallback(() => {
     setReady(true);
+    // First paint is done: the deferred dressing may stream in now.
+    unlockDeferredModels();
     onReady?.();
   }, [onReady]);
   const quality = useQualityTier();
@@ -73,13 +82,16 @@ export function ExperienceCanvas({
         drift={drift}
         label={label}
         overlay={
-          hotspots ? (
-            <SpaceHotspots
-              detail={quality.tier}
-              activeId={hotspots.activeId}
-              onSelect={hotspots.onSelect}
-            />
-          ) : null
+          <>
+            {hotspots ? (
+              <SpaceHotspots
+                detail={quality.tier}
+                activeId={hotspots.activeId}
+                onSelect={hotspots.onSelect}
+              />
+            ) : null}
+            {overlay ?? null}
+          </>
         }
         cinematic={cinematic}
         cinematicMaxSamples={cinematicMaxSamples}
@@ -88,7 +100,7 @@ export function ExperienceCanvas({
         diagnosticsEnabled={diagnosticsEnabled}
         onMetrics={diagnosticsEnabled ? setMetrics : undefined}
       />
-      <LoadingScreen visible={!ready} />
+      <LoadingScreen visible={!ready} poster={poster} />
       {diagnosticsEnabled ? <PerformanceOverlay snapshot={metrics} /> : null}
     </SceneErrorBoundary>
   );

@@ -4,7 +4,6 @@ import {
   createArmchair,
   createBalustrade,
   createBathtub,
-  createBed,
   createBuiltIn,
   createCoffeeTable,
   createConsole,
@@ -12,7 +11,6 @@ import {
   createCeilingRuns,
   createCove,
   createDesk,
-  createDiningSet,
   createFireplace,
   createFloorLamp,
   createIsland,
@@ -26,55 +24,42 @@ import {
   createShower,
   createSofa,
   createVanity,
+  createVanityMirror,
   createWC,
   emptyParts,
 } from './Furniture';
-import {
-  createArtwork,
-  createBedding,
-  createBooks,
-  createCurtains,
-  createHeadboard,
-  createPlant,
-  createTowels,
-  createTray,
-  createVessel,
-} from './InteriorDecor';
+import { createArtwork, createBooks, createPlant, createTray, createVessel } from './InteriorDecor';
 import type { Form } from '../furniture/FormTypes';
 import {
-  createBed as buildBed,
   createBowl,
   createFloorVessel,
   createHungConsole,
-  createHeadboard as buildHeadboard,
-  createLoungeChair,
   createOttoman,
-  createLowTable,
-  createNightstand as buildNightstand,
   createPedestalTable,
   createSofa as buildSofa,
   createTableLamp,
-  createDiningChair as buildDiningChair,
   createCrescentSofa,
-  createRoundTable,
   createOrganicCoffeeTable,
   createBoucleChair,
   createArcLamp,
   createFlutedSideboard,
   createVesselCluster,
-  type Facing,
 } from '../furniture/Pieces';
 import {
   createBoardedWall,
   createDressedWindow,
   createPileRug,
-  createPlanted,
   createScreen,
   createStandingLamp,
   createStyling,
 } from '../furniture/Staging';
 import { createInteriorPlan, FLOOR_BUILD_UP, type Room } from './InteriorPlan';
-import type { InteriorConfig, InteriorLayout, InteriorLight } from './InteriorTypes';
+import type {
+  InteriorConfig,
+  InteriorLayout,
+  InteriorLight,
+  InteriorModelPlacement,
+} from './InteriorTypes';
 
 /** Default interior dimensions, in metres. */
 export const INTERIOR_CONFIG: InteriorConfig = {
@@ -162,7 +147,7 @@ export function createInteriorLayout(
 ): InteriorLayout {
   const tier = DETAIL[detail];
   const schedule = createInteriorPlan(plan, levels);
-  const { rooms, stairwellZ } = schedule;
+  const { rooms, stairwellZ, doorUnits } = schedule;
   const clear = config.wallClearance;
 
   const parts = emptyParts();
@@ -170,12 +155,34 @@ export function createInteriorLayout(
   // than replacing them: the building fabric is still prisms, correctly, and
   // only the things that are not buildings move onto this list.
   const forms: Form[] = [];
+  // Real furniture, placed by the room builders below. Poly Haven
+  // models face +Z authored — the opposite of the repo's Blender
+  // pieces, which face -Z — so their rotations follow Pieces.ts's
+  // YAW table (south 0, north pi, east pi/2, west -pi/2), verified
+  // against the staged glTFs (backrest/headboard vertex clusters).
+  // NOT ApartmentGeometry's FACE table.
+  const models: InteriorModelPlacement[] = [];
+  const model = (
+    name: InteriorModelPlacement['name'],
+    position: [number, number, number],
+    rotationY: number,
+    scale?: InteriorModelPlacement['scale'],
+  ) => {
+    models.push({ name, position, rotationY, scale });
+  };
   const floorsStone: BoxSpec[] = [];
   const floorsTimber: BoxSpec[] = [];
   const ceilings: BoxSpec[] = [];
   const panelling: BoxSpec[] = [];
 
   const roomList = Object.values(rooms) as Room[];
+
+  // Blender-built oak-and-glass interior doors in every
+  // partition and shell doorway. Positions and swing come from
+  // the plan's doorUnits schedule — nothing is restated here.
+  for (const door of doorUnits) {
+    model('door-interior', door.position, door.rotationY);
+  }
 
   // ── Finishes ──────────────────────────────────────────────────────────
   // The stair hall's ceiling is the void the stair rises through, and the
@@ -374,55 +381,26 @@ export function createInteriorLayout(
   // rectangular prism with its corners knocked off stops being an
   // acceptable description of a sofa.
   const livingCx = mid(living.x);
-  buildSofa(
-    forms,
-    'living-sofa',
-    { at: [livingCx, living.z[0] + 1.75], floorY: living.floorY, facing: 'south', seed: 11 },
-    { width: 3.0, depth: 1.08 },
-  );
-  createLowTable(
-    forms,
-    'living-table',
-    { at: [livingCx, mid(living.z) + 0.9], floorY: living.floorY, facing: 'south', seed: 12 },
-    { width: 1.5, depth: 0.82, height: 0.38 },
-  );
+  // Faces south, seat toward the room. Style lock (V1VID concept):
+  // the plush sofa-ph-03 is out, and the cleaner sofa-ph-02 (1.81 m)
+  // read as a loveseat in the 3.0 m slot — so the slot now takes
+  // the Blender-built white sectional (2.90 m, channel-tufted,
+  // sage cushions as separate meshes), authored for this room from
+  // the approved living-room concept image. The chaise is on the
+  // east end: the crescent sofa closes the west side, the east
+  // flank is clear.
+  model('sofa-sectional-white', [livingCx, living.floorY, living.z[0] + 1.75], 0);
+  // Long axis X (the real table is 1.20 m long on Z); 0.39 m high
+  // against the procedural 0.38 m, so the tray and books on it stay put.
+  model('table-ph-coffee', [livingCx, living.floorY, mid(living.z) + 0.9], Math.PI / 2);
   // The pair of chairs facing the seating group, each toed in toward it.
   // Square-on they read as waiting-room furniture; a few degrees of turn is
   // what an arrangement someone actually sits in looks like.
-  createLoungeChair(
-    forms,
-    'living-chair-a',
-    {
-      at: [living.x[0] + 1.6, living.z[1] - 1.2],
-      floorY: living.floorY,
-      facing: 'north',
-      seed: 13,
-    },
-    { dark: true },
-  );
-  createLoungeChair(
-    forms,
-    'living-chair-b',
-    {
-      at: [living.x[0] + 3.5, living.z[1] - 1.2],
-      floorY: living.floorY,
-      facing: 'north',
-      seed: 14,
-    },
-    { dark: true },
-  );
-  forms[forms.length - 1]!.rotationY = (forms[forms.length - 1]!.rotationY ?? 0) + 0.16;
-  createPedestalTable(
-    forms,
-    'living-side',
-    [living.x[0] + 2.55, living.z[1] - 1.5],
-    living.floorY,
-    {
-      height: 0.5,
-      radius: 0.22,
-      seed: 15,
-    },
-  );
+  // Both face north, toward the sofa; chair-b keeps its 0.16 rad
+  // toe-in toward the seating group.
+  model('chair-ph-arm', [living.x[0] + 1.6, living.floorY, living.z[1] - 1.2], Math.PI);
+  model('chair-ph-arm', [living.x[0] + 3.5, living.floorY, living.z[1] - 1.2], Math.PI + 0.16);
+  model('table-ph-side', [living.x[0] + 2.55, living.floorY, living.z[1] - 1.5], 0);
 
   // ── Filling the room out ──────────────────────────────────────────────
   //
@@ -484,12 +462,7 @@ export function createInteriorLayout(
 
   // One more chair, turned to the fire rather than to the group — which is
   // what stops an arrangement reading as a showroom set.
-  createLoungeChair(
-    forms,
-    'living-chair-c',
-    { at: [livingEast - 1.35, living.z[0] + 2.3], floorY: living.floorY, facing: 'west', seed: 23 },
-    { dark: false },
-  );
+  model('chair-ph-arm', [livingEast - 1.35, living.floorY, living.z[0] + 2.3], -Math.PI / 2);
   createPedestalTable(
     forms,
     'living-side-b',
@@ -625,12 +598,12 @@ export function createInteriorLayout(
     );
 
     // Additional biophilic — tall fiddle leaf fig in the corner
-    createPlanted(forms, parts.foliageClusters, 'living-plant-b', {
-      at: [livingWest + 0.7, living.z[1] - 0.9],
-      floorY: living.floorY,
-      height: 1.85,
-      seed: 29,
-    });
+    // The real plant is 1.35 m against the procedural 1.85 m; the
+    // foliage cards for this corner go with it.
+    // Blender-built potted olive (real 3D leaves) in place of
+    // the second decimated plant-ph-01 — two different plants,
+    // not one repeated.
+    model('plant-olive', [livingWest + 0.7, living.floorY, living.z[1] - 0.9], 0);
 
     // Second artwork — layered art, curated gallery wall
     createArtwork(
@@ -666,12 +639,14 @@ export function createInteriorLayout(
       41,
     );
 
-    createPlanted(forms, parts.foliageClusters, 'living-plant', {
-      at: [living.x[1] - 0.9, living.z[1] - 1.6],
-      floorY: living.floorY,
-      height: 2.0,
-      seed: 17,
-    });
+    model('plant-ph-01', [living.x[1] - 0.9, living.floorY, living.z[1] - 1.6], Math.PI / 2);
+
+    // Blender-built glazed door leaf, ajar 35 deg OUTWARD onto
+    // the terrace (hinge at the east end of the glass wall).
+    // Outward so it never crosses the dressed sheer at
+    // living.z[1]-0.26; +0.12 is the terrace step (terraceY
+    // 1.02 over groundY 0.9). Origin is the hinge post.
+    model('door-balcony-open', [living.x[1] - 1.05, living.floorY + 0.12, living.z[1] + 0.06], 0);
 
     // The coffee table, styled. A tray, a low stack of books beside it, and
     // one vessel — the composition every interior photograph uses, because
@@ -705,43 +680,22 @@ export function createInteriorLayout(
   const dining = rooms.dining;
   const diningCx = mid(dining.x);
   createRug(parts, 'dining-rug', diningCx, mid(dining.z) + 0.4, dining.floorY, 3.6, 2.6);
-  // Table — 2026: rectangular trestle set on the low tier, round travertine
-  // top on a bronze pedestal for medium/high — quiet luxury, intimacy.
-  const diningRound = tier.decor && detail !== 'low';
-  if (!diningRound) {
-    createDiningSet(
-      parts,
-      'dining-set',
-      diningCx,
-      mid(dining.z) + 0.4,
-      dining.floorY,
-      2.8,
-      1.15,
-      tier.seatDensity,
+  // The real table and chairs, at every tier: the procedural round
+  // travertine top and the trestle set both go. The Poly Haven table
+  // is 2.26 m long (the trestle set was 2.80 m) and 0.877 m high,
+  // Y-squashed to 0.75 m — the centrepiece and bowls below still sit
+  // on it at floorY + 0.75. Six pale painted-wood chairs, three a
+  // side, turned toward the table (seat 0.44 m; the dark
+  // dining_chair_02 fights the V1VID palette).
+  const diningCz = mid(dining.z) + 0.4;
+  model('table-ph-dining', [diningCx, dining.floorY, diningCz], 0, [1, 0.855, 1]);
+  for (let i = 0; i < 6; i += 1) {
+    const side = i < 3 ? -1 : 1;
+    model(
+      'chair-ph-painted',
+      [diningCx + ((i % 3) - 1) * 0.78, dining.floorY, diningCz + side * 0.86],
+      side < 0 ? 0 : Math.PI,
     );
-  } else {
-    const diningCz = mid(dining.z) + 0.4;
-    createRoundTable(forms, 'dining-round', [diningCx, diningCz], dining.floorY, {
-      diameter: 1.55,
-      height: 0.74,
-      seed: 31,
-    });
-    // Five chairs around the circumference, each turned toward the table.
-    for (let i = 0; i < 5; i += 1) {
-      const angle = (i / 5) * Math.PI * 2;
-      const r = 1.15;
-      const cx = diningCx + Math.cos(angle) * r;
-      const cz = diningCz + Math.sin(angle) * r;
-      const deg = ((angle * 180) / Math.PI) % 360;
-      const facing: Facing =
-        deg < 45 || deg >= 315 ? 'west' : deg < 135 ? 'north' : deg < 225 ? 'east' : 'south';
-      buildDiningChair(
-        forms,
-        `dining-chair-${i}`,
-        { at: [cx, cz], floorY: dining.floorY, facing, seed: 31 + i },
-        false,
-      );
-    }
   }
   if (tier.decor) {
     // A centrepiece and a low run of objects on the sideboard: enough that
@@ -777,11 +731,9 @@ export function createInteriorLayout(
         height: 0.075,
       },
     );
-    createCurtains(parts, 'dining-curtain', {
-      across: inset(dining.x, 0.3),
-      at: [dining.z[1] - 0.34, dining.z[1] - 0.16],
-      y: [dining.floorY, dining.ceilingY - 0.06],
-    });
+    // Blender-built pleated sheer panel (3.0 m) in place of the
+    // procedural curtain slab, same wall.
+    model('curtain-sheer', [mid(dining.x), dining.floorY, dining.z[1] - 0.24], 0);
   }
   // Held east of the kitchen opening so it backs onto solid wall rather
   // than standing in the doorway between the two rooms.
@@ -842,9 +794,16 @@ export function createInteriorLayout(
       upperFrom: kitchen.floorY + 1.55,
     },
   );
+  // Blender-built board + citrus bowl on the run counter
+  // (top floorY+0.92, back band z[0]..z[0]+0.64).
+  model('kitchen-board-set', [kitchen.x[1] - 0.9, kitchen.floorY + 0.92, kitchen.z[0] + 0.32], 0);
   const islandX: Range = [mid(kitchen.x) - 2.0, mid(kitchen.x) + 2.0];
   const islandZ: Range = [mid(kitchen.z) - 0.55, mid(kitchen.z) + 0.55];
   createIsland(parts, 'kitchen-island', islandX, islandZ, kitchen.floorY, tier.accessories ? 3 : 2);
+  // Blender-built gooseneck tap on the island sink (the run has
+  // no sink; the island's recess is at islandX[0]+0.5..1.4).
+  // Base on the island top (floorY+0.94), spout over the sink.
+  model('tap-kitchen', [islandX[0] + 0.95, kitchen.floorY + 0.94, mid(islandZ) - 0.32], 0);
   if (tier.decor) {
     // A luxury kitchen in a brochure is nearly bare. Three objects at three
     // heights, grouped at one end of the island so the run of stone reads.
@@ -910,7 +869,14 @@ export function createInteriorLayout(
   // ── Ground floor: guest suite ─────────────────────────────────────────
   const guest = rooms.guestBedroom;
   const guestBedCz = mid(guest.z) - 0.6;
-  createBed(parts, 'guest-bed', guest.x[0] + 1.15, guestBedCz, guest.floorY, 1.6, 2.05, 'east');
+  // Blender-built platform bed, scaled to the old 1.60 x 2.05 slot.
+  // Faces east (head at the west end): rotation pi/2 per the YAW table.
+  model(
+    'bed-platform-oak',
+    [guest.x[0] + 1.15, guest.floorY, guestBedCz],
+    Math.PI / 2,
+    [0.889, 1, 0.976],
+  );
   createNightstand(
     parts,
     'guest-night-a',
@@ -992,7 +958,7 @@ export function createInteriorLayout(
     band(media.z, 'start', 0.45),
     media.floorY,
   );
-  createSofa(parts, 'media-sofa', mid(media.x), media.z[1] - 1.6, media.floorY, 2.4, 1.0, 'north');
+  model('sofa-ph-02', [mid(media.x), media.floorY, media.z[1] - 1.6], Math.PI);
   createRug(parts, 'media-rug', mid(media.x), mid(media.z) + 0.4, media.floorY, 2.8, 3.4);
   createCoffeeTable(parts, 'media-table', mid(media.x), mid(media.z) + 0.2, media.floorY, 1.0, 0.7);
 
@@ -1004,29 +970,17 @@ export function createInteriorLayout(
   const masterCx = mid(master.x);
   const masterBedCz = master.z[0] + clear + 1.35;
 
-  buildHeadboard(
-    forms,
-    'master-headboard',
-    {
-      at: [masterCx, master.z[0] + clear + 0.16],
-      floorY: master.floorY,
-      facing: 'south',
-      seed: 61,
-    },
-    { width: 2.5, height: 1.2 },
-  );
-  buildBed(
-    forms,
-    'master-bed',
-    { at: [masterCx, masterBedCz], floorY: master.floorY, facing: 'south', seed: 62 },
-    { width: 1.98, length: 2.14 },
-  );
+  // Blender-built platform bed (1.80 x 2.10 m, oak + white linen +
+  // sage throw, own headboard and pillows) — replaces the procedural
+  // headboard + bed. The timber lining behind it stays: it is wall
+  // panelling, not part of the bed. Scaled to the old 1.98 x 2.14 slot.
+  model('bed-platform-oak', [masterCx, master.floorY, masterBedCz], 0, [1.1, 1, 1.019]);
 
   for (const side of [-1, 1] as const) {
     const nx = masterCx + side * 1.62;
     const nz = master.z[0] + clear + 0.62;
-    buildNightstand(forms, `master-night-${side}`, [nx, nz], master.floorY, 70 + side, 'south');
-    createTableLamp(forms, `master-lamp-${side}`, [nx, nz], master.floorY + 0.52, {
+    model('nightstand-ph-classic', [nx, master.floorY, nz], 0);
+    createTableLamp(forms, `master-lamp-${side}`, [nx, nz], master.floorY + 0.7, {
       height: 0.5,
       shadeRadius: 0.15,
     });
@@ -1038,19 +992,8 @@ export function createInteriorLayout(
   // 2026: boucle armchairs — tactile, enveloping, on a hidden plinth —
   // on medium/high; the lounge chairs remain on the low tier.
   const masterChairZ = master.z[1] - 1.05;
-  const masterChair = tier.decor && detail !== 'low' ? createBoucleChair : createLoungeChair;
-  masterChair(
-    forms,
-    'master-chair-a',
-    { at: [masterCx - 1.15, masterChairZ], floorY: master.floorY, facing: 'north', seed: 63 },
-    { dark: true },
-  );
-  masterChair(
-    forms,
-    'master-chair-b',
-    { at: [masterCx + 1.15, masterChairZ], floorY: master.floorY, facing: 'north', seed: 64 },
-    { dark: true },
-  );
+  model('chair-ph-arm', [masterCx - 1.15, master.floorY, masterChairZ], Math.PI);
+  model('chair-ph-arm', [masterCx + 1.15, master.floorY, masterChairZ], Math.PI);
   createPedestalTable(forms, 'master-side', [masterCx, masterChairZ - 0.1], master.floorY, {
     height: 0.48,
     radius: 0.21,
@@ -1068,7 +1011,7 @@ export function createInteriorLayout(
       forms,
       'master-cluster',
       [masterCx + 1.8, master.z[0] + clear + 0.62],
-      master.floorY + 0.52,
+      master.floorY + 0.7,
       67,
     );
   }
@@ -1091,19 +1034,15 @@ export function createInteriorLayout(
       towards: 1,
     });
 
-    createPlanted(forms, parts.foliageClusters, 'master-plant', {
-      at: [master.x[0] + 0.85, master.z[1] - 1.4],
-      floorY: master.floorY,
-      height: 1.6,
-      seed: 29,
-    });
+    model('plant-ph-01', [master.x[0] + 0.85, master.floorY, master.z[1] - 1.4], 0);
+    model('plant-olive', [master.x[1] - 0.85, master.floorY, master.z[1] - 1.4], 0);
 
     // One object on each nightstand, and deliberately not the same object.
     createStyling(
       forms,
       'master-styling',
       [masterCx + 1.62, master.z[0] + clear + 0.62],
-      master.floorY + 0.52,
+      master.floorY + 0.7,
       71,
     );
   }
@@ -1134,7 +1073,12 @@ export function createInteriorLayout(
     [masterBath.z[1] - 1.5, masterBath.z[1] - 0.55],
     masterBath.floorY,
   );
-  createVanity(
+  // Blender-built oak vanity with a marble top (the procedural
+  // cabinet + stone top + basin are out; the lit mirror stays,
+  // via createVanityMirror in Furniture.ts). Same slot, same
+  // 0.90 top, so the tap, towels and bottles sit on it
+  // unchanged.
+  createVanityMirror(
     parts,
     'master-vanity',
     [masterBath.x[0] + 0.3, masterBath.x[0] + 1.9],
@@ -1142,6 +1086,7 @@ export function createInteriorLayout(
     masterBath.floorY,
     masterBath.ceilingY,
   );
+  model('vanity-oak', [masterBath.x[0] + 1.1, masterBath.floorY, masterBath.z[0] + 0.275], 0);
   createShower(
     parts,
     'master-shower',
@@ -1158,27 +1103,32 @@ export function createInteriorLayout(
     masterBath.floorY,
     'west',
   );
+  // Blender-built bath tap on the vanity (vanity top
+  // floorY+0.90; the old stick column in createVanity is
+  // removed in Furniture.ts — it would poke through the tap).
+  // Spout faces +Z, over the basin.
+  model('tap-bath', [masterBath.x[0] + 1.1, masterBath.floorY + 0.9, masterBath.z[0] + 0.12], 0);
+  // Same tap on the tub's east rim (top floorY+0.56), spout
+  // turned west (-pi/2) over the tub.
+  model(
+    'tap-bath',
+    [masterBath.x[0] + 2.26, masterBath.floorY + 0.56, masterBath.z[1] - 1.02],
+    -Math.PI / 2,
+  );
 
   if (tier.decor) {
     const vanityTop = masterBath.floorY + 0.9;
-    createTowels(
-      parts,
-      'master-bath-towels',
-      masterBath.x[0] + 0.55,
-      mid(masterBath.z) - 0.9,
-      vanityTop,
-      2,
-    );
-    createVessel(
-      parts,
-      'master-bath-bottle',
-      masterBath.x[0] + 1.5,
-      mid(masterBath.z) - 1.0,
-      vanityTop,
-      0.19,
-      0.045,
-      'ceramic',
-    );
+    // Blender-built folded towels (real folds + a rolled towel)
+    // in place of the procedural stack, same spot.
+    // The towels used to float at mid-bath height (a pre-existing
+    // misplacement — bath-2's were correctly on its vanity); they
+    // sit on the new vanity top now, west of the basin.
+    model('towels-folded', [masterBath.x[0] + 0.55, vanityTop, masterBath.z[0] + 0.28], 0);
+    // Blender-built bottle tray + soap in place of the single
+    // procedural vessel, same spot on the vanity.
+    // Same fix as the towels: the tray floated mid-bath; it sits
+    // on the new vanity top now, east of the basin.
+    model('bath-bottles', [masterBath.x[0] + 1.68, vanityTop, masterBath.z[0] + 0.28], 0);
     createPlant(
       parts,
       'master-bath-plant',
@@ -1229,18 +1179,10 @@ export function createInteriorLayout(
   bedrooms.forEach(({ room, key }) => {
     const cx = mid(room.x);
     const cz = room.z[0] + clear + 1.05;
-    // The same dressed bed the master gets, at a different width and with a
-    // different seed, so the three bedrooms are not one bed repeated.
-    const bedX: Range = [cx - 0.85, cx + 0.85];
-    const bedZ: Range = [cz - 1.025, cz + 1.025];
-    createHeadboard(parts, `${key}-headboard`, bedX, bedZ[0], -1, room.floorY, 1.05);
-    createBedding(parts, `${key}-bed`, {
-      x: bedX,
-      z: bedZ,
-      floorY: room.floorY,
-      headAt: 'north',
-      seed: key === 'bed2' ? 83 : 97,
-    });
+    // The Blender-built platform bed, scaled to the old 1.70 x 2.05
+    // slot — the same bed the master gets, so the three bedrooms
+    // share one real bed instead of three procedural ones.
+    model('bed-platform-oak', [cx, room.floorY, cz], 0, [0.944, 1, 0.976]);
     createNightstand(parts, `${key}-night-a`, cx - 1.25, room.z[0] + 0.45, room.floorY, true);
     createNightstand(parts, `${key}-night-b`, cx + 1.25, room.z[0] + 0.45, room.floorY, true);
     createRug(parts, `${key}-rug`, cx, cz + 0.35, room.floorY, 3.2, 2.9);
@@ -1252,12 +1194,9 @@ export function createInteriorLayout(
       createDesk(parts, `${key}-desk`, room.x[0] + 1.2, room.z[1] - 1.6, room.floorY, 'east', 1.4);
     }
     if (tier.secondaryDecor) {
-      createCurtains(parts, `${key}-curtain`, {
-        across: inset(room.x, 0.4),
-        at: [room.z[1] - 0.32, room.z[1] - 0.16],
-        y: [room.floorY, room.ceilingY - 0.06],
-        density: 7,
-      });
+      // Blender-built pleated sheer panel in place of the
+      // procedural curtain slab, same wall.
+      model('curtain-sheer', [cx, room.floorY, room.z[1] - 0.24], 0);
       createVessel(
         parts,
         `${key}-night-vase`,
@@ -1272,7 +1211,7 @@ export function createInteriorLayout(
 
   const bath2 = rooms.bath2;
   if (tier.secondaryDecor) {
-    createTowels(parts, 'bath2-towels', bath2.x[0] + 0.75, bath2.z[0] + 0.4, bath2.floorY + 0.9, 2);
+    model('towels-folded', [bath2.x[0] + 0.75, bath2.floorY + 0.9, bath2.z[0] + 0.4], 0);
   }
   createVanity(
     parts,
@@ -1291,6 +1230,9 @@ export function createInteriorLayout(
     2.2,
   );
   createWC(parts, 'bath2-wc', bath2.x[1] - 0.32, mid(bath2.z) - 0.2, bath2.floorY, 'west');
+  // Blender-built bath tap on the bath-2 vanity (top
+  // floorY+0.90), spout over the basin.
+  model('tap-bath', [mid(bath2.x), bath2.floorY + 0.9, bath2.z[0] + 0.12], 0);
 
   // ── Upper floor: hall, lounge, library ────────────────────────────────
   const upperHall = rooms.upperHall;
@@ -1355,18 +1297,8 @@ export function createInteriorLayout(
     { at: [loungeCx, mid(lounge.z) + 0.6], floorY: lounge.floorY, facing: 'south', seed: 72 },
     { width: 1.25, depth: 0.72, height: 0.36 },
   );
-  createBoucleChair(
-    forms,
-    'lounge-chair-a',
-    { at: [loungeCx + 2.5, mid(lounge.z) + 0.9], floorY: lounge.floorY, facing: 'west', seed: 73 },
-    { dark: true },
-  );
-  createBoucleChair(
-    forms,
-    'lounge-chair-b',
-    { at: [loungeCx - 2.5, mid(lounge.z) + 0.9], floorY: lounge.floorY, facing: 'east', seed: 74 },
-    { dark: true },
-  );
+  model('chair-ph-arm', [loungeCx + 2.5, lounge.floorY, mid(lounge.z) + 0.9], -Math.PI / 2);
+  model('chair-ph-arm', [loungeCx - 2.5, lounge.floorY, mid(lounge.z) + 0.9], Math.PI / 2);
   createOttoman(
     forms,
     'lounge-ottoman',
@@ -1716,6 +1648,7 @@ export function createInteriorLayout(
   return {
     rooms: roomList,
     forms,
+    models,
     floorsStone,
     floorsTimber,
     ceilings,

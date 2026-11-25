@@ -90,7 +90,9 @@ export type PracticalSetting = {
 
 /** Material responses that belong to the hour rather than to the surface. */
 export type SurfaceSetting = {
-  /** Glazing opacity — lower after dark so lit rooms read through the glass. */
+  /** Glazing opacity — lower after dark so lit rooms read through the glass.
+      Phase 5 lowered all five hours so the glass reads clear and bright
+      like the facade concept instead of dark grey. */
   glazingOpacity: number;
   /**
    * Submerged pool lighting, carried by the water body. Kept low on
@@ -164,7 +166,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     },
     interior: { intensity: 20, activeLights: 6 },
     exterior: { intensity: 0, activeLights: 0 },
-    surfaces: { glazingOpacity: 0.6, poolGlow: 0.02, fixtureEmissive: 0.5 },
+    surfaces: { glazingOpacity: 0.52, poolGlow: 0.02, fixtureEmissive: 0.5 },
   },
 
   day: {
@@ -219,7 +221,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     },
     interior: { intensity: 16, activeLights: 5 },
     exterior: { intensity: 0, activeLights: 0 },
-    surfaces: { glazingOpacity: 0.62, poolGlow: 0, fixtureEmissive: 0.25 },
+    surfaces: { glazingOpacity: 0.54, poolGlow: 0, fixtureEmissive: 0.25 },
   },
 
   /**
@@ -284,7 +286,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     },
     interior: { intensity: 34, activeLights: 9 },
     exterior: { intensity: 22, activeLights: 1 },
-    surfaces: { glazingOpacity: 0.55, poolGlow: 0.07, fixtureEmissive: 0.5 },
+    surfaces: { glazingOpacity: 0.48, poolGlow: 0.07, fixtureEmissive: 0.5 },
   },
 
   blueHour: {
@@ -318,7 +320,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     },
     interior: { intensity: 46, activeLights: 11 },
     exterior: { intensity: 42, activeLights: 3 },
-    surfaces: { glazingOpacity: 0.46, poolGlow: 0.17, fixtureEmissive: 2.0 },
+    surfaces: { glazingOpacity: 0.42, poolGlow: 0.17, fixtureEmissive: 2.0 },
   },
 
   night: {
@@ -355,7 +357,7 @@ export const TIME_OF_DAY: Record<TimeOfDay, LightingState> = {
     },
     interior: { intensity: 52, activeLights: 11 },
     exterior: { intensity: 50, activeLights: 3 },
-    surfaces: { glazingOpacity: 0.4, poolGlow: 0.24, fixtureEmissive: 2.4 },
+    surfaces: { glazingOpacity: 0.36, poolGlow: 0.24, fixtureEmissive: 2.4 },
   },
 };
 

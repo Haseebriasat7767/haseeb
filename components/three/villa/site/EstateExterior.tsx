@@ -1,6 +1,7 @@
 'use client';
 
 import { FormRenderer } from '../furniture/FormRenderer';
+import { InstancedModels } from '../../models/InstancedModels';
 import { useMemo } from 'react';
 import { getMaterials } from '@/lib/three/materials';
 import { MergedBoxes, MergedSupports, SOFT_RADIUS, SOFT_SEGMENTS } from '../VillaPrimitives';
@@ -25,6 +26,8 @@ export function EstateExterior({ layout }: { layout: EstateLayout }) {
       {/* Outdoor furniture — loungers, sofas, dining chairs. Rounded and
           turned geometry, merged per material exactly like the paving. */}
       <FormRenderer name="estate-forms" forms={layout.forms} />
+      {/* Phase 5: terrace pergola + deck lanterns. */}
+      <InstancedModels name="estate-models" placements={layout.models} />
       <MergedBoxes name="estate-paving" specs={layout.paving} material={materials.paving} />
       <MergedBoxes name="estate-kerbs" specs={layout.kerbs} material={materials.stone} />
       <MergedBoxes name="estate-timber" specs={layout.timber} material={materials.teak} />
@@ -45,8 +48,8 @@ export function EstateExterior({ layout }: { layout: EstateLayout }) {
         chamferSegments={SOFT_SEGMENTS}
       />
       <MergedBoxes name="estate-stone" specs={layout.stone} material={materials.stone} />
-      <MergedBoxes name="estate-metal" specs={layout.metal} material={materials.darkMetal} />
-      <MergedSupports name="estate-posts" specs={layout.posts} material={materials.darkMetal} />
+      <MergedBoxes name="estate-metal" specs={layout.metal} material={materials.frameMetal} />
+      <MergedSupports name="estate-posts" specs={layout.posts} material={materials.frameMetal} />
       {/* Lit lantern faces: emissive surfaces, not light sources. The hour
           decides their brightness through `applyLightingToMaterials`. */}
       <MergedBoxes

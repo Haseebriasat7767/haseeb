@@ -1,7 +1,7 @@
 'use client';
 
 import { useGLTF } from '@react-three/drei';
-import { useEffect, useMemo } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
 import {
   Euler,
   Group,
@@ -14,7 +14,13 @@ import {
   type BufferGeometry,
   type Material,
 } from 'three';
-import { DRACO_PATH, modelUrl, type ModelName } from './ModelLibrary';
+import {
+  DRACO_PATH,
+  isDeferredModel,
+  modelUrl,
+  useDeferredModelsUnlocked,
+  type ModelName,
+} from './ModelLibrary';
 
 /**
  * One placement of a piece, positioned by its floor contact point.
@@ -27,6 +33,12 @@ export type ModelPlacement = {
   name: ModelName;
   position: [number, number, number];
   rotationY: number;
+  /**
+   * Per-placement scale; a number is uniform, a tuple is per-axis.
+   * The dining table is Y-squashed to dining height (see
+   * ApartmentGeometry).
+   */
+  scale?: number | [number, number, number];
   /**
    * Which spatial batch this placement belongs to — a retail level, a room.
    *
@@ -102,6 +114,55 @@ export function InstancedModels({
   castShadow?: boolean;
   receiveShadow?: boolean;
 }) {
+  // Dressing pieces (see `DEFERRED_MODELS` in ModelLibrary) stream in
+  // after the scene reports ready, inside their own Suspense boundary
+  // — the same gate `Model` uses, so a flat's dressing can never block
+  // first paint or re-suspend the scene. Eager pieces load here, as
+  // before.
+  const unlocked = useDeferredModelsUnlocked();
+  const eager = useMemo(
+    () => placements.filter((placement) => !isDeferredModel(placement.name)),
+    [placements],
+  );
+  const deferred = useMemo(
+    () => placements.filter((placement) => isDeferredModel(placement.name)),
+    [placements],
+  );
+  return (
+    <>
+      {eager.length > 0 ? (
+        <InstancedModelsInner
+          name={name}
+          placements={eager}
+          castShadow={castShadow}
+          receiveShadow={receiveShadow}
+        />
+      ) : null}
+      {unlocked && deferred.length > 0 ? (
+        <Suspense fallback={null}>
+          <InstancedModelsInner
+            name={`${name}-deferred`}
+            placements={deferred}
+            castShadow={castShadow}
+            receiveShadow={receiveShadow}
+          />
+        </Suspense>
+      ) : null}
+    </>
+  );
+}
+
+function InstancedModelsInner({
+  name,
+  placements,
+  castShadow = true,
+  receiveShadow = true,
+}: {
+  name: string;
+  placements: readonly ModelPlacement[];
+  castShadow?: boolean;
+  receiveShadow?: boolean;
+}) {
   // Grouped before anything is loaded, so the hook below is handed a stable,
   // deduplicated URL list rather than one entry per placement.
   const groups = useMemo(() => {
@@ -130,6 +191,7 @@ export function InstancedModels({
     const quaternion = new Quaternion();
     const euler = new Euler();
     const one = new Vector3(1, 1, 1);
+    const scaleVec = new Vector3(1, 1, 1);
     const combined = new Matrix4();
 
     groups.forEach(([batchId, batch], index) => {
@@ -164,7 +226,11 @@ export function InstancedModels({
           position.set(...placement.position);
           euler.set(0, placement.rotationY, 0);
           quaternion.setFromEuler(euler);
-          placementMatrix.compose(position, quaternion, one);
+          const s = placement.scale;
+          if (typeof s === 'number') scaleVec.set(s, s, s);
+          else if (Array.isArray(s)) scaleVec.set(s[0], s[1], s[2]);
+          else scaleVec.copy(one);
+          placementMatrix.compose(position, quaternion, scaleVec);
           combined.multiplyMatrices(placementMatrix, part.matrix);
           instanced.setMatrixAt(i, combined);
         });
